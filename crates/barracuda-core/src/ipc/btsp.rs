@@ -398,7 +398,7 @@ where
     // Step 3: Relay ServerHello to client (write through BufReader::get_mut)
     let server_hello = serde_json::json!({
         "type": "ServerHello",
-        "version": 1,
+        "version": crate::BTSP_WIRE_VERSION,
         "server_ephemeral_pub": create_result.get("server_ephemeral_pub"),
         "challenge": create_result.get("challenge"),
     });

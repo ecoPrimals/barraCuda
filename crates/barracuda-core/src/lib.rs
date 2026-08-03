@@ -132,6 +132,15 @@ pub const PRIMAL_NAMESPACE: &str = "barracuda";
 /// and the `domain` field in `identity.get` responses.
 pub const PRIMAL_DOMAIN: &str = "math";
 
+/// IPC protocol identifier for all wire-format responses.
+pub const PROTOCOL_ID: &str = "json-rpc-2.0";
+
+/// BTSP wire protocol version for handshake messages.
+pub const BTSP_WIRE_VERSION: u32 = 1;
+
+/// Read timeout for Neural API and sovereign dispatch IPC probes.
+pub const IPC_PROBE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
 use error::BarracudaCoreError;
 use health::{HealthReport, HealthStatus, PrimalHealth};
 use lifecycle::{PrimalLifecycle, PrimalState};

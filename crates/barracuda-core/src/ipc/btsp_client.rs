@@ -105,7 +105,7 @@ impl BtspClient {
 
         let client_hello = serde_json::json!({
             "protocol": "btsp",
-            "version": 1,
+            "version": crate::BTSP_WIRE_VERSION,
             "client_ephemeral_pub": client_ephemeral_pub
         });
         write_ndjson_to_stream(&mut target_stream, &client_hello).await?;
@@ -423,7 +423,7 @@ where
     // Step 1: Send ClientHello.
     let hello = serde_json::json!({
         "protocol": "btsp",
-        "version": 1,
+        "version": crate::BTSP_WIRE_VERSION,
         "client_ephemeral_pub": base64ct::Base64::encode_string(&ephemeral_key)
     });
     write_ndjson_line(stream.get_mut(), &hello)

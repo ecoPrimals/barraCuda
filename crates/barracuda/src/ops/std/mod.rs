@@ -17,20 +17,13 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 /// Simple std reduction variant (scalar path).
-#[must_use]
-pub fn wgsl_std_simple() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!("../../shaders/misc/std_simple_f64.wgsl").to_string()
-    });
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_STD_SIMPLE: &str = include_str!("../../shaders/misc/std_simple_f64.wgsl");
 
 /// f64 canonical source for dimension-wise std.
 pub(crate) const WGSL_STD_DIM_F64: &str = include_str!("../../shaders/reduce/std_dim_f64.wgsl");
 
 /// f32 derived from f64 canonical source.
-static WGSL_STD_DIM_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_STD_DIM_F64.to_string());
+pub(crate) const WGSL_STD_DIM_F32: &str = WGSL_STD_DIM_F64;
 
 /// Standard deviation reduction operation
 pub struct Std {
@@ -57,7 +50,7 @@ impl Std {
 
     /// Get the WGSL shader source for dimension-wise reduction
     pub(crate) fn wgsl_shader_dim() -> &'static str {
-        std::sync::LazyLock::force(&WGSL_STD_DIM_F32).as_str()
+        WGSL_STD_DIM_F32
     }
 
     /// Execute the std operation

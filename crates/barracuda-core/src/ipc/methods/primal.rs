@@ -19,7 +19,7 @@ pub(super) fn info(_primal: &BarraCudaPrimal, id: Value) -> JsonRpcResponse {
         serde_json::json!({
             "primal": crate::PRIMAL_NAME,
             "version": env!("CARGO_PKG_VERSION"),
-            "protocol": "json-rpc-2.0",
+            "protocol": crate::PROTOCOL_ID,
             "namespace": crate::PRIMAL_NAMESPACE,
             "license": "AGPL-3.0-or-later",
         }),
@@ -64,7 +64,7 @@ pub(super) fn capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespon
                 "f64_shaders": has_f64,
                 "spirv_passthrough": has_spirv,
             },
-            "protocol": "jsonrpc-2.0",
+            "protocol": crate::PROTOCOL_ID,
             "transport": ["uds", "tcp"],
         }),
     )

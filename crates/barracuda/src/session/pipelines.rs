@@ -7,21 +7,14 @@
 //! `encode_binary_op` / `encode_ternary_op` / `encode_scale_op` used to recreate
 //! both `BindGroupLayout` and `ComputePipeline` on every `run()` invocation.
 
-pub(super) static MATMUL_NAIVE_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| include_str!("../shaders/math/matmul_f64.wgsl").to_string());
-pub(super) static MATMUL_TILED_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| include_str!("../shaders/math/matmul_tiled_f64.wgsl").to_string());
-pub(super) static MATMUL_CPU_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    include_str!("../shaders/math/matmul_cpu_tiled_f64.wgsl").to_string()
-});
-pub(super) static MATMUL_GPU_F32: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    include_str!("../shaders/math/matmul_gpu_evolved_f64.wgsl").to_string()
-});
+pub(super) const MATMUL_NAIVE_F32: &str = include_str!("../shaders/math/matmul_f64.wgsl");
+pub(super) const MATMUL_TILED_F32: &str = include_str!("../shaders/math/matmul_tiled_f64.wgsl");
+pub(super) const MATMUL_CPU_F32: &str = include_str!("../shaders/math/matmul_cpu_tiled_f64.wgsl");
+pub(super) const MATMUL_GPU_F32: &str =
+    include_str!("../shaders/math/matmul_gpu_evolved_f64.wgsl");
 
-pub(crate) static HEAD_SPLIT_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| include_str!("../shaders/tensor/head_split_f64.wgsl").to_string());
-pub(crate) static HEAD_CONCAT_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| include_str!("../shaders/tensor/head_concat_f64.wgsl").to_string());
+pub(crate) const HEAD_SPLIT_F32: &str = include_str!("../shaders/tensor/head_split_f64.wgsl");
+pub(crate) const HEAD_CONCAT_F32: &str = include_str!("../shaders/tensor/head_concat_f64.wgsl");
 
 /// All compute pipelines for a `TensorSession`.
 ///
@@ -161,7 +154,7 @@ impl SessionPipelines {
             relu_pl: auto_pipeline(&crate::ops::relu::SHADER_F32, "Session ReLU"),
             gelu_pl: auto_pipeline(&crate::ops::gelu_wgsl::SHADER_F32, "Session GELU"),
             sfmx_pl: auto_pipeline(
-                &crate::ops::softmax::SHADER_SOFTMAX_SIMPLE_F32,
+                crate::ops::softmax::SHADER_SOFTMAX_SIMPLE_F32,
                 "Session Softmax",
             ),
             lnrm_pl: auto_pipeline(
@@ -169,39 +162,39 @@ impl SessionPipelines {
                 "Session LayerNorm",
             ),
             mm_naive_pl: auto_pipeline(
-                &crate::session::pipelines::MATMUL_NAIVE_F32,
+                crate::session::pipelines::MATMUL_NAIVE_F32,
                 "Session MatMul Naive",
             ),
             mm_t16_pl: auto_pipeline(
-                &crate::session::pipelines::MATMUL_TILED_F32,
+                crate::session::pipelines::MATMUL_TILED_F32,
                 "Session MatMul Tiled16",
             ),
             mm_cpu_pl: auto_pipeline(
-                &crate::session::pipelines::MATMUL_CPU_F32,
+                crate::session::pipelines::MATMUL_CPU_F32,
                 "Session MatMul CpuTiled32",
             ),
             mm_gpu_pl: auto_pipeline(
-                &crate::session::pipelines::MATMUL_GPU_F32,
+                crate::session::pipelines::MATMUL_GPU_F32,
                 "Session MatMul GpuEvolved32",
             ),
             sdpa_scores_pl: auto_pipeline(
-                &crate::ops::attention::SDPA_SCORES_F32,
+                crate::ops::attention::SDPA_SCORES_F32,
                 "Session SDPA Scores",
             ),
             attn_softmax_pl: auto_pipeline(
-                &crate::ops::attention::ATTENTION_SOFTMAX_F32,
+                crate::ops::attention::ATTENTION_SOFTMAX_F32,
                 "Session Attn Softmax",
             ),
             attn_apply_pl: auto_pipeline(
-                &crate::ops::attention::ATTENTION_APPLY_F32,
+                crate::ops::attention::ATTENTION_APPLY_F32,
                 "Session Attn Apply",
             ),
             head_split_pl: auto_pipeline(
-                &crate::session::pipelines::HEAD_SPLIT_F32,
+                crate::session::pipelines::HEAD_SPLIT_F32,
                 "Session Head Split",
             ),
             head_concat_pl: auto_pipeline(
-                &crate::session::pipelines::HEAD_CONCAT_F32,
+                crate::session::pipelines::HEAD_CONCAT_F32,
                 "Session Head Concat",
             ),
         }

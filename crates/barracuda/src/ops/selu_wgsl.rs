@@ -10,12 +10,11 @@
 //! - ✅ Capability-based dispatch (vendor-optimized workgroups)
 
 /// f64 is the canonical source — math is universal, precision is silicon.
-const SHADER_F64: &str = include_str!("../shaders/activation/selu_f64.wgsl");
-const SHADER_SELU_SIMPLE_F64: &str = include_str!("../shaders/activation/selu_simple_f64.wgsl");
-pub(crate) static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_F64.to_string());
-pub(crate) static SHADER_SELU_SIMPLE_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_SELU_SIMPLE_F64.to_string());
+pub(crate) const SHADER_F64: &str = include_str!("../shaders/activation/selu_f64.wgsl");
+pub(crate) const SHADER_F32: &str = SHADER_F64;
+pub(crate) const SHADER_SELU_SIMPLE_F64: &str =
+    include_str!("../shaders/activation/selu_simple_f64.wgsl");
+pub(crate) const SHADER_SELU_SIMPLE_F32: &str = SHADER_SELU_SIMPLE_F64;
 
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
@@ -24,7 +23,7 @@ use crate::tensor::Tensor;
 /// Simple SELU variant (single-pass, no vectorization).
 #[must_use]
 pub fn wgsl_selu_simple() -> &'static str {
-    &SHADER_SELU_SIMPLE_F32
+    SHADER_SELU_SIMPLE_F32
 }
 
 /// SELU operation
@@ -41,7 +40,7 @@ impl SELU {
 
     /// Get the WGSL shader source
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute the selu operation

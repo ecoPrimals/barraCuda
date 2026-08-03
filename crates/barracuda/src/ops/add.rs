@@ -28,25 +28,16 @@ const SHADER_WG128: &str = include_str!("../shaders/math/elementwise_add_wg128.w
 pub const WGSL_ADD_F64: &str = include_str!("../shaders/math/elementwise_add_f64.wgsl");
 
 /// f32 variant derived from f64 via precision downcast.
-static SHADER_DEFAULT: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_ADD_F64.to_string());
+const SHADER_DEFAULT: &str = WGSL_ADD_F64;
 
 /// Basic element-wise add shader (f64 canonical).
-const WGSL_ADD_BASIC_F64: &str = include_str!("../shaders/math/add_f64.wgsl");
-
-/// Basic element-wise add shader (f32 derived from f64).
-pub static WGSL_ADD_BASIC: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_ADD_BASIC_F64.to_string());
+pub const WGSL_ADD_BASIC: &str = include_str!("../shaders/math/add_f64.wgsl");
 
 /// Optimized element-wise add variant.
 pub const WGSL_ADD_OPTIMIZED: &str = include_str!("../shaders/math/elementwise_add_optimized.wgsl");
 
 /// Vector-add shader (f64 canonical).
-const WGSL_VECTORADD_F64: &str = include_str!("../shaders/math/vectoradd_f64.wgsl");
-
-/// Vector-add shader (f32 derived from f64).
-pub static WGSL_VECTORADD: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_VECTORADD_F64.to_string());
+pub const WGSL_VECTORADD: &str = include_str!("../shaders/math/vectoradd_f64.wgsl");
 
 /// Element-wise addition operation
 pub struct Add {
@@ -77,7 +68,7 @@ impl Add {
     fn wgsl_shader(caps: &DeviceCapabilities, size: usize) -> (&'static str, u32) {
         let max_inv = caps.max_compute_invocations_per_workgroup;
         let max_dispatch = caps.max_compute_workgroups.0;
-        let default: &'static str = &SHADER_DEFAULT;
+        let default: &'static str = SHADER_DEFAULT;
 
         let (shader, wg) = if max_inv >= WORKGROUP_SIZE_1D {
             (default, WORKGROUP_SIZE_1D)

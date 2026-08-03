@@ -109,7 +109,7 @@ impl MultiHeadAttention {
             });
 
         let shader = device.compile_shader(
-            &crate::session::pipelines::HEAD_SPLIT_F32,
+            crate::session::pipelines::HEAD_SPLIT_F32,
             Some("head_split"),
         );
 
@@ -194,7 +194,7 @@ impl MultiHeadAttention {
             });
 
         let shader = device.compile_shader(
-            &crate::session::pipelines::HEAD_CONCAT_F32,
+            crate::session::pipelines::HEAD_CONCAT_F32,
             Some("head_concat"),
         );
 

@@ -14,12 +14,7 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 /// Generic sort shader.
-#[must_use]
-pub fn wgsl_sort() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| include_str!("../shaders/misc/sort_f64.wgsl").to_string());
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_SORT: &str = include_str!("../shaders/misc/sort_f64.wgsl");
 
 /// Argmax operation - Find indices of maximum values
 pub struct Argmax {
@@ -41,18 +36,12 @@ impl Argmax {
 
     /// Get the WGSL shader source for global reduction
     fn wgsl_shader_reduce() -> &'static str {
-        static SHADER_REDUCE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            include_str!("../shaders/math/argmax_reduce_f64.wgsl").to_string()
-        });
-        std::sync::LazyLock::force(&SHADER_REDUCE).as_str()
+        include_str!("../shaders/math/argmax_reduce_f64.wgsl")
     }
 
     /// Get the WGSL shader source for dimension-wise reduction
     fn wgsl_shader_dim() -> &'static str {
-        static SHADER_DIM: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            include_str!("../shaders/math/argmax_f64.wgsl").to_string()
-        });
-        std::sync::LazyLock::force(&SHADER_DIM).as_str()
+        include_str!("../shaders/math/argmax_f64.wgsl")
     }
 
     /// Execute the argmax operation

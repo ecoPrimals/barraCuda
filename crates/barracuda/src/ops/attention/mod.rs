@@ -38,28 +38,24 @@ use crate::tensor::Tensor;
 mod compute;
 
 /// f64 canonical — attention matmul (sqrt).
-pub(crate) static ATTENTION_MATMUL_F64: &str =
+pub(crate) const ATTENTION_MATMUL_F64: &str =
     include_str!("../../shaders/math/attention_matmul_f64.wgsl");
-pub(crate) static ATTENTION_MATMUL_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| ATTENTION_MATMUL_F64.to_string());
+pub(crate) const ATTENTION_MATMUL_F32: &str = ATTENTION_MATMUL_F64;
 
 /// f64 canonical — SDPA scores (sqrt).
 pub(crate) const SDPA_SCORES_F64: &str =
     include_str!("../../shaders/attention/sdpa_scores_f64.wgsl");
-pub(crate) static SDPA_SCORES_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SDPA_SCORES_F64.to_string());
+pub(crate) const SDPA_SCORES_F32: &str = SDPA_SCORES_F64;
 
 /// f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 pub(crate) const ATTENTION_APPLY_F64: &str =
     include_str!("../../shaders/attention/attention_apply_f64.wgsl");
-pub(crate) static ATTENTION_APPLY_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| ATTENTION_APPLY_F64.to_string());
+pub(crate) const ATTENTION_APPLY_F32: &str = ATTENTION_APPLY_F64;
 
 /// f64 canonical — attention softmax (exp).
 pub(crate) const ATTENTION_SOFTMAX_F64: &str =
     include_str!("../../shaders/activation/attention_softmax_f64.wgsl");
-pub(crate) static ATTENTION_SOFTMAX_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| ATTENTION_SOFTMAX_F64.to_string());
+pub(crate) const ATTENTION_SOFTMAX_F32: &str = ATTENTION_SOFTMAX_F64;
 
 #[cfg(test)]
 mod tests;
@@ -149,17 +145,17 @@ impl Attention {
 
     /// Pass 1 shader: Compute QK^T scores
     pub(crate) fn shader_matmul() -> &'static str {
-        &ATTENTION_MATMUL_F32
+        ATTENTION_MATMUL_F32
     }
 
     /// Pass 2 shader: Apply softmax
     pub(crate) fn shader_softmax() -> &'static str {
-        &ATTENTION_SOFTMAX_F32
+        ATTENTION_SOFTMAX_F32
     }
 
     /// Pass 3 shader: Apply weights to values
     pub(crate) fn shader_apply() -> &'static str {
-        &ATTENTION_APPLY_F32
+        ATTENTION_APPLY_F32
     }
 
     /// Get query tensor

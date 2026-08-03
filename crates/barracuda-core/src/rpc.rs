@@ -153,7 +153,7 @@ impl BarraCudaService for BarraCudaServer {
         PrimalInfo {
             primal: crate::PRIMAL_NAME.into(),
             version: env!("CARGO_PKG_VERSION").into(),
-            protocol: "json-rpc-2.0".into(),
+            protocol: crate::PROTOCOL_ID.into(),
             namespace: crate::PRIMAL_NAMESPACE.into(),
             license: "AGPL-3.0-or-later".into(),
         }

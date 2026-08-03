@@ -96,7 +96,7 @@ impl CausalAttention {
 
     /// Pass 1 shader: Compute QK^T scores (REUSED from attention ✅)
     pub(super) fn shader_matmul() -> &'static str {
-        &crate::ops::attention::ATTENTION_MATMUL_F32
+        crate::ops::attention::ATTENTION_MATMUL_F32
     }
 
     /// Pass 2 shader: Apply softmax with causal mask (NEW - only shader needed!)
@@ -106,7 +106,7 @@ impl CausalAttention {
 
     /// Pass 3 shader: Apply weights to values (REUSED from attention ✅)
     pub(super) fn shader_apply() -> &'static str {
-        &crate::ops::attention::ATTENTION_APPLY_F32
+        crate::ops::attention::ATTENTION_APPLY_F32
     }
 
     /// Get query tensor

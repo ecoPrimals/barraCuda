@@ -31,7 +31,7 @@ fn test_primal_capabilities_no_gpu() {
     assert!(result["provides"].is_array());
     assert!(result["requires"].is_array());
     assert!(result["domains"].is_array());
-    assert_eq!(result["protocol"], "jsonrpc-2.0");
+    assert_eq!(result["protocol"], crate::PROTOCOL_ID);
     assert!(result["transport"].is_array());
     assert_eq!(result["hardware"]["gpu_available"], false);
     assert_eq!(result["hardware"]["f64_shaders"], false);

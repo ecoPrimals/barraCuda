@@ -14,18 +14,10 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 /// Simple max reduction variant (f64 canonical).
-const WGSL_MAX_SIMPLE_F64: &str = include_str!("../shaders/math/max_simple_f64.wgsl");
+pub const WGSL_MAX_SIMPLE: &str = include_str!("../shaders/math/max_simple_f64.wgsl");
 
-/// Simple max reduction variant (f32 derived from f64).
-pub static WGSL_MAX_SIMPLE: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_MAX_SIMPLE_F64.to_string());
-
-/// f64 is the canonical source — math is universal, precision is silicon.
-const WGSL_MAX_BASIC_F64: &str = include_str!("../shaders/math/max_f64.wgsl");
-
-/// Basic max reduction shader (f32 derived from f64).
-pub static WGSL_MAX_BASIC: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_MAX_BASIC_F64.to_string());
+/// Basic max reduction shader (f64 canonical).
+pub const WGSL_MAX_BASIC: &str = include_str!("../shaders/math/max_f64.wgsl");
 
 /// Max reduction operation
 pub struct Max {
@@ -47,18 +39,12 @@ impl Max {
 
     /// Get the WGSL shader source for global reduction
     fn wgsl_shader_reduce() -> &'static str {
-        static SHADER_REDUCE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            include_str!("../shaders/math/max_reduce_f64.wgsl").to_string()
-        });
-        &SHADER_REDUCE
+        include_str!("../shaders/math/max_reduce_f64.wgsl")
     }
 
     /// Get the WGSL shader source for dimension-wise reduction
     fn wgsl_shader_dim() -> &'static str {
-        static SHADER_DIM: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            include_str!("../shaders/math/max_dim_f64.wgsl").to_string()
-        });
-        &SHADER_DIM
+        include_str!("../shaders/math/max_dim_f64.wgsl")
     }
 
     /// Execute the max operation

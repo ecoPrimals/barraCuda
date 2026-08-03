@@ -152,17 +152,17 @@ impl ScaledDotProductAttention {
 
     /// Get WGSL shader for attention matrix multiplication (Pass 1)
     pub(super) fn wgsl_shader_matmul() -> &'static str {
-        &crate::ops::attention::ATTENTION_MATMUL_F32
+        crate::ops::attention::ATTENTION_MATMUL_F32
     }
 
     /// Get WGSL shader for attention softmax (Pass 2)
     pub(super) fn wgsl_shader_softmax() -> &'static str {
-        &crate::ops::attention::ATTENTION_SOFTMAX_F32
+        crate::ops::attention::ATTENTION_SOFTMAX_F32
     }
 
     /// Get WGSL shader for attention apply (Pass 3)
     pub(super) fn wgsl_shader_apply() -> &'static str {
-        &crate::ops::attention::ATTENTION_APPLY_F32
+        crate::ops::attention::ATTENTION_APPLY_F32
     }
 
     /// Get query tensor

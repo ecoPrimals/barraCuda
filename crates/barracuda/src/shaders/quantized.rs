@@ -27,36 +27,16 @@
 //! - GPU compute can hide dequantization latency
 
 /// `Q4_0` dequantization shader source (f64 canonical, downcast to f32)
-#[must_use]
-pub fn dequant_q4_wgsl() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| include_str!("quantized/dequant_q4_f64.wgsl").to_string());
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_DEQUANT_Q4: &str = include_str!("quantized/dequant_q4_f64.wgsl");
 
 /// `Q8_0` dequantization shader source (f64 canonical, downcast to f32)
-#[must_use]
-pub fn dequant_q8_wgsl() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| include_str!("quantized/dequant_q8_f64.wgsl").to_string());
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_DEQUANT_Q8: &str = include_str!("quantized/dequant_q8_f64.wgsl");
 
 /// `Q4_0` GEMV shader source (on-the-fly dequantization, f64 canonical)
-#[must_use]
-pub fn gemv_q4_wgsl() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| include_str!("quantized/gemv_q4_f64.wgsl").to_string());
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_GEMV_Q4: &str = include_str!("quantized/gemv_q4_f64.wgsl");
 
 /// `Q8_0` GEMV shader source (on-the-fly dequantization, f64 canonical)
-#[must_use]
-pub fn gemv_q8_wgsl() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| include_str!("quantized/gemv_q8_f64.wgsl").to_string());
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_GEMV_Q8: &str = include_str!("quantized/gemv_q8_f64.wgsl");
 
 /// Block size for `Q4_0` and `Q8_0` quantization
 pub const QUANT_BLOCK_SIZE: usize = 32;
@@ -111,8 +91,8 @@ impl QuantType {
     #[must_use]
     pub fn dequant_shader(&self) -> &'static str {
         match self {
-            Self::Q4_0 => dequant_q4_wgsl(),
-            Self::Q8_0 => dequant_q8_wgsl(),
+            Self::Q4_0 => WGSL_DEQUANT_Q4,
+            Self::Q8_0 => WGSL_DEQUANT_Q8,
         }
     }
 
@@ -120,8 +100,8 @@ impl QuantType {
     #[must_use]
     pub fn gemv_shader(&self) -> &'static str {
         match self {
-            Self::Q4_0 => gemv_q4_wgsl(),
-            Self::Q8_0 => gemv_q8_wgsl(),
+            Self::Q4_0 => WGSL_GEMV_Q4,
+            Self::Q8_0 => WGSL_GEMV_Q8,
         }
     }
 }
@@ -268,9 +248,9 @@ mod tests {
 
     #[test]
     fn test_shader_sources_exist() {
-        assert!(!dequant_q4_wgsl().is_empty());
-        assert!(!dequant_q8_wgsl().is_empty());
-        assert!(!gemv_q4_wgsl().is_empty());
-        assert!(!gemv_q8_wgsl().is_empty());
+        assert!(!WGSL_DEQUANT_Q4.is_empty());
+        assert!(!WGSL_DEQUANT_Q8.is_empty());
+        assert!(!WGSL_GEMV_Q4.is_empty());
+        assert!(!WGSL_GEMV_Q8.is_empty());
     }
 }

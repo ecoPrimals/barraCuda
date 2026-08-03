@@ -54,17 +54,12 @@ pub mod sparsity;
 
 #[cfg(feature = "gpu")]
 /// Latin hypercube sampling shader.
-pub static WGSL_LHS: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| include_str!("../shaders/sample/lhs_f64.wgsl").to_string());
+pub const WGSL_LHS: &str = include_str!("../shaders/sample/lhs_f64.wgsl");
 
-#[cfg(feature = "gpu")]
-/// f64 is the canonical source — math is universal, precision is silicon.
-static WGSL_METROPOLIS_F64: &str = include_str!("../shaders/sample/metropolis_f64.wgsl");
 #[cfg(feature = "gpu")]
 /// WGSL shader: parallel Metropolis-Hastings MCMC
 /// WGSL kernel for Metropolis-Hastings sampling.
-pub static WGSL_METROPOLIS: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_METROPOLIS_F64.to_string());
+pub const WGSL_METROPOLIS: &str = include_str!("../shaders/sample/metropolis_f64.wgsl");
 
 #[cfg(feature = "gpu")]
 pub use direct::{DirectSamplerConfig, DirectSamplerResult, direct_sampler};

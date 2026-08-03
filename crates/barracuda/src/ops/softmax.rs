@@ -14,14 +14,12 @@ use bytemuck::{Pod, Zeroable};
 /// Softmax (simple) f64 WGSL shader — single workgroup, `array<f64>` storage.
 pub const WGSL_SOFTMAX_SIMPLE_F64: &str =
     include_str!("../shaders/activation/softmax_simple_f64.wgsl");
-pub(crate) static SHADER_SOFTMAX_SIMPLE_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_SOFTMAX_SIMPLE_F64.to_string());
+pub(crate) const SHADER_SOFTMAX_SIMPLE_F32: &str = WGSL_SOFTMAX_SIMPLE_F64;
 
 /// Softmax (multi-pass) f64 WGSL shader — `array<f64>` storage.
 pub const WGSL_SOFTMAX_BASIC_F64: &str = include_str!("../shaders/activation/softmax_f64.wgsl");
 /// WGSL shader for basic softmax (runtime reference).
-pub static WGSL_SOFTMAX_BASIC: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_SOFTMAX_BASIC_F64.to_string());
+pub const WGSL_SOFTMAX_BASIC: &str = WGSL_SOFTMAX_BASIC_F64;
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -51,7 +49,7 @@ impl Softmax {
 
     /// WGSL shader source (embedded at compile time)
     fn wgsl_shader() -> &'static str {
-        &SHADER_SOFTMAX_SIMPLE_F32
+        SHADER_SOFTMAX_SIMPLE_F32
     }
 
     /// Execute Softmax — GPU-resident, pipeline-cached, batchable.

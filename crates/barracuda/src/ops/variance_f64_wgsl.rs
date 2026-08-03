@@ -38,13 +38,7 @@ fn fused_shader_for_device(device: &WgpuDevice) -> &'static str {
 }
 
 /// Simple variance reduction variant (scalar path).
-#[must_use]
-pub fn wgsl_variance_simple() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!("../shaders/misc/variance_simple_f64.wgsl").to_string()
-    });
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_VARIANCE_SIMPLE: &str = include_str!("../shaders/misc/variance_simple_f64.wgsl");
 
 /// Special variance shader.
 pub const WGSL_VARIANCE_SPECIAL: &str = include_str!("../shaders/special/variance.wgsl");

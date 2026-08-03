@@ -121,7 +121,7 @@ async fn send_jsonrpc_transport(
     writer.shutdown().await?;
 
     let response_line = tokio::time::timeout(
-        std::time::Duration::from_secs(5),
+        crate::IPC_PROBE_TIMEOUT,
         tokio::io::BufReader::new(reader).lines().next_line(),
     )
     .await

@@ -7,8 +7,7 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 /// Where/select conditional shader.
-pub static WGSL_WHERE_OP: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| include_str!("../shaders/tensor/where_op_f64.wgsl").to_string());
+pub const WGSL_WHERE_OP: &str = include_str!("../shaders/tensor/where_op_f64.wgsl");
 
 /// Conditional selection: output[i] = condition[i] ? x[i] : y[i].
 pub struct Where {
@@ -25,12 +24,7 @@ impl Where {
     }
 
     fn wgsl_shader() -> &'static str {
-        {
-            static S: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                include_str!("../shaders/tensor/where_select_f64.wgsl").to_string()
-            });
-            &S
-        }
+        include_str!("../shaders/tensor/where_select_f64.wgsl")
     }
 
     /// Execute the conditional selection on GPU.

@@ -15,63 +15,31 @@ use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
 
 /// GPU shader for fused layer normalization (single-pass mean+var, normalize+affine).
-#[must_use]
-pub fn wgsl_layernorm_fused() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!("../shaders/norm/layernorm_fused_f64.wgsl").to_string()
-    });
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_LAYERNORM_FUSED: &str = include_str!("../shaders/norm/layernorm_fused_f64.wgsl");
 
 /// GPU shader for fused layer normalization v2 (improved numerical stability).
-#[must_use]
-pub fn wgsl_layernorm_fused_v2() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!("../shaders/norm/layernorm_fused_v2_f64.wgsl").to_string()
-    });
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_LAYERNORM_FUSED_V2: &str =
+    include_str!("../shaders/norm/layernorm_fused_v2_f64.wgsl");
 
 /// GPU shader for optimized layer normalization (vectorized loads).
 pub const WGSL_LAYERNORM_OPTIMIZED: &str = include_str!("../shaders/norm/layernorm_optimized.wgsl");
 
-/// f64 canonical — f32 derived via downcast when needed.
-const WGSL_LAYERNORM_MEANVAR_F64: &str = include_str!("../shaders/norm/layernorm_meanvar_f64.wgsl");
-const WGSL_LAYERNORM_STATS_F64: &str = include_str!("../shaders/norm/layernorm_stats_f64.wgsl");
-
 /// `LayerNorm` mean/variance pass.
-pub static WGSL_LAYERNORM_MEANVAR: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_LAYERNORM_MEANVAR_F64.to_string());
-
-/// `LayerNorm` normalize pass.
-#[must_use]
-pub fn wgsl_layernorm_normalize() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!("../shaders/norm/layernorm_normalize_f64.wgsl").to_string()
-    });
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_LAYERNORM_MEANVAR: &str =
+    include_str!("../shaders/norm/layernorm_meanvar_f64.wgsl");
 
 /// `LayerNorm` stats pass.
-pub static WGSL_LAYERNORM_STATS: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_LAYERNORM_STATS_F64.to_string());
+pub const WGSL_LAYERNORM_STATS: &str = include_str!("../shaders/norm/layernorm_stats_f64.wgsl");
+
+/// `LayerNorm` normalize pass.
+pub const WGSL_LAYERNORM_NORMALIZE: &str =
+    include_str!("../shaders/norm/layernorm_normalize_f64.wgsl");
 
 /// `LayerNorm` optimized variant.
-#[must_use]
-pub fn wgsl_layernorm_opt() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!("../shaders/norm/layernorm_opt_f64.wgsl").to_string()
-    });
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_LAYERNORM_OPT: &str = include_str!("../shaders/norm/layernorm_opt_f64.wgsl");
 
 /// Base layer norm shader.
-#[must_use]
-pub fn wgsl_layernorm_base() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| include_str!("../shaders/norm/layernorm_f64.wgsl").to_string());
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_LAYERNORM_BASE: &str = include_str!("../shaders/norm/layernorm_f64.wgsl");
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -96,10 +64,7 @@ impl LayerNorm {
     }
 
     pub(crate) fn wgsl_shader() -> &'static str {
-        static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            include_str!("../shaders/norm/layer_norm_f64.wgsl").to_string()
-        });
-        std::sync::LazyLock::force(&SHADER).as_str()
+        include_str!("../shaders/norm/layer_norm_f64.wgsl")
     }
 
     /// Execute layer normalization.

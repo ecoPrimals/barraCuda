@@ -41,19 +41,17 @@ use crate::tensor::Tensor;
 mod compute;
 
 /// f64 canonical — cross attention matmul (sqrt).
-static CROSS_ATTENTION_MATMUL_F64: &str =
+pub(crate) const CROSS_ATTENTION_MATMUL_F64: &str =
     include_str!("../../shaders/math/cross_attention_matmul_f64.wgsl");
-static CROSS_ATTENTION_MATMUL_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| CROSS_ATTENTION_MATMUL_F64.to_string());
+pub(crate) const CROSS_ATTENTION_MATMUL_F32: &str = CROSS_ATTENTION_MATMUL_F64;
 
-const SHADER_F64: &str = include_str!("../../shaders/attention/cross_attention_apply_f64.wgsl");
-static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_F64.to_string());
+pub(crate) const SHADER_F64: &str =
+    include_str!("../../shaders/attention/cross_attention_apply_f64.wgsl");
+pub(crate) const SHADER_F32: &str = SHADER_F64;
 
-const SHADER_SOFTMAX_F64: &str =
+pub(crate) const SHADER_SOFTMAX_F64: &str =
     include_str!("../../shaders/activation/cross_attention_softmax_f64.wgsl");
-static SHADER_SOFTMAX_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_SOFTMAX_F64.to_string());
+pub(crate) const SHADER_SOFTMAX_F32: &str = SHADER_SOFTMAX_F64;
 
 #[cfg(test)]
 mod tests;
@@ -133,15 +131,15 @@ impl CrossAttention {
 
     /// Shader references
     pub(super) fn shader_matmul() -> &'static str {
-        &CROSS_ATTENTION_MATMUL_F32
+        CROSS_ATTENTION_MATMUL_F32
     }
 
     pub(super) fn shader_softmax() -> &'static str {
-        &SHADER_SOFTMAX_F32
+        SHADER_SOFTMAX_F32
     }
 
     pub(super) fn shader_apply() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Get query tensor

@@ -9,37 +9,20 @@ use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
 
-const WGSL_BATCHNORM_TRAINING_F64: &str = include_str!("../shaders/norm/batchnorm_f64.wgsl");
 /// f32 batch norm shader (training mode, running mean/var).
-pub static WGSL_BATCHNORM_TRAINING: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_BATCHNORM_TRAINING_F64.to_string());
+pub const WGSL_BATCHNORM_TRAINING: &str = include_str!("../shaders/norm/batchnorm_f64.wgsl");
 
-const WGSL_BATCH_NORM_2D_F64: &str = include_str!("../shaders/norm/batch_norm2d_f64.wgsl");
 /// f32 2D batch norm shader (NCHW format, per-channel stats).
-pub static WGSL_BATCH_NORM_2D: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_BATCH_NORM_2D_F64.to_string());
+pub const WGSL_BATCH_NORM_2D: &str = include_str!("../shaders/norm/batch_norm2d_f64.wgsl");
 
 /// f64 canonical — per-tensor batch norm (simplified).
-const SHADER_BATCH_NORM_F64: &str = include_str!("../shaders/norm/batch_norm_f64.wgsl");
-static SHADER_BATCH_NORM_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_BATCH_NORM_F64.to_string());
+pub const SHADER_BATCH_NORM_F64: &str = include_str!("../shaders/norm/batch_norm_f64.wgsl");
 
 /// GPU shader for group normalization (groups within channels).
-#[must_use]
-pub fn wgsl_groupnorm() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| include_str!("../shaders/norm/groupnorm_f64.wgsl").to_string());
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_GROUPNORM: &str = include_str!("../shaders/norm/groupnorm_f64.wgsl");
 
 /// GPU shader for instance normalization (per-instance per-channel).
-#[must_use]
-pub fn wgsl_instancenorm() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!("../shaders/norm/instancenorm_f64.wgsl").to_string()
-    });
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+pub const WGSL_INSTANCENORM: &str = include_str!("../shaders/norm/instancenorm_f64.wgsl");
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -62,7 +45,7 @@ impl BatchNorm {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_BATCH_NORM_F32
+        SHADER_BATCH_NORM_F64
     }
 
     /// Execute batch normalization and return the output tensor.

@@ -56,7 +56,7 @@ springs = ["hotspring", "primalspring", "wetspring", "airspring"]
 
 - **biomeOS** — perceptron weights consumer (`PerceptronAdvisor` hot path, <0.1ms)
 - **primalSpring** — composition validation, typed extractors, training pipeline
-- **hotSpring** — 3-GPU sovereign compute (Titan V, K80, RTX 5060), lattice QCD, nuclear EOS
+- **hotSpring** — 3-GPU sovereign compute (Titan V, K80, RTX 5060), SU(3) lattice QCD, nuclear EOS
 - **wetSpring** — Tenaillon 2016 (264-clone LTEE), pairwise L2 GPU dispatch
 - **airSpring** — cross-tier parity benchmarks
 

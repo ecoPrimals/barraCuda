@@ -34,7 +34,7 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. It provides
 1. **Universal GPU compute** — one WGSL source runs on any GPU vendor
 2. **Scientific precision** — DF64 emulation for double-precision on consumer GPUs
 3. **FHE acceleration** — the only cross-vendor FHE-on-GPU implementation
-4. **Domain breadth** — lattice QCD, spectral analysis, MD, hydrology, bio, ML
+4. **Domain breadth** — SU(3) lattice QCD, spectral analysis, MD, hydrology, bio, ML
 5. **Validation rigor** — FHE + QCD canary suite for GPU stack correctness
 
 ## Architecture
@@ -186,7 +186,7 @@ No external SDK needed for correctness.
 | Consumer | Relationship | What they use |
 |----------|-------------|---------------|
 | **toadStool** | Orchestration primal | Device management, IPC bridge, workload routing |
-| **hotSpring** | Physics validation | Lattice QCD, HMC, CG solver, MD, spectral |
+| **hotSpring** | Physics validation | SU(3) lattice QCD, HMC, CG solver, MD, spectral |
 | **groundSpring** | Earth science validation | Linalg, eigensolvers, optimization, hydrology |
 | **neuralSpring** | ML/bio validation | Matmul, attention, ESN, HMM, activation functions |
 | **wetSpring** | Marine bio validation | Statistics, diversity, genomics, spectral, FHE |

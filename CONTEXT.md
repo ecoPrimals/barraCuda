@@ -35,7 +35,7 @@ traits are fully internalized.
 ## Key Capabilities
 
 - **859 WGSL shaders** spanning: linear algebra, statistics, spectral analysis,
-  molecular dynamics, lattice QCD, FHE (NTT/INTT), pharmacometrics,
+  molecular dynamics, SU(3) lattice QCD, FHE (NTT/INTT), pharmacometrics,
   bioinformatics, ML ops, health/biosignal, procedural generation
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **15-tier precision continuum** — Binary through DF128 with per-tier tolerances

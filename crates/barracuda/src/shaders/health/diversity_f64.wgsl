@@ -4,8 +4,8 @@
 //
 // Absorbed from healthSpring V44 (March 2026).
 //
-// Uses f32 log() cast to f64 for Shannon H' — driver-portable approach.
-// Full f64 log requires compile_shader_f64 pipeline.
+// Compiled via compile_shader_f64 pipeline — native log() is polyfilled
+// automatically by inject_f64_polyfills on NVIDIA hardware.
 //
 // Dispatch: (n_communities, 1, 1) — one workgroup per community
 
@@ -22,10 +22,6 @@ struct Params {
 
 var<workgroup> shared_shannon: array<f64, 256>;
 var<workgroup> shared_simpson: array<f64, 256>;
-
-fn log_f64(x: f64) -> f64 {
-    return f64(log(f32(x)));
-}
 
 @compute @workgroup_size(256)
 fn main(
@@ -50,7 +46,7 @@ fn main(
         }
         let p = abundances[base + i];
         if p > 0.0 {
-            sum_shannon = sum_shannon - p * log_f64(p);
+            sum_shannon = sum_shannon - p * log(p);
         }
         sum_simpson_sq = sum_simpson_sq + p * p;
         i = i + 256u;

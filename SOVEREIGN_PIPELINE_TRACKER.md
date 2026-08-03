@@ -100,7 +100,7 @@ posture unmatched by any CUDA/OpenCL stack.
 ### Kokkos Parity Projections
 
 With VFIO dispatch + DF64 emulation (9.9x throughput on Hybrid GPUs):
-- **Target**: ~4,000 steps/s for RHMC lattice QCD
+- **Target**: ~4,000 steps/s for RHMC SU(3) lattice QCD
 - **Kokkos baseline**: 2,630 steps/s (C++ / CUDA)
 - **Projected advantage**: ~1.5x over Kokkos, achieved in pure safe Rust
 

@@ -94,7 +94,7 @@ half the FP64 matrix TFLOPS of MI300X. The industry trend is clear.
 | Special         | gamma (Lanczos 9-term), erf (Abramowitz & Stegun)               |
 
 **Precision**: ~48-bit mantissa (~14 decimal digits) vs f64's 52-bit (~15.9).
-The 4-bit gap is acceptable for Krylov solvers, MD forces, lattice QCD.
+The 4-bit gap is acceptable for Krylov solvers, MD forces, SU(3) lattice QCD.
 
 **Performance**: DF64 runs on f32 cores at ~0.4× f32 throughput. On consumer
 GPUs where f64 is 1:64 throttled, DF64 is **~16× faster** than native f64.

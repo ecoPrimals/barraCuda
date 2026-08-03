@@ -406,7 +406,10 @@ mod tests {
     }
 
     #[test]
-    #[expect(deprecated, reason = "testing deprecated batch functions until 0.5.0 removal")]
+    #[expect(
+        deprecated,
+        reason = "testing deprecated batch functions until 0.5.0 removal"
+    )]
     fn test_batch_functions() {
         let x = vec![0.0, 1.0, 2.0];
 

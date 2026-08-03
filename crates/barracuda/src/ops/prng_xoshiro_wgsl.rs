@@ -220,7 +220,6 @@ mod tests {
     #[tokio::test]
     async fn test_prng_xoshiro() {
         let device = crate::device::test_pool::get_test_device().await;
-        // Seeds as u32 (one per output element)
         let seeds: Vec<u32> = vec![1, 2, 3, 4, 5, 100, 200, 300];
         let seeds_tensor = Tensor::from_data_pod(&seeds, vec![8], device).unwrap();
         let output = seeds_tensor.prng_xoshiro(0).unwrap();
@@ -231,5 +230,59 @@ mod tests {
                 .iter()
                 .all(|&x| (0.0..1.0).contains(&x) && x.is_finite())
         );
+    }
+
+    #[tokio::test]
+    async fn test_prng_xoshiro_statistical_validation() {
+        let device = crate::device::test_pool::get_test_device().await;
+        let n = 10_000_u32;
+        let seeds: Vec<u32> = (1..=n).collect();
+        let seeds_tensor = Tensor::from_data_pod(&seeds, vec![n as usize], device).unwrap();
+        let output = seeds_tensor.prng_xoshiro(0).unwrap();
+        let result = output.to_f64_vec().unwrap();
+        assert_eq!(result.len(), n as usize);
+
+        assert!(result.iter().all(|&x| (0.0..1.0).contains(&x) && x.is_finite()));
+
+        let mean = result.iter().sum::<f64>() / n as f64;
+        assert!(
+            (mean - 0.5).abs() < 0.02,
+            "GPU xoshiro U(0,1) mean {mean} outside tolerance"
+        );
+
+        let var = result.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n as f64;
+        let expected_var = 1.0 / 12.0;
+        assert!(
+            (var - expected_var).abs() < 0.02,
+            "GPU xoshiro U(0,1) variance {var} vs expected {expected_var}"
+        );
+
+        let n_bins = 10;
+        let mut bins = vec![0u32; n_bins];
+        for &x in &result {
+            let bin = (x * n_bins as f64).min((n_bins - 1) as f64) as usize;
+            bins[bin] += 1;
+        }
+        let expected_count = n as f64 / n_bins as f64;
+        let chi2: f64 = bins
+            .iter()
+            .map(|&b| (b as f64 - expected_count).powi(2) / expected_count)
+            .sum();
+        assert!(
+            chi2 < 30.0,
+            "GPU xoshiro chi-squared {chi2} exceeds critical value (df=9, p=0.001~27.9)"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_prng_xoshiro_seed_independence() {
+        let device = crate::device::test_pool::get_test_device().await;
+        let seeds_a: Vec<u32> = vec![42, 43, 44, 45];
+        let seeds_b: Vec<u32> = vec![100, 200, 300, 400];
+        let t_a = Tensor::from_data_pod(&seeds_a, vec![4], device.clone()).unwrap();
+        let t_b = Tensor::from_data_pod(&seeds_b, vec![4], device).unwrap();
+        let out_a = t_a.prng_xoshiro(0).unwrap().to_f64_vec().unwrap();
+        let out_b = t_b.prng_xoshiro(0).unwrap().to_f64_vec().unwrap();
+        assert_ne!(out_a, out_b, "different seeds must produce different output");
     }
 }

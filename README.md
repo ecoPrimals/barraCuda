@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **859 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,208 Rust source files**, 25 integration test harnesses, 5,037 tests passing
+- **1,208 Rust source files**, 25 integration test harnesses, 4,970 tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -54,7 +54,7 @@ results.
 2. **Vendor-agnostic** — same binary, identical results on any GPU
 3. **Sovereign** — zero external SDK dependency for correctness or performance
 4. **Pure Rust** — `#![forbid(unsafe_code)]` in both crates, zero `unsafe` blocks, zero external C dependencies, zero dependencies on any other primal (wire format is the contract, `TransportEndpoint` implemented locally)
-5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; split-lock GPU submission (submit and poll use separate lock acquisitions); fire-and-forget dispatch via `submit_commands` for non-readback ops; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; `GPU_TEST_GUARD` serializes device lifecycle in tests; all 5,037 tests pass at full parallelism on llvmpipe
+5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; split-lock GPU submission (submit and poll use separate lock acquisitions); fire-and-forget dispatch via `submit_commands` for non-readback ops; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; `GPU_TEST_GUARD` serializes device lifecycle in tests; all 4,970 tests pass at full parallelism on llvmpipe
 6. **AGPL-3.0** — free as in freedom
 
 ---
@@ -62,8 +62,9 @@ results.
 ## Recent
 
 - **Wave 155n: Idiom Evolution Sweep (Aug 3)**: RK4 ODE solver zero-alloc inner loop (7·n_steps allocations eliminated). MD force dead-code collapse (4 modules, unused imports removed). Full 12-axis deep debt scan confirmed clean. Zero clippy warnings.
-- **Wave 155n: Subgroup Reduction + Diversity Self-Recursion (Jul 31)**: Subgroup reduce entry point fixed, diversity self-recursion eliminated, SU(3) labels corrected. 5,037 tests.
-- **Wave 155i: RTX 3090 Profiling + Deep Debt (Jul 29)**: First real GPU compute on strandGate — RTX 3090 + RX 6950 XT both detected. 103.97 TFLOPS FP64, FHE NTT bit-perfect, cdist 65x faster than SciPy CPU. ShaderValidationBackend::CoralReef → SovereignCpu (self-knowledge). 10 batch functions #[deprecated]. Compute Trio silicon utilization AAR. MultiDevicePool wired into primal startup. device.pool IPC method (99th). 5,037 tests, zero warnings.
+- **Wave 155p: PRNG Validation + Half-Range Fix (Aug 3)**: CPU `state_to_f64` and GPU `prng_xoshiro_f64.wgsl` both produced [0, 0.5) instead of [0, 1). Fixed with 53-bit extraction. 11 statistical validation tests added (moments, chi-squared, Gaussian). PRNG YELLOW → GREEN. 4,970 tests.
+- **Wave 155n: Subgroup Reduction + Diversity Self-Recursion (Jul 31)**: Subgroup reduce entry point fixed, diversity self-recursion eliminated, SU(3) labels corrected.
+- **Wave 155i: RTX 3090 Profiling + Deep Debt (Jul 29)**: First real GPU compute on strandGate — RTX 3090 + RX 6950 XT both detected. 103.97 TFLOPS FP64, FHE NTT bit-perfect, cdist 65x faster than SciPy CPU. ShaderValidationBackend::CoralReef → SovereignCpu (self-knowledge). 10 batch functions #[deprecated]. Compute Trio silicon utilization AAR. MultiDevicePool wired into primal startup. device.pool IPC method (99th). Zero warnings.
 - **Wave 155f: Deep Debt Sweep + Bug Fixes (Jul 28)**: SIGSEGV in barracuda-core tests fixed (GPU_TEST_GUARD serializes wgpu device lifecycle). ESN BindGroupLayout crash fixed (TimeSeriesAnalyzer reuses caller's device). BTSP env var race conditions fixed (ENV_MUTEX in all integration test binaries). BatchError → thiserror. BTSP_STRICT_MODE env key. wgpu backend target-gating. 4,957 tests pass, zero SIGSEGV, zero failures, all quality gates green.
 - **Wave 107: Socket Cleanup + method.describe (Jun 10)**: `PRIMAL-SOCKET-CLEANUP` — state files co-locate with socket path. `method.describe` RPC for runtime introspection. All production files <800L. 98 methods. Composition-ready.
 - **Waves 100-101: Transport Self-Knowledge (Jun 8)**: Removed cross-primal `sourdough-core` dep. Local `TransportEndpoint` + `connect_transport()` (237L). Wire format is the contract. `TRANSPORT_ENDPOINT` env var operational.
@@ -251,7 +252,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo nextest run --workspace --profile ci  # 5,037+ tests via nextest
+cargo nextest run --workspace --profile ci  # 4,970+ tests via nextest
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 

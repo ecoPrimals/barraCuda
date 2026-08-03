@@ -236,7 +236,10 @@ pub mod workload;
 /// Re-exports the most commonly needed special functions so Springs
 /// can `use barracuda::math::{erf, ln_gamma, regularized_gamma_p}`.
 pub mod math {
-    #[expect(deprecated, reason = "re-export preserved for API stability until 0.5.0")]
+    #[expect(
+        deprecated,
+        reason = "re-export preserved for API stability until 0.5.0"
+    )]
     pub use crate::special::erf::{erf_batch, erfc_batch};
     pub use crate::special::{
         beta, digamma, erf, erfc, gamma, ln_beta, ln_gamma, lower_incomplete_gamma,

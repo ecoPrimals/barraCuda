@@ -263,7 +263,10 @@ mod tests {
     }
 
     #[test]
-    #[expect(deprecated, reason = "testing deprecated batch functions until 0.5.0 removal")]
+    #[expect(
+        deprecated,
+        reason = "testing deprecated batch functions until 0.5.0 removal"
+    )]
     fn batch_lengths() {
         let input = vec![1.0, -1.0, 0.0, 2.0];
         assert_eq!(relu_batch(&input).len(), 4);

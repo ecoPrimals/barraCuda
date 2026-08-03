@@ -78,4 +78,29 @@ mod tests {
             assert!(g.is_finite(), "Gaussian deviate must be finite: {g}");
         }
     }
+
+    #[test]
+    fn lcg_uniform_mean_variance() {
+        let n = 50_000;
+        let mut seed = 42u64;
+        let samples: Vec<f64> = (0..n).map(|_| lcg_uniform_f64(&mut seed)).collect();
+        let mean = samples.iter().sum::<f64>() / n as f64;
+        let var = samples.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n as f64;
+        assert!((mean - 0.5).abs() < 0.005, "lattice U(0,1) mean {mean}");
+        assert!(
+            (var - 1.0 / 12.0).abs() < 0.005,
+            "lattice U(0,1) variance {var}"
+        );
+    }
+
+    #[test]
+    fn lcg_gaussian_moments() {
+        let n = 50_000;
+        let mut seed = 42u64;
+        let samples: Vec<f64> = (0..n).map(|_| lcg_gaussian(&mut seed)).collect();
+        let mean = samples.iter().sum::<f64>() / n as f64;
+        let var = samples.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n as f64;
+        assert!(mean.abs() < 0.02, "lattice N(0,1) mean {mean}");
+        assert!((var - 1.0).abs() < 0.05, "lattice N(0,1) variance {var}");
+    }
 }

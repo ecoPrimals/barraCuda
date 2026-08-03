@@ -40,11 +40,10 @@ fn xoshiro_next(s: ptr<function, array<u32, 4>>) -> u32 {
 }
 
 fn to_uniform_f64(s: ptr<function, array<u32, 4>>) -> f64 {
-    // Combine two u32 draws for 52-bit mantissa coverage
     let hi = xoshiro_next(s);
     let lo = xoshiro_next(s);
-    // hi provides upper 26 bits, lo provides lower 26 bits
-    let combined = f64(hi >> 6u) * f64(67108864.0) + f64(lo >> 6u);
+    // hi: upper 27 bits, lo: lower 26 bits → 53-bit mantissa coverage
+    let combined = f64(hi >> 5u) * f64(67108864.0) + f64(lo >> 6u);
     return combined / f64(9007199254740992.0); // 2^53
 }
 

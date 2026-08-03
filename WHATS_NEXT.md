@@ -6,6 +6,31 @@ Prioritized work items, ordered by impact. Updated 2026-08-03.
 
 ## Recently Completed
 
+### Wave 155p — PRNG Validation + Half-Range Fix (Aug 3, 2026)
+- **CPU PRNG half-range bug FIXED** — `state_to_f64()` extracted 31 bits (>> 33)
+  but divided by `u32::MAX` (2^32-1), producing values in [0, 0.5) instead of
+  [0, 1). Fixed to 53-bit extraction matching `LcgRng::uniform()` and lattice
+  `lcg_uniform_f64()`. The `rng.uniform` IPC method was affected — now correctly
+  covers full [min, max) range.
+- **GPU xoshiro PRNG half-range bug FIXED** — `prng_xoshiro_f64.wgsl` combined
+  26+26=52 bits but divided by 2^53, producing [0, 0.5). Fixed to 27+26=53 bits
+  for full [0, 1) coverage.
+- **Statistical PRNG validation harness added** — 11 new tests covering:
+  - Uniform mean/variance for f64, f32, and LcgRng (expected 0.5 / 1/12)
+  - Chi-squared goodness-of-fit (10-bin, p<0.001)
+  - CPU Box-Muller Gaussian moments (mean, variance, skewness, kurtosis)
+  - Gaussian chi-squared (20-bin vs N(0,1) CDF)
+  - GPU xoshiro statistical validation (mean, variance, chi-squared)
+  - GPU seed independence
+  - Multi-seed independence
+  - Lattice LCG uniform mean/variance and Gaussian moments
+- **PRNG YELLOW → GREEN**: Statistical validation harness is now in-repo.
+  CPU generators (LCG, Box-Muller) and GPU generators (xoshiro128**) validated
+  against expected distributions. Lattice PCG uniform confirmed correct (uses
+  `(v + 0.5) / 2^32` — proper [0, 1) range).
+- **12-axis deep debt scan** confirmed clean (0 critical findings).
+- Zero clippy warnings. 4,970 tests pass. All quality gates green.
+
 ### Wave 155n — Idiom Evolution Sweep (Aug 3, 2026)
 - **RK4 ODE solver zero-alloc inner loop** — `math.ode_solve_rk4` derivative closure
   previously cloned bias vector `b` on every evaluation (4× per step × n_steps).

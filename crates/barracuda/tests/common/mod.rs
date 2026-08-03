@@ -6,7 +6,10 @@
 //! Wraps the entire async body in `tokio::time::timeout` to prevent indefinite
 //! hangs when the GPU stalls (driver lockup, compute shader deadlock).
 
-#![allow(dead_code, reason = "shared across multiple test binaries — usage varies per consumer")]
+#![allow(
+    dead_code,
+    reason = "shared across multiple test binaries — usage varies per consumer"
+)]
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 

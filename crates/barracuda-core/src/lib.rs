@@ -356,10 +356,7 @@ impl PrimalLifecycle for BarraCudaPrimal {
 
             match barracuda::multi_gpu::MultiDevicePool::new().await {
                 Ok(pool) => {
-                    tracing::info!(
-                        "barraCuda: multi-GPU pool ready — {}",
-                        pool.summary()
-                    );
+                    tracing::info!("barraCuda: multi-GPU pool ready — {}", pool.summary());
                     self.gpu_pool = Some(pool);
                 }
                 Err(e) => {

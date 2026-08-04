@@ -24,6 +24,7 @@ traits are fully internalized.
 - **Communication:** JSON-RPC 2.0 + tarpc over Unix socket and TCP
 - **License:** AGPL-3.0-or-later (scyBorg provenance trio)
 - **Tests:** 4,970 passing (cargo test --workspace) — barracuda 4,184 + barracuda-core 770 + naga-exec 16
+- **Wave 155u Evolution:** LazyLock→const migration (374 statics), error constructor helpers (518 sites), env_keys centralization (9 keys). Net -1,488 LOC.
 - **Coverage:** 80.54% line on llvmpipe (80% CI gate, 90% target with GPU hardware)
 - **MSRV:** 1.92
 - **Crate count:** 4 workspace crates

@@ -61,7 +61,7 @@ results.
 
 ## Recent
 
-- **Wave 155u: Shader Static Evolution Phase 2 (Aug 4)**: Remaining 323 `LazyLock<String>` → `const &str` across 310 files (-478 LOC). Total migration: 374 statics across 328 files. Only 5 `LazyLock<String>` remain (DF64 format! concatenation). 12-axis deep debt scan clean. 4,970 tests.
+- **Wave 155u: Deep Idiom Evolution (Aug 4)**: LazyLock<String> Phase 2 (323 statics → const &str across 310 files). Error constructor helpers (518 call sites migrated). Env var centralization (9 keys into env_keys.rs). Total: -1,488 LOC. 12-axis deep debt scan clean. 4,970 tests.
 - **Wave 155p: PRNG Validation + Shader Evolution + Magic Numbers (Aug 3)**: CPU `state_to_f64` and GPU `prng_xoshiro_f64.wgsl` half-range bugs fixed ([0, 0.5) → [0, 1)). 11 PRNG statistical validation tests. 51 `LazyLock<String>` → `const &str` across 18 files (-182 LOC). Protocol version inconsistency unified (`PROTOCOL_ID`). `BTSP_WIRE_VERSION` + `IPC_PROBE_TIMEOUT` centralized. PRNG YELLOW → GREEN.
 - **Wave 155n: Idiom Evolution + Subgroup Fixes (Jul 31–Aug 3)**: RK4 ODE solver zero-alloc inner loop. MD force dead-code collapse. Subgroup reduce entry point fixed. Diversity self-recursion eliminated. SU(3) labels corrected.
 - **Wave 155i: RTX 3090 Profiling + Deep Debt (Jul 29)**: First real GPU compute on strandGate — RTX 3090 + RX 6950 XT both detected. 103.97 TFLOPS FP64, FHE NTT bit-perfect, cdist 65x faster than SciPy CPU. ShaderValidationBackend::CoralReef → SovereignCpu (self-knowledge). 10 batch functions #[deprecated]. Compute Trio silicon utilization AAR. MultiDevicePool wired into primal startup. device.pool IPC method (99th). Zero warnings.

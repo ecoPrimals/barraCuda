@@ -1,6 +1,6 @@
 # Pure Rust Evolution — barraCuda
 
-**Date**: August 3, 2026
+**Date**: August 4, 2026
 **Version**: 0.4.0
 **Status**: Layer 1 complete — zero unsafe, zero application C deps, VFIO-primary architecture adopted, GpuBackend trait abstraction, dispatch_binary wired, coral cache → dispatch integrated, PrecisionBrain-coralReef sovereign routing, NagaExecutor CPU shader interpreter (workgroup.rs extracted), coralReef CPU compilation IPC contract, cargo deny fully passing, 80.5% test coverage, 4,970 tests (cargo test --workspace), **BTSP Phase 3 stream encryption** (ChaCha20-Poly1305 + HMAC-SHA256 via pure Rust RustCrypto), **99 IPC methods** including ML pipeline, mesh trust, `linalg.batched_tridiag_eigh` (groundSpring absorption), genetics-layer prefix stripping (0xEC/0xED/0xEE), **postcard serialization** (bincode replaced, RUSTSEC-2025-0141 resolved), **transport/ module decomposition** (server + connection + dispatch), **transport_tests/ module** (7 semantic files), **238 mul_add evolutions**, **MSRV 1.92 + Edition 2024**, zero files >800L, all quality gates green
 

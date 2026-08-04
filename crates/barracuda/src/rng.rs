@@ -270,7 +270,10 @@ mod tests {
         let mean = samples.iter().sum::<f64>() / n as f64;
         let var = samples.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n as f64;
 
-        assert!((mean - 0.5).abs() < 0.005, "U(0,1) mean {mean} outside tolerance");
+        assert!(
+            (mean - 0.5).abs() < 0.005,
+            "U(0,1) mean {mean} outside tolerance"
+        );
         let expected_var = 1.0 / 12.0;
         assert!(
             (var - expected_var).abs() < 0.005,
@@ -289,7 +292,10 @@ mod tests {
             .sum::<f64>()
             / n as f64;
 
-        assert!((mean - 0.5).abs() < 0.005, "U(0,1) f32 mean {mean} outside tolerance");
+        assert!(
+            (mean - 0.5).abs() < 0.005,
+            "U(0,1) f32 mean {mean} outside tolerance"
+        );
         let expected_var = 1.0 / 12.0;
         assert!(
             (var - expected_var).abs() < 0.005,
@@ -309,7 +315,10 @@ mod tests {
         }
 
         let expected = n as f64 / n_bins as f64;
-        let chi2: f64 = bins.iter().map(|&b| (b as f64 - expected).powi(2) / expected).sum();
+        let chi2: f64 = bins
+            .iter()
+            .map(|&b| (b as f64 - expected).powi(2) / expected)
+            .sum();
         // df = n_bins - 1 = 9; chi2 critical at p=0.001 is ~27.9
         assert!(
             chi2 < 30.0,
@@ -325,7 +334,10 @@ mod tests {
         let mean = samples.iter().sum::<f64>() / n as f64;
         let var = samples.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n as f64;
 
-        assert!((mean - 0.5).abs() < 0.005, "LcgRng mean {mean} outside tolerance");
+        assert!(
+            (mean - 0.5).abs() < 0.005,
+            "LcgRng mean {mean} outside tolerance"
+        );
         let expected_var = 1.0 / 12.0;
         assert!(
             (var - expected_var).abs() < 0.005,
@@ -343,16 +355,28 @@ mod tests {
 
         let mean = samples.iter().sum::<f64>() / n as f64;
         let var = samples.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n as f64;
-        let skew = samples.iter().map(|x| ((x - mean) / var.sqrt()).powi(3)).sum::<f64>()
+        let skew = samples
+            .iter()
+            .map(|x| ((x - mean) / var.sqrt()).powi(3))
+            .sum::<f64>()
             / n as f64;
-        let kurt = samples.iter().map(|x| ((x - mean) / var.sqrt()).powi(4)).sum::<f64>()
+        let kurt = samples
+            .iter()
+            .map(|x| ((x - mean) / var.sqrt()).powi(4))
+            .sum::<f64>()
             / n as f64
             - 3.0;
 
         assert!(mean.abs() < 0.02, "N(0,1) mean {mean} outside tolerance");
-        assert!((var - 1.0).abs() < 0.05, "N(0,1) variance {var} outside tolerance");
+        assert!(
+            (var - 1.0).abs() < 0.05,
+            "N(0,1) variance {var} outside tolerance"
+        );
         assert!(skew.abs() < 0.1, "N(0,1) skewness {skew} outside tolerance");
-        assert!(kurt.abs() < 0.2, "N(0,1) excess kurtosis {kurt} outside tolerance");
+        assert!(
+            kurt.abs() < 0.2,
+            "N(0,1) excess kurtosis {kurt} outside tolerance"
+        );
     }
 
     #[test]
@@ -400,17 +424,24 @@ mod tests {
 
     #[test]
     fn multiple_seeds_independent() {
-        let seqs: Vec<Vec<f64>> = (0..10).map(|s| uniform_f64_sequence(s * 1000 + 1, 1000)).collect();
+        let seqs: Vec<Vec<f64>> = (0..10)
+            .map(|s| uniform_f64_sequence(s * 1000 + 1, 1000))
+            .collect();
         for i in 0..seqs.len() {
             for j in (i + 1)..seqs.len() {
-                assert_ne!(seqs[i], seqs[j], "seeds {i} and {j} produced identical sequences");
+                assert_ne!(
+                    seqs[i], seqs[j],
+                    "seeds {i} and {j} produced identical sequences"
+                );
             }
         }
     }
 
     fn erf_approx(x: f64) -> f64 {
         let t = 1.0 / (1.0 + 0.3275911 * x.abs());
-        let poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+        let poly = t
+            * (0.254829592
+                + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
         let result = 1.0 - poly * (-x * x).exp();
         if x >= 0.0 { result } else { -result }
     }

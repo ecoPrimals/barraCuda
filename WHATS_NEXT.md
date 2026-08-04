@@ -1,13 +1,34 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-08-03.
+Prioritized work items, ordered by impact. Updated 2026-08-04.
 
 ---
 
 ## Recently Completed
 
+### Wave 155u — Shader Static Evolution Phase 2 (Aug 4, 2026)
+- **LazyLock\<String\> → const &str Phase 2** — Converted remaining 323 shader
+  statics across 310 files. Total migration: 374 statics across 328 files
+  (51 in Wave 155p + 323 in 155u). Only 5 `LazyLock<String>` remain — all
+  genuine DF64 `format!` concatenation (Pattern C) that requires runtime
+  string assembly.
+- **12-axis deep debt scan** confirmed clean:
+  - Files >800L: **0** (max 783L, test file)
+  - Production unsafe: **1** (barracuda-spirv passthrough, feature-gated)
+  - Production unwrap: **0** in src/
+  - todo/unimplemented: **0**
+  - Bare `#[allow(`: **0**
+  - Hardcoded primal names: **0**
+  - Production mocks: **0**
+  - Cross-primal deps: **0**
+  - `Result<T, String>`: **0**
+  - println in lib: **0**
+  - Hardcoded paths/ports: **0**
+  - Remaining `LazyLock<String>`: **5** (all Pattern C — format! concatenation)
+- Net -478 LOC. Zero clippy warnings. 4,970 tests pass. All quality gates green.
+
 ### Wave 155p — PRNG Validation + Shader Static Evolution + Magic Numbers (Aug 3, 2026)
-- **LazyLock\<String\> → const &str** — Converted 51 shader statics across 18
+- **LazyLock\<String\> → const &str Phase 1** — Converted 51 shader statics across 18
   files from heap-allocating `LazyLock<String>` to zero-cost `const &str`.
   Eliminates ~51 one-time heap allocations and `LazyLock` synchronization
   overhead on the shader compilation hot path. `format!` concatenation

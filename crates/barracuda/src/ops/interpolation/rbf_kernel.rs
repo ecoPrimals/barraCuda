@@ -48,8 +48,7 @@ use bytemuck::{Pod, Zeroable};
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 static SHADER_F64: &str = include_str!("../../shaders/interpolation/rbf_kernel_f64.wgsl");
-static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_F64.to_string());
+const SHADER_F32: &str = SHADER_F64;
 
 /// RBF kernel types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

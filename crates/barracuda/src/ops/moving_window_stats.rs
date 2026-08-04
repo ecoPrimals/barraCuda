@@ -15,9 +15,7 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
 /// WGSL shader for moving window mean/variance/min/max (f32, downcast from f64).
-pub static WGSL_MOVING_WINDOW_STATS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    include_str!("../shaders/stats/moving_window_f64.wgsl").to_string()
-});
+pub const WGSL_MOVING_WINDOW_STATS: &str = include_str!("../shaders/stats/moving_window_f64.wgsl");
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -82,7 +80,7 @@ impl MovingWindowStats {
 
         let module = d.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("moving_window_stats"),
-            source: wgpu::ShaderSource::Wgsl((&**WGSL_MOVING_WINDOW_STATS).into()),
+            source: wgpu::ShaderSource::Wgsl(WGSL_MOVING_WINDOW_STATS.into()),
         });
 
         let params = MovingWindowParams {

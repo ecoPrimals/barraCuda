@@ -16,8 +16,7 @@ use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
 const SHADER_F64: &str = include_str!("../shaders/audio/mel_scale_f64.wgsl");
-static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_F64.to_string());
+const SHADER_F32: &str = SHADER_F64;
 
 fn hz_to_mel(hz: f32) -> f32 {
     2595.0 * (1.0 + hz / 700.0).log10()

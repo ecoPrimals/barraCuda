@@ -15,9 +15,7 @@ use wgpu::util::DeviceExt;
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
-static WGSL_PAIRWISE_HAMMING: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    include_str!("../../shaders/math/pairwise_hamming_f64.wgsl").to_string()
-});
+const WGSL_PAIRWISE_HAMMING: &str = include_str!("../../shaders/math/pairwise_hamming_f64.wgsl");
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]

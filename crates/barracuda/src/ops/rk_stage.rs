@@ -26,11 +26,8 @@ use std::sync::Arc;
 /// For f64 structured ODE batches, see [`BatchedOdeRK4F64`].
 #[must_use]
 pub fn wgsl_rk4_parallel() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!("../shaders/numerical/rk4_parallel_f64.wgsl").to_string()
-    });
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+        include_str!("../shaders/numerical/rk4_parallel_f64.wgsl")
+    }
 
 /// RK45 (Dormand-Prince) coefficients
 const DP_C: [f64; 6] = [0.0, 0.2, 0.3, 0.8, 8.0 / 9.0, 1.0];

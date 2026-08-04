@@ -16,8 +16,7 @@ use crate::tensor::Tensor;
 const WGSL_SUM_DIM_F64: &str = include_str!("../shaders/reduce/sum_dim_f64.wgsl");
 
 /// f32 derived from f64 canonical source.
-static WGSL_SUM_DIM_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_SUM_DIM_F64.to_string());
+const WGSL_SUM_DIM_F32: &str = WGSL_SUM_DIM_F64;
 
 /// Sum reduction operation
 pub struct Sum {

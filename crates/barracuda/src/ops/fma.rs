@@ -36,8 +36,7 @@ const SHADER_WG128: &str = include_str!("../shaders/math/fma_wg128.wgsl");
 const SHADER_F64: &str = include_str!("../shaders/math/fma_f64.wgsl");
 
 /// Default shader (f32 derived from f64).
-static SHADER_DEFAULT: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_F64.to_string());
+const SHADER_DEFAULT: &str = SHADER_F64;
 
 /// Element-wise FMA shader.
 pub const WGSL_FMA_ELEMENTWISE: &str = include_str!("../shaders/math/elementwise_fma.wgsl");

@@ -16,11 +16,8 @@ use crate::tensor::Tensor;
 /// Simple norm reduction variant (scalar path).
 #[must_use]
 pub fn wgsl_norm_simple() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        include_str!("../shaders/misc/norm_simple_f64.wgsl").to_string()
-    });
-    std::sync::LazyLock::force(&SHADER).as_str()
-}
+        include_str!("../shaders/misc/norm_simple_f64.wgsl")
+    }
 
 /// Norm reduction operation
 pub struct Norm {
@@ -50,10 +47,8 @@ impl Norm {
     /// Get the WGSL shader source for dimension-wise reduction
     fn wgsl_shader_dim() -> &'static str {
         {
-            static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                include_str!("../shaders/reduce/norm_dim_f64.wgsl").to_string()
-            });
-            std::sync::LazyLock::force(&SHADER).as_str()
+            const SHADER: &str = include_str!("../shaders/reduce/norm_dim_f64.wgsl");
+            SHADER
         }
     }
 

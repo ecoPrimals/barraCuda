@@ -16,8 +16,7 @@
 /// custom f64 pipelines via `ComputeDispatch` can use this directly.
 pub const WGSL_GELU_F64: &str = include_str!("../shaders/activation/gelu_f64.wgsl");
 
-pub(crate) static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_GELU_F64.to_string());
+pub(crate) const SHADER_F32: &str = WGSL_GELU_F64;
 
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;

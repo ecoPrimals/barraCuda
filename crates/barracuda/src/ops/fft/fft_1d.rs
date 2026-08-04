@@ -60,8 +60,7 @@ pub const BATCHED_SHADER_F64: &str = include_str!("fft_3d_batched_f64.wgsl");
 /// Returns the f32-downcast version of the batched shader.
 #[must_use]
 pub fn batched_shader_f32() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| BATCHED_SHADER_F64.to_string());
+    const SHADER: &str = BATCHED_SHADER_F64;
     &SHADER
 }
 

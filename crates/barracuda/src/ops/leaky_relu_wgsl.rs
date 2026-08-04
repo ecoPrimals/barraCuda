@@ -13,8 +13,7 @@
 /// f64 is the canonical source.
 const SHADER_F64: &str = include_str!("../shaders/activation/leaky_relu_f64.wgsl");
 
-static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_F64.to_string());
+const SHADER_F32: &str = SHADER_F64;
 
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;
@@ -28,8 +27,7 @@ const WGSL_LEAKY_RELU_SIMPLE_F64: &str =
     include_str!("../shaders/activation/leaky_relu_simple_f64.wgsl");
 
 /// Simple `LeakyReLU` variant (single-pass, no vectorization).
-pub static WGSL_LEAKY_RELU_SIMPLE: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_LEAKY_RELU_SIMPLE_F64.to_string());
+pub const WGSL_LEAKY_RELU_SIMPLE: &str = WGSL_LEAKY_RELU_SIMPLE_F64;
 
 /// Default negative slope for `LeakyReLU` (matches common framework defaults).
 pub const LEAKY_RELU_DEFAULT_SLOPE: f32 = 0.01;

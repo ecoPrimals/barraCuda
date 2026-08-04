@@ -25,8 +25,7 @@ pub struct LogSumExp {
 static WGSL_LOGSUMEXP_REDUCE_F64: &str =
     include_str!("../shaders/reduce/logsumexp_reduce_f64.wgsl");
 /// Batched logsumexp over rows [batch × width] — f64 (neuralSpring).
-pub static WGSL_LOGSUMEXP_REDUCE: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_LOGSUMEXP_REDUCE_F64.to_string());
+pub const WGSL_LOGSUMEXP_REDUCE: &str = WGSL_LOGSUMEXP_REDUCE_F64;
 /// Batched logsumexp over rows [batch × width] — f32 variant.
 pub const WGSL_LOGSUMEXP_REDUCE_F32: &str =
     include_str!("../shaders/reduce/logsumexp_reduce_f32.wgsl");

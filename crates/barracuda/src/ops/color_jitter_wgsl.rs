@@ -24,8 +24,7 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 const SHADER_F64: &str = include_str!("../shaders/augmentation/color_jitter_f64.wgsl");
-static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_F64.to_string());
+const SHADER_F32: &str = SHADER_F64;
 
 /// Image color augmentation: brightness, contrast, saturation, hue.
 pub struct ColorJitter {

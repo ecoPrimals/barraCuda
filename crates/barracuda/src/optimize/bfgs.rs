@@ -33,8 +33,7 @@ use crate::error::{BarracudaError, Result};
 const WGSL_BFGS_UPDATE_F64: &str = include_str!("../shaders/optimizer/bfgs_update_f64.wgsl");
 
 /// Entry points: `bfgs_update`, `dot_product`, `mat_vec_mul`, `compute_Hy_and_yHy`.
-pub static WGSL_BFGS_UPDATE: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_BFGS_UPDATE_F64.to_string());
+pub const WGSL_BFGS_UPDATE: &str = WGSL_BFGS_UPDATE_F64;
 
 /// GPU shader for batch numerical gradient via central/forward differences.
 ///
@@ -42,8 +41,7 @@ pub static WGSL_BFGS_UPDATE: std::sync::LazyLock<String> =
 const WGSL_BATCH_GRADIENT_F64: &str = include_str!("../shaders/optimizer/batch_gradient_f64.wgsl");
 
 /// WGSL batch gradient shader (f32, downcast from f64).
-pub static WGSL_BATCH_GRADIENT: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_BATCH_GRADIENT_F64.to_string());
+pub const WGSL_BATCH_GRADIENT: &str = WGSL_BATCH_GRADIENT_F64;
 
 /// Configuration for the BFGS optimizer.
 #[derive(Debug, Clone)]

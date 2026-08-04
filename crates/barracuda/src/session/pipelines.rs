@@ -10,8 +10,7 @@
 pub(super) const MATMUL_NAIVE_F32: &str = include_str!("../shaders/math/matmul_f64.wgsl");
 pub(super) const MATMUL_TILED_F32: &str = include_str!("../shaders/math/matmul_tiled_f64.wgsl");
 pub(super) const MATMUL_CPU_F32: &str = include_str!("../shaders/math/matmul_cpu_tiled_f64.wgsl");
-pub(super) const MATMUL_GPU_F32: &str =
-    include_str!("../shaders/math/matmul_gpu_evolved_f64.wgsl");
+pub(super) const MATMUL_GPU_F32: &str = include_str!("../shaders/math/matmul_gpu_evolved_f64.wgsl");
 
 pub(crate) const HEAD_SPLIT_F32: &str = include_str!("../shaders/tensor/head_split_f64.wgsl");
 pub(crate) const HEAD_CONCAT_F32: &str = include_str!("../shaders/tensor/head_concat_f64.wgsl");

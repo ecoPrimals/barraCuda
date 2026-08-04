@@ -31,10 +31,7 @@ impl PrngXoshiro {
     /// Xoshiro128** stateful PRNG (neuralSpring): per-thread state, `n_samples` per thread.
     #[must_use]
     pub fn wgsl_xoshiro128ss() -> &'static str {
-        static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-            include_str!("../shaders/misc/xoshiro128ss_f64.wgsl").to_string()
-        });
-        std::sync::LazyLock::force(&SHADER).as_str()
+        include_str!("../shaders/misc/xoshiro128ss_f64.wgsl")
     }
 
     /// WGSL kernel for Xoshiro PRNG (f32 variant).
@@ -242,7 +239,11 @@ mod tests {
         let result = output.to_f64_vec().unwrap();
         assert_eq!(result.len(), n as usize);
 
-        assert!(result.iter().all(|&x| (0.0..1.0).contains(&x) && x.is_finite()));
+        assert!(
+            result
+                .iter()
+                .all(|&x| (0.0..1.0).contains(&x) && x.is_finite())
+        );
 
         let mean = result.iter().sum::<f64>() / n as f64;
         assert!(
@@ -283,6 +284,9 @@ mod tests {
         let t_b = Tensor::from_data_pod(&seeds_b, vec![4], device).unwrap();
         let out_a = t_a.prng_xoshiro(0).unwrap().to_f64_vec().unwrap();
         let out_b = t_b.prng_xoshiro(0).unwrap().to_f64_vec().unwrap();
-        assert_ne!(out_a, out_b, "different seeds must produce different output");
+        assert_ne!(
+            out_a, out_b,
+            "different seeds must produce different output"
+        );
     }
 }

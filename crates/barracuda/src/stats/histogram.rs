@@ -159,7 +159,7 @@ impl HistogramGpu {
 
         let wg_count = n_values.div_ceil(WORKGROUP_SIZE_1D);
         ComputeDispatch::new(&self.device, "histogram_f32")
-            .shader(super::WGSL_HISTOGRAM_F32.as_str(), "histogram")
+            .shader(super::WGSL_HISTOGRAM_F32, "histogram")
             .storage_read(0, &values_buf)
             .storage_rw(1, bins_buf)
             .uniform(2, &params_buf)

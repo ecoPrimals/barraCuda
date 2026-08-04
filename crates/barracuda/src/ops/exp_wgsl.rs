@@ -27,8 +27,7 @@ impl Exp {
 
     /// Get the WGSL shader source
     fn wgsl_shader() -> &'static str {
-        static SHADER: std::sync::LazyLock<String> =
-            std::sync::LazyLock::new(|| include_str!("../shaders/math/exp_f64.wgsl").to_string());
+        const SHADER: &str = include_str!("../shaders/math/exp_f64.wgsl");
         &SHADER
     }
 

@@ -17,14 +17,12 @@ use crate::tensor::Tensor;
 use std::mem::size_of;
 
 fn rtc_shader_f32() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| include_str!("real_to_complex_f64.wgsl").to_string());
+    const SHADER: &str = include_str!("real_to_complex_f64.wgsl");
     &SHADER
 }
 
 fn extract_shader_f32() -> &'static str {
-    static SHADER: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| include_str!("rfft_extract_f64.wgsl").to_string());
+    const SHADER: &str = include_str!("rfft_extract_f64.wgsl");
     &SHADER
 }
 

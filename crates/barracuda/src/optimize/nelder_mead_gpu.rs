@@ -54,8 +54,7 @@ pub struct NelderMeadGpuResult {
 const WGSL_SIMPLEX_OPS_F64: &str = include_str!("../shaders/optimizer/simplex_ops_f64.wgsl");
 
 /// WGSL shader for Nelder-Mead simplex operations (f64 downcast to f32 when needed).
-pub static WGSL_SIMPLEX_OPS: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_SIMPLEX_OPS_F64.to_string());
+pub const WGSL_SIMPLEX_OPS: &str = WGSL_SIMPLEX_OPS_F64;
 
 /// Only reads back the best solution at the end or periodically.
 pub struct NelderMeadGpu {

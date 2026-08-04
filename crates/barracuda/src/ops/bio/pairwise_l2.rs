@@ -16,9 +16,7 @@ use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::device::compute_pipeline::ComputeDispatch;
 
-static WGSL_PAIRWISE_L2: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    include_str!("../../shaders/math/pairwise_l2_f64.wgsl").to_string()
-});
+const WGSL_PAIRWISE_L2: &str = include_str!("../../shaders/math/pairwise_l2_f64.wgsl");
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]

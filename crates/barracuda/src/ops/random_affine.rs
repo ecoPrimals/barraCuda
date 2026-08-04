@@ -17,8 +17,7 @@ use crate::error::Result;
 use crate::tensor::Tensor;
 
 const SHADER_F64: &str = include_str!("../shaders/augmentation/random_affine_f64.wgsl");
-static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_F64.to_string());
+const SHADER_F32: &str = SHADER_F64;
 
 /// `RandomAffine` operation
 pub struct RandomAffine {

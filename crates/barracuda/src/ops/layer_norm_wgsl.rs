@@ -25,8 +25,7 @@ pub const WGSL_LAYERNORM_FUSED_V2: &str =
 pub const WGSL_LAYERNORM_OPTIMIZED: &str = include_str!("../shaders/norm/layernorm_optimized.wgsl");
 
 /// `LayerNorm` mean/variance pass.
-pub const WGSL_LAYERNORM_MEANVAR: &str =
-    include_str!("../shaders/norm/layernorm_meanvar_f64.wgsl");
+pub const WGSL_LAYERNORM_MEANVAR: &str = include_str!("../shaders/norm/layernorm_meanvar_f64.wgsl");
 
 /// `LayerNorm` stats pass.
 pub const WGSL_LAYERNORM_STATS: &str = include_str!("../shaders/norm/layernorm_stats_f64.wgsl");

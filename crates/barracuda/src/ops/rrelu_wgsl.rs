@@ -13,8 +13,7 @@
 /// f64 is the canonical source.
 const SHADER_F64: &str = include_str!("../shaders/activation/rrelu_f64.wgsl");
 
-static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_F64.to_string());
+const SHADER_F32: &str = SHADER_F64;
 
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, GLOBAL_CACHE};
 use crate::device::tensor_context::get_device_context;

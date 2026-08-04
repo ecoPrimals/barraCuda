@@ -15,8 +15,7 @@ use crate::tensor::Tensor;
 const WGSL_DIV_F64: &str = include_str!("../shaders/math/elementwise_div_f64.wgsl");
 
 /// f32 variant derived from f64 via precision downcast.
-static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_DIV_F64.to_string());
+const SHADER_F32: &str = WGSL_DIV_F64;
 
 /// Element-wise division: output = lhs / rhs.
 pub struct Div {

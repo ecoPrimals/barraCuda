@@ -15,8 +15,7 @@ use crate::tensor::Tensor;
 const WGSL_SUB_F64: &str = include_str!("../shaders/math/elementwise_sub_f64.wgsl");
 
 /// f32 variant derived from f64 via precision downcast.
-static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| WGSL_SUB_F64.to_string());
+const SHADER_F32: &str = WGSL_SUB_F64;
 
 /// Element-wise subtraction: output = lhs - rhs.
 pub struct Sub {

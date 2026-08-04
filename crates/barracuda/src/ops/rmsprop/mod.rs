@@ -132,10 +132,8 @@ impl RMSprop {
     /// WGSL shader source
     pub(super) fn shader() -> &'static str {
         {
-            static SHADER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                include_str!("../../shaders/optimizer/rmsprop_f64.wgsl").to_string()
-            });
-            std::sync::LazyLock::force(&SHADER).as_str()
+            const SHADER: &str = include_str!("../../shaders/optimizer/rmsprop_f64.wgsl");
+            SHADER
         }
     }
 

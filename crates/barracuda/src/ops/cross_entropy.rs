@@ -8,8 +8,7 @@ use crate::tensor::Tensor;
 
 /// f64 is the canonical source — math is universal, precision is silicon.
 static SHADER_F64: &str = include_str!("../shaders/loss/cross_entropy_f64.wgsl");
-static SHADER_F32: std::sync::LazyLock<String> =
-    std::sync::LazyLock::new(|| SHADER_F64.to_string());
+const SHADER_F32: &str = SHADER_F64;
 
 /// Cross entropy loss for classification.
 pub struct CrossEntropy {
@@ -28,7 +27,7 @@ impl CrossEntropy {
     }
 
     fn wgsl_shader() -> &'static str {
-        std::sync::LazyLock::force(&SHADER_F32).as_str()
+        SHADER_F32
     }
 
     /// Executes cross entropy loss and returns a scalar loss tensor.

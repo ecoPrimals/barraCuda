@@ -200,10 +200,10 @@ impl EvaluationCache {
     /// path) or JSON serialization fails.
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let file = File::create(path.as_ref())
-            .map_err(|e| BarracudaError::Internal(format!("Failed to create cache file: {e}")))?;
+            .map_err(|e| BarracudaError::internal(format!("Failed to create cache file: {e}")))?;
         let writer = BufWriter::new(file);
         serde_json::to_writer_pretty(writer, self)
-            .map_err(|e| BarracudaError::Internal(format!("Failed to serialize cache: {e}")))?;
+            .map_err(|e| BarracudaError::internal(format!("Failed to serialize cache: {e}")))?;
         Ok(())
     }
 
@@ -224,10 +224,10 @@ impl EvaluationCache {
     /// permission denied) or JSON deserialization fails.
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let file = File::open(path.as_ref())
-            .map_err(|e| BarracudaError::Internal(format!("Failed to open cache file: {e}")))?;
+            .map_err(|e| BarracudaError::internal(format!("Failed to open cache file: {e}")))?;
         let reader = BufReader::new(file);
         let mut cache: Self = serde_json::from_reader(reader)
-            .map_err(|e| BarracudaError::Internal(format!("Failed to deserialize cache: {e}")))?;
+            .map_err(|e| BarracudaError::internal(format!("Failed to deserialize cache: {e}")))?;
 
         // Recompute best_idx
         cache.recompute_best();

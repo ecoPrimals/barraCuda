@@ -49,22 +49,16 @@ impl BoltzmannSamplingGpu {
     ) -> Result<Vec<u32>> {
         let n = logits.len();
         if n == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "logits cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("logits cannot be empty"));
         }
         if batch_size == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "batch_size must be > 0".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("batch_size must be > 0"));
         }
         let n_classes = n / batch_size;
         if n_classes * batch_size != n {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "logits.len() must be divisible by batch_size: {n} / {batch_size}"
-                ),
-            });
+                )));
         }
 
         let temp_safe = if temperature > 1e-10 {

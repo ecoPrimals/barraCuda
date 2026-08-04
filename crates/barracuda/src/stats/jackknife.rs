@@ -54,9 +54,7 @@ impl JackknifeMeanGpu {
     pub fn dispatch(&self, data: &[f64]) -> Result<JackknifeResult> {
         let n = data.len();
         if n < 2 {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: "jackknife requires at least 2 observations".to_string(),
-            });
+            return Err(crate::error::BarracudaError::invalid_input("jackknife requires at least 2 observations"));
         }
 
         let full_sum: f64 = data.iter().sum();

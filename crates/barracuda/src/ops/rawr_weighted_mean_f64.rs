@@ -75,29 +75,21 @@ impl RawrWeightedMeanGpu {
         confidence: f64,
     ) -> Result<RawrResult> {
         if data.len() != weights.len() {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "data and weights must have same length: {} vs {}",
                     data.len(),
                     weights.len()
-                ),
-            });
+                )));
         }
         let n = data.len();
         if n == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "data cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("data cannot be empty"));
         }
         if n_resamples == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "n_resamples must be > 0".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("n_resamples must be > 0"));
         }
         if !(0.0..1.0).contains(&confidence) {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("confidence must be in (0, 1), got {confidence}"),
-            });
+            return Err(BarracudaError::invalid_input(format!("confidence must be in (0, 1), got {confidence}")));
         }
 
         let sum_wx: f64 = data.iter().zip(weights.iter()).map(|(d, w)| d * w).sum();

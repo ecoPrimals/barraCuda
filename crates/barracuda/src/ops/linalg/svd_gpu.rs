@@ -256,13 +256,11 @@ impl SvdGpu {
         max_sweeps: u32,
     ) -> Result<(Vec<f64>, Vec<f64>)> {
         if data.len() != m * n {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Expected {} elements for {m}x{n} matrix, got {}",
                     m * n,
                     data.len()
-                ),
-            });
+                )));
         }
         let (mu, nu) = (m as u32, n as u32);
 

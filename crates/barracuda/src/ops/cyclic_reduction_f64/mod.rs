@@ -77,16 +77,14 @@ impl CyclicReductionF64 {
         let n = b.len();
 
         if a.len() != n || c.len() != n || d.len() != n {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "All vectors must have length {}: a={}, b={}, c={}, d={}",
                     n,
                     a.len(),
                     b.len(),
                     c.len(),
                     d.len()
-                ),
-            });
+                )));
         }
 
         if n == 0 {
@@ -95,9 +93,7 @@ impl CyclicReductionF64 {
 
         if n == 1 {
             if b[0].abs() < 1e-14 {
-                return Err(BarracudaError::InvalidInput {
-                    message: "Singular matrix: b[0] = 0".to_string(),
-                });
+                return Err(BarracudaError::invalid_input("Singular matrix: b[0] = 0"));
             }
             return Ok(vec![d[0] / b[0]]);
         }

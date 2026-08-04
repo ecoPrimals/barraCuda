@@ -67,9 +67,7 @@ pub async fn cross_attention(
     let kv_size = batch_size * num_heads * encoder_len * head_dim;
 
     if query.len() != q_size || key.len() != kv_size || value.len() != kv_size {
-        return Err(BarracudaError::InvalidInput {
-            message: "Dimension mismatch".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Dimension mismatch"));
     }
 
     let mut output = vec![0.0f32; q_size];

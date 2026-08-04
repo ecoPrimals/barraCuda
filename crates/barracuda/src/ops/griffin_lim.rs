@@ -46,28 +46,22 @@ impl GriffinLim {
     ) -> Result<Self> {
         let mag_size: usize = magnitude.shape().iter().product();
         if mag_size != n_frames * n_freqs {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Magnitude size ({}) must equal n_frames * n_freqs ({})",
                     mag_size,
                     n_frames * n_freqs
-                ),
-            });
+                )));
         }
 
         let expected_freqs = n_fft / 2 + 1;
         if n_freqs != expected_freqs {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "n_freqs ({n_freqs}) must equal n_fft/2 + 1 ({expected_freqs}) for STFT consistency"
-                ),
-            });
+                )));
         }
 
         if hop_length == 0 || hop_length > n_fft {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("hop_length ({hop_length}) must be in [1, n_fft={n_fft}]"),
-            });
+            return Err(BarracudaError::invalid_input(format!("hop_length ({hop_length}) must be in [1, n_fft={n_fft}]")));
         }
 
         Ok(Self {

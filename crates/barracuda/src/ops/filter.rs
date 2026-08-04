@@ -160,13 +160,11 @@ impl Filter {
         let n_u32 = n as u32;
 
         if n_u32 > SCAN_L2_THRESHOLD {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "ParallelFilter: input length {n} exceeds the two-level maximum \
                      ({SCAN_L2_THRESHOLD} = WG³). Extend to a three-level hierarchy for \
                      genome-scale inputs."
-                ),
-            });
+                )));
         }
 
         // Empty input: return immediately without creating zero-sized buffers (wgpu rejects them)

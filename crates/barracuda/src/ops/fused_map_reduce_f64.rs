@@ -446,9 +446,7 @@ impl FusedMapReduceF64 {
     /// out of memory, mapping channel closed).
     pub fn dot(&self, a: &[f64], b: &[f64]) -> Result<f64> {
         if a.len() != b.len() {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: format!("dot: length mismatch ({} vs {})", a.len(), b.len()),
-            });
+            return Err(crate::error::BarracudaError::invalid_input(format!("dot: length mismatch ({} vs {})", a.len(), b.len())));
         }
         let products: Vec<f64> = a.iter().zip(b.iter()).map(|(x, y)| x * y).collect();
         self.sum(&products)

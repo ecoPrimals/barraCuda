@@ -66,36 +66,28 @@ impl PopulationPkF64 {
     /// Returns [`Err`] if any parameter is invalid.
     pub fn new(device: Arc<WgpuDevice>, config: PopulationPkConfig) -> Result<Self> {
         if config.dose_mg <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "PopulationPkF64: dose_mg must be > 0, got {}",
                     config.dose_mg
-                ),
-            });
+                )));
         }
         if config.f_bioavail <= 0.0 || config.f_bioavail > 1.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "PopulationPkF64: f_bioavail must be in (0, 1], got {}",
                     config.f_bioavail
-                ),
-            });
+                )));
         }
         if config.base_cl <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "PopulationPkF64: base_cl must be > 0, got {}",
                     config.base_cl
-                ),
-            });
+                )));
         }
         if config.cl_low <= 0.0 || config.cl_high <= config.cl_low {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "PopulationPkF64: need 0 < cl_low < cl_high, got [{}, {}]",
                     config.cl_low, config.cl_high
-                ),
-            });
+                )));
         }
         Ok(Self { device, config })
     }

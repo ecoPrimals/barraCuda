@@ -89,11 +89,9 @@ where
 
         // Check for zero derivative
         if dfx.abs() < 1e-14 {
-            return Err(BarracudaError::Numerical {
-                message: format!(
+            return Err(BarracudaError::numerical(format!(
                     "Newton-Raphson: derivative is near zero at x = {x}, f'(x) = {dfx}"
-                ),
-            });
+                )));
         }
 
         // Newton step
@@ -101,12 +99,10 @@ where
 
         // Check for divergence
         if !x.is_finite() {
-            return Err(BarracudaError::Numerical {
-                message: format!(
+            return Err(BarracudaError::numerical(format!(
                     "Newton-Raphson diverged: x became non-finite after {} iterations",
                     iter + 1
-                ),
-            });
+                )));
         }
     }
 
@@ -174,11 +170,9 @@ where
 
         // Check for zero derivative
         if dfx.abs() < 1e-14 {
-            return Err(BarracudaError::Numerical {
-                message: format!(
+            return Err(BarracudaError::numerical(format!(
                     "Newton-Raphson: numerical derivative is near zero at x = {x}, f'(x) ≈ {dfx}"
-                ),
-            });
+                )));
         }
 
         // Newton step
@@ -186,12 +180,10 @@ where
 
         // Check for divergence
         if !x.is_finite() {
-            return Err(BarracudaError::Numerical {
-                message: format!(
+            return Err(BarracudaError::numerical(format!(
                     "Newton-Raphson diverged: x became non-finite after {} iterations",
                     iter + 1
-                ),
-            });
+                )));
         }
     }
 
@@ -255,12 +247,10 @@ where
 
         // Check for identical function values
         if (f1 - f0).abs() < 1e-14 {
-            return Err(BarracudaError::Numerical {
-                message: format!(
+            return Err(BarracudaError::numerical(format!(
                     "Secant method: f(x0) ≈ f(x1), cannot compute approximation. \
                     x0 = {x0}, x1 = {x1}, f0 = {f0}, f1 = {f1}"
-                ),
-            });
+                )));
         }
 
         // Secant step
@@ -274,12 +264,10 @@ where
 
         // Check for divergence
         if !x1.is_finite() || !f1.is_finite() {
-            return Err(BarracudaError::Numerical {
-                message: format!(
+            return Err(BarracudaError::numerical(format!(
                     "Secant method diverged: x or f(x) became non-finite after {} iterations",
                     iter + 1
-                ),
-            });
+                )));
         }
     }
 

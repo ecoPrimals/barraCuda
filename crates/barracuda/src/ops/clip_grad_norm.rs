@@ -35,9 +35,7 @@ impl ClipGradNorm {
     /// readback fails (e.g. device lost or out of memory).
     pub fn new(gradients: Tensor, max_norm: f32) -> Result<Self> {
         if max_norm < 0.0 {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: "max_norm must be non-negative".to_string(),
-            });
+            return Err(crate::error::BarracudaError::invalid_input("max_norm must be non-negative"));
         }
         Ok(Self {
             gradients,

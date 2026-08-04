@@ -87,9 +87,7 @@ impl CrankNicolson {
     ) -> Result<Vec<f32>> {
         let n = u0.len();
         if n == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "Initial condition must have at least 1 point".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Initial condition must have at least 1 point"));
         }
 
         let courant = alpha * dt / (dx * dx);
@@ -142,18 +140,14 @@ impl CrankNicolson {
                     (0, _, BoundaryCondition::Neumann(0.0), _) => (u[0], u[1]),
                     (0, _, BoundaryCondition::Dirichlet(l), _) => (*l, u[1]),
                     (0, _, BoundaryCondition::Neumann(_), _) => {
-                        return Err(BarracudaError::InvalidInput {
-                            message: "Non-zero Neumann flux not yet implemented".to_string(),
-                        });
+                        return Err(BarracudaError::invalid_input("Non-zero Neumann flux not yet implemented"));
                     }
                     (i, _, _, BoundaryCondition::Neumann(0.0)) if i == n - 1 && n > 1 => {
                         (u[n - 2], u[n - 1])
                     }
                     (i, _, _, BoundaryCondition::Dirichlet(r)) if i == n - 1 => (u[n - 2], *r),
                     (i, _, _, BoundaryCondition::Neumann(_)) if i == n - 1 => {
-                        return Err(BarracudaError::InvalidInput {
-                            message: "Non-zero Neumann flux not yet implemented".to_string(),
-                        });
+                        return Err(BarracudaError::invalid_input("Non-zero Neumann flux not yet implemented"));
                     }
                     _ => (u[i - 1], u[i + 1]),
                 };

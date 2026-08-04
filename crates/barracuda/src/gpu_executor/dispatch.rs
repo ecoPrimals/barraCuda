@@ -41,14 +41,12 @@ pub async fn build_tensor(
     let numel = desc.numel;
     let elem = desc.dtype.size_bytes();
     if data_bytes.len() < numel * elem {
-        return Err(crate::error::BarracudaError::InvalidInput {
-            message: format!(
+        return Err(crate::error::BarracudaError::invalid_input(format!(
                 "execute: expected {} bytes for {numel} × {dtype:?} elements, got {}",
                 numel * elem,
                 data_bytes.len(),
                 dtype = desc.dtype
-            ),
-        });
+            )));
     }
     let floats: Vec<f32> = match desc.dtype {
         DType::F32 => data_bytes
@@ -220,9 +218,7 @@ pub(super) async fn execute_dispatch(
             .broadcast(target_shape.clone())?,
         MathOp::Concat { .. } => {
             if inputs.len() < 2 {
-                return Err(crate::error::BarracudaError::InvalidInput {
-                    message: "Concat requires at least 2 inputs".to_string(),
-                });
+                return Err(crate::error::BarracudaError::invalid_input("Concat requires at least 2 inputs"));
             }
             let a = build_tensor(&inputs[0], device).await?;
             let b = build_tensor(&inputs[1], device).await?;
@@ -246,9 +242,7 @@ pub(super) async fn execute_dispatch(
             groups,
         } => {
             if inputs.len() < 2 {
-                return Err(crate::error::BarracudaError::InvalidInput {
-                    message: "Conv2D requires 2 inputs (input, kernel)".to_string(),
-                });
+                return Err(crate::error::BarracudaError::invalid_input("Conv2D requires 2 inputs (input, kernel)"));
             }
             let in_desc = inputs[0].descriptor();
             let kernel_desc = inputs[1].descriptor();

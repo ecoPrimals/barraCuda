@@ -183,6 +183,39 @@ pub enum BarracudaError {
 }
 
 impl BarracudaError {
+    /// Construct an invalid-input error.
+    pub fn invalid_input(msg: impl Into<String>) -> Self {
+        Self::InvalidInput {
+            message: msg.into(),
+        }
+    }
+
+    /// Construct a numerical error.
+    pub fn numerical(msg: impl Into<String>) -> Self {
+        Self::Numerical {
+            message: msg.into(),
+        }
+    }
+
+    /// Construct an execution error.
+    pub fn execution(msg: impl Into<String>) -> Self {
+        Self::ExecutionError {
+            message: msg.into(),
+        }
+    }
+
+    /// Construct an internal error.
+    pub fn internal(msg: impl Into<String>) -> Self {
+        Self::Internal(msg.into())
+    }
+
+    /// Construct a not-implemented error.
+    pub fn not_implemented(feature: impl Into<String>) -> Self {
+        Self::NotImplemented {
+            feature: feature.into(),
+        }
+    }
+
     /// Construct a device error.
     pub fn device(msg: impl Into<String>) -> Self {
         Self::Device(msg.into())
@@ -345,8 +378,8 @@ impl From<std::io::Error> for BarracudaError {
 /// Returns [`BarracudaError::InvalidInput`] if `v > u32::MAX`.
 #[inline]
 pub fn u32_from_u64(v: u64) -> Result<u32> {
-    u32::try_from(v).map_err(|_| BarracudaError::InvalidInput {
-        message: format!("value {v} exceeds u32::MAX ({max})", max = u32::MAX),
+    u32::try_from(v).map_err(|_| {
+        BarracudaError::invalid_input(format!("value {v} exceeds u32::MAX ({max})", max = u32::MAX))
     })
 }
 
@@ -357,8 +390,8 @@ pub fn u32_from_u64(v: u64) -> Result<u32> {
 /// Returns [`BarracudaError::InvalidInput`] if `v > u32::MAX`.
 #[inline]
 pub fn u32_from_usize(v: usize) -> Result<u32> {
-    u32::try_from(v).map_err(|_| BarracudaError::InvalidInput {
-        message: format!("value {v} exceeds u32::MAX ({max})", max = u32::MAX),
+    u32::try_from(v).map_err(|_| {
+        BarracudaError::invalid_input(format!("value {v} exceeds u32::MAX ({max})", max = u32::MAX))
     })
 }
 
@@ -448,9 +481,7 @@ mod tests {
 
     #[test]
     fn invalid_input_variant_constructs_and_displays() {
-        let e = BarracudaError::InvalidInput {
-            message: "negative stride".to_string(),
-        };
+        let e = BarracudaError::invalid_input("negative stride");
         let s = e.to_string();
         assert!(s.contains("Invalid input"));
         assert!(s.contains("negative stride"));
@@ -458,9 +489,7 @@ mod tests {
 
     #[test]
     fn execution_error_variant_constructs_and_displays() {
-        let e = BarracudaError::ExecutionError {
-            message: "kernel crashed".to_string(),
-        };
+        let e = BarracudaError::execution("kernel crashed");
         let s = e.to_string();
         assert!(s.contains("Execution error"));
         assert!(s.contains("kernel crashed"));
@@ -490,7 +519,7 @@ mod tests {
 
     #[test]
     fn internal_variant_constructs_and_displays() {
-        let e = BarracudaError::Internal("unexpected state".to_string());
+        let e = BarracudaError::internal("unexpected state");
         let s = e.to_string();
         assert!(s.contains("Internal error"));
         assert!(s.contains("unexpected state"));
@@ -570,7 +599,7 @@ mod tests {
 
     #[test]
     fn result_err_works() {
-        let r: Result<i32> = Err(BarracudaError::Internal("test".into()));
+        let r: Result<i32> = Err(BarracudaError::internal("test"));
         let Err(e) = r else { panic!("expected Err") };
         assert!(e.to_string().contains("Internal error"));
     }

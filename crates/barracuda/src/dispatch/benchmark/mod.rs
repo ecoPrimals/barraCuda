@@ -421,7 +421,7 @@ impl BenchmarkSuite {
     /// Benchmark GPU implementation
     fn benchmark_gpu(&self, operation: &str, size: usize) -> Result<Duration> {
         if !self.gpu_available {
-            return Err(BarracudaError::Internal("GPU not available".to_string()));
+            return Err(BarracudaError::internal("GPU not available"));
         }
 
         // Generate test data

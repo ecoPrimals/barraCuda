@@ -130,25 +130,19 @@ pub fn chi2_decomposed(
 ) -> Result<Chi2Decomposed> {
     let n = observed.len();
     if n != expected.len() {
-        return Err(BarracudaError::InvalidInput {
-            message: format!(
+        return Err(BarracudaError::invalid_input(format!(
                 "observed and expected must have same length: {} vs {}",
                 n,
                 expected.len()
-            ),
-        });
+            )));
     }
     if n == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "observed and expected cannot be empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("observed and expected cannot be empty"));
     }
 
     let dof = n.saturating_sub(n_params);
     if dof == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "degrees of freedom must be > 0".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("degrees of freedom must be > 0"));
     }
 
     let mut chi2_total = 0.0;
@@ -161,9 +155,7 @@ pub fn chi2_decomposed(
         let e = expected[i];
 
         if e <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("expected[{i}] = {e} must be > 0"),
-            });
+            return Err(BarracudaError::invalid_input(format!("expected[{i}] = {e} must be > 0")));
         }
 
         let residual = o - e;
@@ -230,21 +222,15 @@ pub fn chi2_decomposed_weighted(
 ) -> Result<Chi2Decomposed> {
     let n = observed.len();
     if n != expected.len() || n != uncertainties.len() {
-        return Err(BarracudaError::InvalidInput {
-            message: "observed, expected, and uncertainties must have same length".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("observed, expected, and uncertainties must have same length"));
     }
     if n == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "arrays cannot be empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("arrays cannot be empty"));
     }
 
     let dof = n.saturating_sub(n_params);
     if dof == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "degrees of freedom must be > 0".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("degrees of freedom must be > 0"));
     }
 
     let mut chi2_total = 0.0;
@@ -258,9 +244,7 @@ pub fn chi2_decomposed_weighted(
         let sigma = uncertainties[i];
 
         if sigma <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("uncertainties[{i}] = {sigma} must be > 0"),
-            });
+            return Err(BarracudaError::invalid_input(format!("uncertainties[{i}] = {sigma} must be > 0")));
         }
 
         let residual = o - e;

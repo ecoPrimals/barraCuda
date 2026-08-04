@@ -78,19 +78,13 @@ impl HillFunctionF64 {
     /// Returns [`Err`] if K, n, or emax are not positive.
     pub fn dose_response(device: Arc<WgpuDevice>, k: f64, n: f64, emax: f64) -> Result<Self> {
         if k <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("HillFunctionF64: K must be > 0, got {k}"),
-            });
+            return Err(BarracudaError::invalid_input(format!("HillFunctionF64: K must be > 0, got {k}")));
         }
         if n <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("HillFunctionF64: n must be > 0, got {n}"),
-            });
+            return Err(BarracudaError::invalid_input(format!("HillFunctionF64: n must be > 0, got {n}")));
         }
         if emax <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("HillFunctionF64: emax must be > 0, got {emax}"),
-            });
+            return Err(BarracudaError::invalid_input(format!("HillFunctionF64: emax must be > 0, got {emax}")));
         }
         Ok(Self { device, k, n, emax })
     }

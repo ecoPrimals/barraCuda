@@ -83,12 +83,10 @@ where
 
     // Check bracketing
     if fa * fb > 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!(
+        return Err(BarracudaError::invalid_input(format!(
                 "Brent's method requires f(a) and f(b) to have opposite signs: \
                 f({a}) = {fa}, f({b}) = {fb}"
-            ),
-        });
+            )));
     }
 
     // Ensure |f(a)| >= |f(b)| (so b is the better approximation)

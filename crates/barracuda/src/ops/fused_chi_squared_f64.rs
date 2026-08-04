@@ -56,25 +56,19 @@ impl FusedChiSquaredGpu {
         expected: &[f64],
     ) -> Result<ChiSquaredTestResult> {
         if observed.len() != expected.len() {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "observed and expected must have same length: {} vs {}",
                     observed.len(),
                     expected.len()
-                ),
-            });
+                )));
         }
         let n = observed.len();
         if n == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "observed and expected cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("observed and expected cannot be empty"));
         }
         for (i, &e) in expected.iter().enumerate() {
             if e <= 0.0 {
-                return Err(BarracudaError::InvalidInput {
-                    message: format!("expected[{i}] must be positive, got {e}"),
-                });
+                return Err(BarracudaError::invalid_input(format!("expected[{i}] must be positive, got {e}")));
             }
         }
 

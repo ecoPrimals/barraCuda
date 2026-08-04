@@ -62,9 +62,7 @@ pub async fn causal_attention(
 ) -> Result<Vec<f32>> {
     let expected_size = batch_size * num_heads * seq_len * head_dim;
     if query.len() != expected_size {
-        return Err(BarracudaError::InvalidInput {
-            message: "Dimension mismatch".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Dimension mismatch"));
     }
 
     let mut output = vec![0.0f32; expected_size];

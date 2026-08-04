@@ -149,9 +149,7 @@ where
 {
     let n = x0.len();
     if n == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "x0 must not be empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("x0 must not be empty"));
     }
 
     let mut x = x0.to_vec();
@@ -279,9 +277,7 @@ where
     let dg: f64 = d.iter().zip(gx.iter()).map(|(di, gi)| di * gi).sum(); // directional derivative
 
     if dg >= 0.0 {
-        return Err(BarracudaError::Numerical {
-            message: "Search direction is not a descent direction".to_string(),
-        });
+        return Err(BarracudaError::numerical("Search direction is not a descent direction"));
     }
 
     let mut n_evals = 0;

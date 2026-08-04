@@ -106,24 +106,16 @@ impl CrankNicolsonConfig {
     /// Returns [`Err`] if `alpha` ≤ 0, `dx` ≤ 0, `dt` ≤ 0, or `nx` < 3.
     pub fn validate(&self) -> Result<()> {
         if self.alpha <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "alpha must be positive".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("alpha must be positive"));
         }
         if self.dx <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "dx must be positive".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("dx must be positive"));
         }
         if self.dt <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "dt must be positive".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("dt must be positive"));
         }
         if self.nx < 3 {
-            return Err(BarracudaError::InvalidInput {
-                message: "nx must be >= 3".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("nx must be >= 3"));
         }
         Ok(())
     }
@@ -167,13 +159,11 @@ impl HeatEquation1D {
         config.validate()?;
 
         if initial.len() != config.nx {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Initial condition length {} != nx {}",
                     initial.len(),
                     config.nx
-                ),
-            });
+                )));
         }
 
         let r = config.courant_number();
@@ -358,9 +348,7 @@ pub fn crank_nicolson_step(
 ) -> Result<Vec<f64>> {
     let n = u.len();
     if n == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "u must have at least 1 interior point".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("u must have at least 1 interior point"));
     }
 
     let r = alpha * dt / (dx * dx);

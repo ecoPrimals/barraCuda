@@ -61,14 +61,10 @@ impl HistogramGpu {
     pub fn dispatch(&self, values: &[f64], n_bins: u32) -> Result<Vec<u32>> {
         let n_values = values.len();
         if n_values == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "values cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("values cannot be empty"));
         }
         if n_bins == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "n_bins must be > 0".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("n_bins must be > 0"));
         }
 
         let (min_val, max_val) = values

@@ -66,7 +66,7 @@ impl GuardedEncoder {
     pub fn encoder(&self) -> Result<&wgpu::CommandEncoder> {
         self.encoder
             .as_ref()
-            .ok_or_else(|| BarracudaError::Internal("encoder already finished".into()))
+            .ok_or_else(|| BarracudaError::internal("encoder already finished"))
     }
 
     /// Get mutable reference to the encoder.
@@ -76,7 +76,7 @@ impl GuardedEncoder {
     pub fn encoder_mut(&mut self) -> Result<&mut wgpu::CommandEncoder> {
         self.encoder
             .as_mut()
-            .ok_or_else(|| BarracudaError::Internal("encoder already finished".into()))
+            .ok_or_else(|| BarracudaError::internal("encoder already finished"))
     }
 
     /// Finish encoding and decrement the active encoder count.

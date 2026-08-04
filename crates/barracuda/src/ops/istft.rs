@@ -45,9 +45,7 @@ impl ISTFT {
         // Validate window length
         let window_size: usize = window.shape().iter().product();
         if window_size != n_fft {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("Window length ({window_size}) must match n_fft ({n_fft})"),
-            });
+            return Err(BarracudaError::invalid_input(format!("Window length ({window_size}) must match n_fft ({n_fft})")));
         }
 
         // Validate STFT data size
@@ -55,18 +53,14 @@ impl ISTFT {
         let bins_per_frame = n_fft / 2 + 1;
         let expected_size = num_frames * bins_per_frame * 2; // Complex pairs
         if stft_size != expected_size {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "STFT data size ({stft_size}) must equal num_frames * bins_per_frame * 2 ({expected_size})"
-                ),
-            });
+                )));
         }
 
         // Ensure same device
         if !std::ptr::eq(stft_data.device().as_ref(), window.device().as_ref()) {
-            return Err(BarracudaError::InvalidInput {
-                message: "STFT data and window must be on the same device".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("STFT data and window must be on the same device"));
         }
 
         Ok(Self {

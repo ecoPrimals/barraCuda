@@ -43,15 +43,11 @@ use crate::error::{BarracudaError, Result};
 /// ```
 pub fn pearson_correlation(x: &[f64], y: &[f64]) -> Result<f64> {
     if x.len() != y.len() {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("Vectors must have same length: {} vs {}", x.len(), y.len()),
-        });
+        return Err(BarracudaError::invalid_input(format!("Vectors must have same length: {} vs {}", x.len(), y.len())));
     }
 
     if x.len() < 2 {
-        return Err(BarracudaError::InvalidInput {
-            message: "Need at least 2 data points for correlation".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Need at least 2 data points for correlation"));
     }
 
     let n = x.len() as f64;
@@ -107,15 +103,11 @@ pub fn pearson_correlation(x: &[f64], y: &[f64]) -> Result<f64> {
 /// ```
 pub fn covariance(x: &[f64], y: &[f64]) -> Result<f64> {
     if x.len() != y.len() {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("Vectors must have same length: {} vs {}", x.len(), y.len()),
-        });
+        return Err(BarracudaError::invalid_input(format!("Vectors must have same length: {} vs {}", x.len(), y.len())));
     }
 
     if x.len() < 2 {
-        return Err(BarracudaError::InvalidInput {
-            message: "Need at least 2 data points for covariance".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Need at least 2 data points for covariance"));
     }
 
     let n = x.len() as f64;
@@ -142,9 +134,7 @@ pub fn covariance(x: &[f64], y: &[f64]) -> Result<f64> {
 /// Returns [`Err`] if there are fewer than 2 data points.
 pub fn variance(x: &[f64]) -> Result<f64> {
     if x.len() < 2 {
-        return Err(BarracudaError::InvalidInput {
-            message: "Need at least 2 data points for variance".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Need at least 2 data points for variance"));
     }
 
     let n = x.len() as f64;
@@ -203,31 +193,23 @@ pub fn std_dev(x: &[f64]) -> Result<f64> {
 /// ```
 pub fn correlation_matrix(data: &[Vec<f64>]) -> Result<Vec<f64>> {
     if data.is_empty() {
-        return Err(BarracudaError::InvalidInput {
-            message: "Data matrix is empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Data matrix is empty"));
     }
 
     let n = data.len();
     if n < 2 {
-        return Err(BarracudaError::InvalidInput {
-            message: "Need at least 2 observations".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Need at least 2 observations"));
     }
 
     let p = data[0].len();
     if p == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "Data has no variables".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Data has no variables"));
     }
 
     // Verify all rows have same length
     for (i, row) in data.iter().enumerate() {
         if row.len() != p {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("Row {} has {} elements, expected {}", i, row.len(), p),
-            });
+            return Err(BarracudaError::invalid_input(format!("Row {} has {} elements, expected {}", i, row.len(), p)));
         }
     }
 
@@ -270,31 +252,23 @@ pub fn correlation_matrix(data: &[Vec<f64>]) -> Result<Vec<f64>> {
 /// rows have inconsistent lengths, or [`covariance`] fails for any pair.
 pub fn covariance_matrix(data: &[Vec<f64>]) -> Result<Vec<f64>> {
     if data.is_empty() {
-        return Err(BarracudaError::InvalidInput {
-            message: "Data matrix is empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Data matrix is empty"));
     }
 
     let n = data.len();
     if n < 2 {
-        return Err(BarracudaError::InvalidInput {
-            message: "Need at least 2 observations".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Need at least 2 observations"));
     }
 
     let p = data[0].len();
     if p == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "Data has no variables".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Data has no variables"));
     }
 
     // Verify all rows have same length
     for (i, row) in data.iter().enumerate() {
         if row.len() != p {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("Row {} has {} elements, expected {}", i, row.len(), p),
-            });
+            return Err(BarracudaError::invalid_input(format!("Row {} has {} elements, expected {}", i, row.len(), p)));
         }
     }
 
@@ -326,15 +300,11 @@ pub fn covariance_matrix(data: &[Vec<f64>]) -> Result<Vec<f64>> {
 /// or if [`pearson_correlation`] fails on the ranks.
 pub fn spearman_correlation(x: &[f64], y: &[f64]) -> Result<f64> {
     if x.len() != y.len() {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("Vectors must have same length: {} vs {}", x.len(), y.len()),
-        });
+        return Err(BarracudaError::invalid_input(format!("Vectors must have same length: {} vs {}", x.len(), y.len())));
     }
 
     if x.len() < 2 {
-        return Err(BarracudaError::InvalidInput {
-            message: "Need at least 2 data points".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Need at least 2 data points"));
     }
 
     // Compute ranks

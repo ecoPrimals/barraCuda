@@ -44,25 +44,19 @@ pub async fn fused_mlp(
     activation: Activation,
 ) -> Result<Tensor> {
     if weights.len() != biases.len() {
-        return Err(BarracudaError::InvalidInput {
-            message: format!(
+        return Err(BarracudaError::invalid_input(format!(
                 "fused_mlp: weights len {} != biases len {}",
                 weights.len(),
                 biases.len()
-            ),
-        });
+            )));
     }
     if weights.is_empty() {
-        return Err(BarracudaError::InvalidInput {
-            message: "fused_mlp: at least one layer required".into(),
-        });
+        return Err(BarracudaError::invalid_input("fused_mlp: at least one layer required"));
     }
     let device = input.device();
     let shape = input.shape();
     if shape.len() != 2 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("fused_mlp: input must be 2D, got {shape:?}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("fused_mlp: input must be 2D, got {shape:?}")));
     }
     let batch = shape[0];
     let mut in_features = shape[1];
@@ -73,22 +67,16 @@ pub async fn fused_mlp(
     for (i, (w, b)) in weights.iter().zip(biases.iter()).enumerate() {
         let w_shape = w.shape();
         let (out_features, in_feat) = if w_shape.len() != 2 {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("fused_mlp: weight[{i}] must be 2D"),
-            });
+            return Err(BarracudaError::invalid_input(format!("fused_mlp: weight[{i}] must be 2D")));
         } else if w_shape[1] == in_features {
             (w_shape[0], w_shape[1])
         } else if w_shape[0] == in_features {
             (w_shape[1], w_shape[0])
         } else {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("fused_mlp: weight[{i}] shape {w_shape:?} incompatible"),
-            });
+            return Err(BarracudaError::invalid_input(format!("fused_mlp: weight[{i}] shape {w_shape:?} incompatible")));
         };
         if b.shape() != [out_features] {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("fused_mlp: bias[{i}] shape mismatch"),
-            });
+            return Err(BarracudaError::invalid_input(format!("fused_mlp: bias[{i}] shape mismatch")));
         }
         layer_dims.push((in_feat, out_features));
         let buf = device.device.create_buffer(&wgpu::BufferDescriptor {
@@ -160,9 +148,7 @@ pub async fn fused_mlp(
     batch_enc.submit();
     let last = layer_buffers
         .last()
-        .ok_or_else(|| BarracudaError::InvalidInput {
-            message: "fused_mlp: no layer buffers".into(),
-        })?
+        .ok_or_else(|| BarracudaError::invalid_input("fused_mlp: no layer buffers"))?
         .clone();
     Ok(Tensor::from_arc_buffer(
         last,

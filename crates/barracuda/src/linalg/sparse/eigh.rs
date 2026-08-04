@@ -17,12 +17,10 @@ use super::CsrMatrix;
 /// Convert a symmetric `CsrMatrix` to `SpectralCsrMatrix` for Lanczos.
 fn to_spectral(matrix: &CsrMatrix) -> Result<SpectralCsrMatrix> {
     if matrix.n_rows != matrix.n_cols {
-        return Err(BarracudaError::InvalidInput {
-            message: format!(
+        return Err(BarracudaError::invalid_input(format!(
                 "sparse_eigh requires square matrix, got {}×{}",
                 matrix.n_rows, matrix.n_cols
-            ),
-        });
+            )));
     }
     Ok(SpectralCsrMatrix {
         n: matrix.n_rows,

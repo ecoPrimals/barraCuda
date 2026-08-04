@@ -110,14 +110,10 @@ impl ResumableNelderMead {
     pub fn new(x0: &[f64], bounds: &[(f64, f64)], tol: f64) -> Result<Self> {
         let n = x0.len();
         if bounds.len() != n {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("Bounds length {} must match x0 length {}", bounds.len(), n),
-            });
+            return Err(BarracudaError::invalid_input(format!("Bounds length {} must match x0 length {}", bounds.len(), n)));
         }
         if n == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "x0 must be non-empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("x0 must be non-empty"));
         }
 
         Ok(Self {

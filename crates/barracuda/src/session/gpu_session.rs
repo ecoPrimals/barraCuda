@@ -80,9 +80,7 @@ impl GpuSessionBuilder {
             Arc::new(
                 WgpuDevice::new()
                     .await
-                    .map_err(|e| BarracudaError::InvalidInput {
-                        message: format!("Failed to create WgpuDevice: {e}"),
-                    })?,
+                    .map_err(|e| BarracudaError::invalid_input(format!("Failed to create WgpuDevice: {e}")))?,
             )
         };
 
@@ -110,9 +108,7 @@ impl GpuSessionBuilder {
                 workgroup_sizes: vec![256],
                 verbose: false,
             };
-            warmup_device(device.as_ref(), &config).map_err(|e| BarracudaError::InvalidInput {
-                message: format!("Warmup failed: {e}"),
-            })?;
+            warmup_device(device.as_ref(), &config).map_err(|e| BarracudaError::invalid_input(format!("Warmup failed: {e}")))?;
         }
 
         Ok(GpuSession {

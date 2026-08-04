@@ -57,10 +57,10 @@ impl NcbiCache {
         let path = self.cache_path(accession);
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)
-                .map_err(|e| BarracudaError::Internal(format!("create cache dir: {e}")))?;
+                .map_err(|e| BarracudaError::internal(format!("create cache dir: {e}")))?;
         }
         std::fs::write(&path, data)
-            .map_err(|e| BarracudaError::Internal(format!("write cache: {e}")))?;
+            .map_err(|e| BarracudaError::internal(format!("write cache: {e}")))?;
         Ok(())
     }
 
@@ -72,7 +72,7 @@ impl NcbiCache {
         let path = self.cache_path(accession);
         std::fs::read(&path)
             .map(bytes::Bytes::from)
-            .map_err(|e| BarracudaError::Internal(format!("read cache: {e}")))
+            .map_err(|e| BarracudaError::internal(format!("read cache: {e}")))
     }
 
     /// Remove all cached data.
@@ -81,7 +81,7 @@ impl NcbiCache {
     pub fn clear(&self) -> Result<()> {
         if self.cache_dir.exists() {
             std::fs::remove_dir_all(&self.cache_dir)
-                .map_err(|e| BarracudaError::Internal(format!("clear cache: {e}")))?;
+                .map_err(|e| BarracudaError::internal(format!("clear cache: {e}")))?;
         }
         Ok(())
     }
@@ -91,42 +91,32 @@ impl NcbiCache {
 ///
 /// Returns `$XDG_CACHE_HOME` if set, otherwise `$HOME/.cache`.
 fn xdg_cache_dir() -> Result<PathBuf> {
-    if let Ok(xdg) = std::env::var("XDG_CACHE_HOME")
+    if let Ok(xdg) = std::env::var(crate::env_keys::XDG_CACHE_HOME)
         && !xdg.is_empty()
     {
         return Ok(PathBuf::from(xdg));
     }
-    let home = std::env::var("HOME")
-        .map_err(|_| BarracudaError::Internal("HOME not set; cannot resolve cache dir".into()))?;
+    let home = std::env::var(crate::env_keys::HOME)
+        .map_err(|_| BarracudaError::internal("HOME not set; cannot resolve cache dir"))?;
     Ok(PathBuf::from(home).join(".cache"))
 }
 
 /// Reject paths that could escape the cache directory.
 fn validate_accession(accession: &str) -> Result<()> {
     if accession.is_empty() {
-        return Err(BarracudaError::InvalidInput {
-            message: "accession cannot be empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("accession cannot be empty"));
     }
     if accession.contains('/') || accession.contains('\\') {
-        return Err(BarracudaError::InvalidInput {
-            message: "accession cannot contain path separators".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("accession cannot contain path separators"));
     }
     if accession.contains("..") {
-        return Err(BarracudaError::InvalidInput {
-            message: "accession cannot contain path traversal".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("accession cannot contain path traversal"));
     }
     if accession.contains('\0') {
-        return Err(BarracudaError::InvalidInput {
-            message: "accession cannot contain null byte".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("accession cannot contain null byte"));
     }
     if Path::new(accession).has_root() {
-        return Err(BarracudaError::InvalidInput {
-            message: "accession cannot be an absolute path".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("accession cannot be an absolute path"));
     }
     Ok(())
 }

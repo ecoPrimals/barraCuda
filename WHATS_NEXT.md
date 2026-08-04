@@ -6,12 +6,27 @@ Prioritized work items, ordered by impact. Updated 2026-08-04.
 
 ## Recently Completed
 
-### Wave 155u — Shader Static Evolution Phase 2 (Aug 4, 2026)
+### Wave 155u — Deep Idiom Evolution (Aug 4, 2026)
 - **LazyLock\<String\> → const &str Phase 2** — Converted remaining 323 shader
   statics across 310 files. Total migration: 374 statics across 328 files
   (51 in Wave 155p + 323 in 155u). Only 5 `LazyLock<String>` remain — all
   genuine DF64 `format!` concatenation (Pattern C) that requires runtime
   string assembly.
+- **Error constructor helpers** — Added `invalid_input()`, `numerical()`,
+  `execution()`, `internal()`, `not_implemented()` constructor methods to
+  `BarracudaError`. Migrated 518 call sites from verbose struct literal
+  syntax (`BarracudaError::InvalidInput { message: "...".to_string() }`)
+  to concise helper calls (`BarracudaError::invalid_input("...")`).
+  Eliminates `.to_string()` / `.into()` noise at call sites while keeping
+  the typed error enum unchanged.
+- **Environment variable centralization** — Added 9 new constants to
+  `env_keys.rs`: `BARRACUDA_GPU_ADAPTER`, `BARRACUDA_CONCURRENCY_BUDGET`,
+  `BARRACUDA_MATMUL_SMALL_THRESHOLD`, `BARRACUDA_MATMUL_GPU_THRESHOLD`,
+  `BARRACUDA_SHADER_COMPILER_ADDR`, `BARRACUDA_SHADER_COMPILER_PORT`,
+  `XDG_CACHE_HOME`, `XDG_DATA_HOME`, `HOME`. Updated all scattered inline
+  string literals in `creation.rs`, `dispatch.rs`, `session/types.rs`,
+  `coral_compiler/discovery.rs`, `autotune.rs`, `ncbi_cache.rs`, `akida.rs`
+  to reference centralized constants.
 - **12-axis deep debt scan** confirmed clean:
   - Files >800L: **0** (max 783L, test file)
   - Production unsafe: **1** (barracuda-spirv passthrough, feature-gated)
@@ -23,9 +38,10 @@ Prioritized work items, ordered by impact. Updated 2026-08-04.
   - Cross-primal deps: **0**
   - `Result<T, String>`: **0**
   - println in lib: **0**
-  - Hardcoded paths/ports: **0**
+  - Hardcoded env var literals: **0** (all centralized in `env_keys.rs`)
   - Remaining `LazyLock<String>`: **5** (all Pattern C — format! concatenation)
-- Net -478 LOC. Zero clippy warnings. 4,970 tests pass. All quality gates green.
+- Net -1,504 LOC total (-478 shader statics + -1,026 error constructors + env_keys).
+  Zero clippy warnings. 4,970 tests pass. All quality gates green.
 
 ### Wave 155p — PRNG Validation + Shader Static Evolution + Magic Numbers (Aug 3, 2026)
 - **LazyLock\<String\> → const &str Phase 1** — Converted 51 shader statics across 18

@@ -45,15 +45,11 @@ impl Upsample {
     ) -> Result<Self> {
         let shape = input.shape();
         if shape.len() != 4 {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: format!("Upsample expects 4D tensor [B, C, H, W], got shape {shape:?}"),
-            });
+            return Err(crate::error::BarracudaError::invalid_input(format!("Upsample expects 4D tensor [B, C, H, W], got shape {shape:?}")));
         }
 
         if size.is_none() && scale_factor.is_none() {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: "Either size or scale_factor must be provided".to_string(),
-            });
+            return Err(crate::error::BarracudaError::invalid_input("Either size or scale_factor must be provided"));
         }
 
         Ok(Self {
@@ -94,9 +90,7 @@ impl Upsample {
                 (in_width as f32 * sw) as usize,
             )
         } else {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: "Either size or scale_factor must be provided".to_string(),
-            });
+            return Err(crate::error::BarracudaError::invalid_input("Either size or scale_factor must be provided"));
         };
 
         let output_size = batch_size * channels * out_height * out_width;

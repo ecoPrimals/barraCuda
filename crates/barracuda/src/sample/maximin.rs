@@ -120,15 +120,11 @@ pub fn maximin_lhs(
     config: &MaximinConfig,
 ) -> Result<MaximinResult> {
     if n_samples < 2 {
-        return Err(BarracudaError::InvalidInput {
-            message: "maximin_lhs requires at least 2 samples".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("maximin_lhs requires at least 2 samples"));
     }
 
     if bounds.is_empty() {
-        return Err(BarracudaError::InvalidInput {
-            message: "bounds must be non-empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("bounds must be non-empty"));
     }
 
     let n_dims = bounds.len();
@@ -148,9 +144,7 @@ pub fn maximin_lhs(
         }
     }
 
-    let mut samples = best_samples.ok_or_else(|| BarracudaError::InvalidInput {
-        message: "maximin_lhs requires n_candidates >= 1".to_string(),
-    })?;
+    let mut samples = best_samples.ok_or_else(|| BarracudaError::invalid_input("maximin_lhs requires n_candidates >= 1"))?;
     let initial_maximin_dist = best_dist;
     let mut current_dist = best_dist;
     let mut rng = Xoshiro256::new(config.seed.wrapping_add(99991));

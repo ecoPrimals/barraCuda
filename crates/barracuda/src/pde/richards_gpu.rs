@@ -96,9 +96,7 @@ impl RichardsGpu {
         let n = config.n_nodes;
 
         if h0.len() != n {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("h0 length {} != n_nodes {}", h0.len(), n),
-            });
+            return Err(BarracudaError::invalid_input(format!("h0 length {} != n_nodes {}", h0.len(), n)));
         }
 
         let gpu_params = RichardsGpuParams {

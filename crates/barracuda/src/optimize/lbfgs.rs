@@ -97,14 +97,10 @@ where
 {
     let n = x0.len();
     if n == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "L-BFGS requires at least 1 dimension".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("L-BFGS requires at least 1 dimension"));
     }
     if config.memory == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "L-BFGS memory must be >= 1".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("L-BFGS memory must be >= 1"));
     }
 
     let m = config.memory;

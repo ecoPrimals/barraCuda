@@ -12,14 +12,14 @@ const MATMUL_GPU_EVOLVED_THRESHOLD: usize = 256;
 
 static MATMUL_SMALL_THRESHOLD_RESOLVED: std::sync::LazyLock<usize> =
     std::sync::LazyLock::new(|| {
-        std::env::var("BARRACUDA_MATMUL_SMALL_THRESHOLD")
+        std::env::var(crate::env_keys::BARRACUDA_MATMUL_SMALL_THRESHOLD)
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(MATMUL_SMALL_THRESHOLD)
     });
 
 static MATMUL_GPU_THRESHOLD_RESOLVED: std::sync::LazyLock<usize> = std::sync::LazyLock::new(|| {
-    std::env::var("BARRACUDA_MATMUL_GPU_THRESHOLD")
+    std::env::var(crate::env_keys::BARRACUDA_MATMUL_GPU_THRESHOLD)
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(MATMUL_GPU_EVOLVED_THRESHOLD)

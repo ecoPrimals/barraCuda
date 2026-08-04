@@ -141,13 +141,11 @@ impl PppmGpu {
     pub async fn compute(&self, positions: &[f64], charges: &[f64]) -> Result<(Vec<f64>, f64)> {
         let n = charges.len();
         if positions.len() != n * 3 {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "positions length {} != charges length {} * 3",
                     positions.len(),
                     n
-                ),
-            });
+                )));
         }
         let order = self.params.interpolation_order;
         let [kx, ky, kz] = self.params.mesh_dims;

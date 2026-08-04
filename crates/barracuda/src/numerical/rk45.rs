@@ -198,15 +198,11 @@ where
     F: Fn(f64, &[f64]) -> Vec<f64>,
 {
     if t_end <= t_start {
-        return Err(BarracudaError::InvalidInput {
-            message: "t_end must be > t_start".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("t_end must be > t_start"));
     }
 
     if y0.is_empty() {
-        return Err(BarracudaError::InvalidInput {
-            message: "y0 must not be empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("y0 must not be empty"));
     }
 
     let n = y0.len();
@@ -367,17 +363,13 @@ where
             n_rejected += 1;
 
             if h <= config.h_min {
-                return Err(BarracudaError::Numerical {
-                    message: format!("Step size {} below minimum {} at t={}", h, config.h_min, t),
-                });
+                return Err(BarracudaError::numerical(format!("Step size {} below minimum {} at t={}", h, config.h_min, t)));
             }
         }
     }
 
     if n_steps >= config.max_steps {
-        return Err(BarracudaError::Numerical {
-            message: format!("Max steps {} exceeded", config.max_steps),
-        });
+        return Err(BarracudaError::numerical(format!("Max steps {} exceeded", config.max_steps)));
     }
 
     Ok(Rk45Result {

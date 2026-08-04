@@ -115,9 +115,7 @@ pub fn convergence_diagnostics(
 ) -> Result<ConvergenceDiagnostics> {
     let n = history.len();
     if n == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "history cannot be empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("history cannot be empty"));
     }
 
     // Find best value

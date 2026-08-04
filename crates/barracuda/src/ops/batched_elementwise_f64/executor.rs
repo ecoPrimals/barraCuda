@@ -98,15 +98,13 @@ impl BatchedElementwiseF64 {
         let expected_len = batch_size * stride;
 
         if data.len() < expected_len {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: format!(
+            return Err(crate::error::BarracudaError::invalid_input(format!(
                     "Input data length {} too short for {} batches with stride {} (expected {})",
                     data.len(),
                     batch_size,
                     stride,
                     expected_len
-                ),
-            });
+                )));
         }
 
         // Create input buffer
@@ -150,8 +148,8 @@ impl BatchedElementwiseF64 {
 
         if use_df64 {
             let Some(src) = df64_shader_source() else {
-                return Err(crate::error::BarracudaError::Internal(
-                    "DF64 shader source unavailable despite Hybrid strategy".into(),
+                return Err(crate::error::BarracudaError::internal(
+                    "DF64 shader source unavailable despite Hybrid strategy",
                 ));
             };
             ComputeDispatch::new(&self.device, "batched_elementwise_df64")

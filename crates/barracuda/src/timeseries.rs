@@ -236,22 +236,16 @@ impl TimeSeriesAnalyzer {
     /// were added, or the underlying model (e.g., ESN training/prediction) fails.
     pub async fn forecast(&mut self, history: &[f32], horizon: usize) -> BarracudaResult<Forecast> {
         if !self.built {
-            return Err(BarracudaError::InvalidInput {
-                message: "Analyzer not built. Call .build() first.".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Analyzer not built. Call .build() first."));
         }
 
         if history.is_empty() {
-            return Err(BarracudaError::InvalidInput {
-                message: "History cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("History cannot be empty"));
         }
 
         // Use first available model
         if self.models.is_empty() {
-            return Err(BarracudaError::InvalidInput {
-                message: "No models added. Use .add_model() before building.".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("No models added. Use .add_model() before building."));
         }
 
         match &self.models[0] {
@@ -286,10 +280,7 @@ impl TimeSeriesAnalyzer {
         threshold: f32,
     ) -> BarracudaResult<Vec<Anomaly>> {
         if series.len() < 10 {
-            return Err(BarracudaError::InvalidInput {
-                message: "Series too short for anomaly detection (need at least 10 points)"
-                    .to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Series too short for anomaly detection (need at least 10 points)"));
         }
 
         // Use moving average as baseline
@@ -338,13 +329,11 @@ impl TimeSeriesAnalyzer {
     /// Returns [`Err`] if series has fewer than 2×period points.
     pub async fn decompose(&self, series: &[f32], period: usize) -> BarracudaResult<Decomposition> {
         if series.len() < period * 2 {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Series too short for period {} (need at least {})",
                     period,
                     period * 2
-                ),
-            });
+                )));
         }
 
         // Simple moving average for trend
@@ -405,9 +394,7 @@ impl TimeSeriesAnalyzer {
         let esn = self
             .esn_instance
             .as_mut()
-            .ok_or_else(|| BarracudaError::InvalidInput {
-                message: "ESN not initialized".to_string(),
-            })?;
+            .ok_or_else(|| BarracudaError::invalid_input("ESN not initialized"))?;
 
         // Prepare training data (sliding window)
         let sequence: Vec<Vec<f32>> = history.windows(2).map(|w| vec![w[0]]).collect();
@@ -489,9 +476,7 @@ impl TimeSeriesAnalyzer {
         weights: &[f32],
     ) -> BarracudaResult<Forecast> {
         if weights.is_empty() {
-            return Err(BarracudaError::InvalidInput {
-                message: "Weights cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Weights cannot be empty"));
         }
 
         let window = weights.len().min(history.len());

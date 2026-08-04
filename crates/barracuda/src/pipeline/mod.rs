@@ -278,22 +278,18 @@ impl PipelineBuilder {
             // Validate all buffers exist
             for input in &stage.inputs {
                 if !buffers.contains_key(input) {
-                    return Err(BarracudaError::InvalidInput {
-                        message: format!(
+                    return Err(BarracudaError::invalid_input(format!(
                             "Stage '{}' references unknown input buffer '{}'",
                             stage.name, input
-                        ),
-                    });
+                        )));
                 }
             }
             for output in &stage.outputs {
                 if !buffers.contains_key(output) {
-                    return Err(BarracudaError::InvalidInput {
-                        message: format!(
+                    return Err(BarracudaError::invalid_input(format!(
                             "Stage '{}' references unknown output buffer '{}'",
                             stage.name, output
-                        ),
-                    });
+                        )));
                 }
             }
 
@@ -359,9 +355,7 @@ impl ComputePipeline {
         let buffer = self
             .buffers
             .get(name)
-            .ok_or_else(|| BarracudaError::InvalidInput {
-                message: format!("Unknown buffer: {name}"),
-            })?;
+            .ok_or_else(|| BarracudaError::invalid_input(format!("Unknown buffer: {name}")))?;
 
         let bytes: &[u8] = bytemuck::cast_slice(data);
         self.device.queue.write_buffer(buffer, 0, bytes);
@@ -375,9 +369,7 @@ impl ComputePipeline {
         let buffer = self
             .buffers
             .get(name)
-            .ok_or_else(|| BarracudaError::InvalidInput {
-                message: format!("Unknown buffer: {name}"),
-            })?;
+            .ok_or_else(|| BarracudaError::invalid_input(format!("Unknown buffer: {name}")))?;
 
         let bytes: &[u8] = bytemuck::cast_slice(data);
         self.device.queue.write_buffer(buffer, 0, bytes);
@@ -391,9 +383,7 @@ impl ComputePipeline {
         let buffer = self
             .buffers
             .get(name)
-            .ok_or_else(|| BarracudaError::InvalidInput {
-                message: format!("Unknown buffer: {name}"),
-            })?;
+            .ok_or_else(|| BarracudaError::invalid_input(format!("Unknown buffer: {name}")))?;
 
         self.device.queue.write_buffer(buffer, 0, data);
         Ok(())
@@ -435,9 +425,7 @@ impl ComputePipeline {
         let buffer = self
             .buffers
             .get(name)
-            .ok_or_else(|| BarracudaError::InvalidInput {
-                message: format!("Unknown buffer: {name}"),
-            })?;
+            .ok_or_else(|| BarracudaError::invalid_input(format!("Unknown buffer: {name}")))?;
 
         let size = buffer.size() as usize;
         let staging = self.device.device.create_buffer(&wgpu::BufferDescriptor {
@@ -488,9 +476,7 @@ impl ComputePipeline {
         let buffer = self
             .buffers
             .get(name)
-            .ok_or_else(|| BarracudaError::InvalidInput {
-                message: format!("Unknown buffer: {name}"),
-            })?;
+            .ok_or_else(|| BarracudaError::invalid_input(format!("Unknown buffer: {name}")))?;
 
         let size = buffer.size() as usize;
         let staging = self.device.device.create_buffer(&wgpu::BufferDescriptor {

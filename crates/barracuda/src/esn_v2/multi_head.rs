@@ -85,15 +85,11 @@ impl MultiHeadEsn {
     pub async fn new(base_config: ESNConfig, heads: Vec<HeadConfig>) -> BarracudaResult<Self> {
         validate_config(&base_config)?;
         if heads.is_empty() {
-            return Err(BarracudaError::InvalidInput {
-                message: "At least one head required".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("At least one head required"));
         }
         for h in &heads {
             if h.output_size == 0 {
-                return Err(BarracudaError::InvalidInput {
-                    message: format!("Head '{}' has zero output_size", h.label),
-                });
+                return Err(BarracudaError::invalid_input(format!("Head '{}' has zero output_size", h.label)));
             }
         }
 
@@ -132,15 +128,10 @@ impl MultiHeadEsn {
         heads: Vec<HeadConfig>,
     ) -> BarracudaResult<Self> {
         if heads.is_empty() {
-            return Err(BarracudaError::InvalidInput {
-                message: "At least one head required".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("At least one head required"));
         }
         if weights.reservoir_size == 0 || weights.input_size == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "ExportedWeights must have non-zero reservoir_size and input_size"
-                    .to_string(),
-            });
+            return Err(BarracudaError::invalid_input("ExportedWeights must have non-zero reservoir_size and input_size"));
         }
 
         let config = ESNConfig {
@@ -225,41 +216,31 @@ impl MultiHeadEsn {
         lambda: f64,
     ) -> BarracudaResult<()> {
         let Some(cfg) = self.head_configs.get(head_idx) else {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("Head index {head_idx} out of range"),
-            });
+            return Err(BarracudaError::invalid_input(format!("Head index {head_idx} out of range")));
         };
         let n = self.reservoir.config().reservoir_size;
         let m = cfg.output_size;
 
         if states.is_empty() {
-            return Err(BarracudaError::InvalidInput {
-                message: "States cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("States cannot be empty"));
         }
         if !states.len().is_multiple_of(n) {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "States length {} must be divisible by reservoir_size {}",
                     states.len(),
                     n
-                ),
-            });
+                )));
         }
         let n_samples = states.len() / n;
         if targets.len() != m * n_samples {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Targets length {} expected {}",
                     targets.len(),
                     m * n_samples
-                ),
-            });
+                )));
         }
         if lambda <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "Lambda must be positive".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Lambda must be positive"));
         }
 
         let x = states;
@@ -316,9 +297,7 @@ impl MultiHeadEsn {
         let head = self
             .heads
             .get(head_idx)
-            .ok_or_else(|| BarracudaError::InvalidInput {
-                message: format!("Head index {head_idx} out of range"),
-            })?;
+            .ok_or_else(|| BarracudaError::invalid_input(format!("Head index {head_idx} out of range")))?;
         let w_out = head
             .w_out
             .as_ref()

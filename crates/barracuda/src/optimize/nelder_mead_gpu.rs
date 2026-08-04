@@ -130,9 +130,7 @@ impl NelderMeadGpu {
         let check_interval = check_interval.max(1);
 
         if bounds.len() != n {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("Bounds length {} must match x0 length {}", bounds.len(), n),
-            });
+            return Err(BarracudaError::invalid_input(format!("Bounds length {} must match x0 length {}", bounds.len(), n)));
         }
 
         // Initialize simplex on CPU, then upload

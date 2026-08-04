@@ -189,9 +189,7 @@ impl StatefulPipeline {
         iterations: usize,
     ) -> Result<Vec<f64>> {
         if chain.is_empty() {
-            return Err(BarracudaError::InvalidInput {
-                message: "StatefulPipeline: kernel chain is empty".into(),
-            });
+            return Err(BarracudaError::invalid_input("StatefulPipeline: kernel chain is empty"));
         }
 
         let label = self.config.label.as_deref().unwrap_or("StatefulPipeline");

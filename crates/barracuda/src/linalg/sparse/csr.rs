@@ -255,9 +255,7 @@ impl CsrMatrix {
     pub fn tridiagonal(lower: &[f64], main: &[f64], upper: &[f64]) -> Result<Self> {
         let n = main.len();
         if lower.len() != n - 1 || upper.len() != n - 1 {
-            return Err(BarracudaError::InvalidInput {
-                message: "Tridiagonal dimensions mismatch".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Tridiagonal dimensions mismatch"));
         }
 
         let mut triplets = Vec::with_capacity(3 * n - 2);
@@ -328,13 +326,11 @@ impl CsrMatrix {
     /// Returns [`Err`] if vector length does not match matrix column count.
     pub fn matvec(&self, x: &[f64]) -> Result<Vec<f64>> {
         if x.len() != self.n_cols {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Vector length {} doesn't match matrix columns {}",
                     x.len(),
                     self.n_cols
-                ),
-            });
+                )));
         }
 
         let mut y = vec![0.0; self.n_rows];
@@ -356,13 +352,11 @@ impl CsrMatrix {
     /// Returns [`Err`] if vector length does not match matrix row count.
     pub fn matvec_transpose(&self, x: &[f64]) -> Result<Vec<f64>> {
         if x.len() != self.n_rows {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Vector length {} doesn't match matrix rows {}",
                     x.len(),
                     self.n_rows
-                ),
-            });
+                )));
         }
 
         let mut y = vec![0.0; self.n_cols];

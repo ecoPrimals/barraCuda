@@ -18,8 +18,8 @@ use std::sync::Arc;
 /// mutex ensures all device creation across the entire process is serial.
 static DEVICE_CREATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-/// Environment variable for adapter selection
-pub const ADAPTER_ENV_VAR: &str = "BARRACUDA_GPU_ADAPTER";
+/// Environment variable for adapter selection (re-export from env_keys).
+pub const ADAPTER_ENV_VAR: &str = crate::env_keys::BARRACUDA_GPU_ADAPTER;
 
 /// Desired features to negotiate with any adapter.
 fn desired_features() -> Vec<wgpu::Features> {

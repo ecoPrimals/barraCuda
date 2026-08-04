@@ -262,9 +262,7 @@ impl SequenceAnalyzer {
     /// Returns [`Err`] if the sequence is empty.
     pub fn analyze_composition(&self, sequence: &[u8]) -> BarracudaResult<CompositionReport> {
         if sequence.is_empty() {
-            return Err(BarracudaError::InvalidInput {
-                message: "Sequence cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Sequence cannot be empty"));
         }
 
         // All pure Rust - no GPU!
@@ -324,15 +322,11 @@ impl SequenceAnalyzer {
         patterns: &[&[u8]],
     ) -> BarracudaResult<Vec<MotifMatch>> {
         if sequence.is_empty() {
-            return Err(BarracudaError::InvalidInput {
-                message: "Sequence cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Sequence cannot be empty"));
         }
 
         if patterns.is_empty() {
-            return Err(BarracudaError::InvalidInput {
-                message: "At least one pattern required".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("At least one pattern required"));
         }
 
         let mut matches = Vec::new();

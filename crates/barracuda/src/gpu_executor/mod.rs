@@ -311,9 +311,7 @@ impl ComputeExecutor for GpuExecutor {
     > {
         if inputs.is_empty() {
             return Box::pin(async move {
-                Err(crate::error::BarracudaError::InvalidInput {
-                    message: "GpuExecutor::execute: no inputs provided".to_string(),
-                })
+                Err(crate::error::BarracudaError::invalid_input("GpuExecutor::execute: no inputs provided"))
             });
         }
         let op = op.clone();

@@ -118,15 +118,11 @@ where
     F: Fn(&[f64]) -> f64,
 {
     if n_starts == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "n_starts must be > 0".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("n_starts must be > 0"));
     }
 
     if bounds.is_empty() {
-        return Err(BarracudaError::InvalidInput {
-            message: "bounds must be non-empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("bounds must be non-empty"));
     }
 
     let n_dims = bounds.len();

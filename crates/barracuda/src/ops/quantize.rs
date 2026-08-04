@@ -166,9 +166,7 @@ pub fn compute_affine_i8_params(data: &[f32]) -> (f32, f32) {
 ///
 /// Returns [`Err`] if tensor readback fails for scale computation, or if [`Quantize::new`] or [`Quantize::execute`] fails.
 pub fn quantize_affine_i8(input: Tensor) -> Result<(Tensor, f32, f32)> {
-    let data = input.to_vec().map_err(|e| BarracudaError::InvalidInput {
-        message: format!("failed to read tensor for scale computation: {e}"),
-    })?;
+    let data = input.to_vec().map_err(|e| BarracudaError::invalid_input(format!("failed to read tensor for scale computation: {e}")))?;
     let (scale, zero_point) = compute_affine_i8_params(&data);
     let quantized = Quantize::new(input, scale, zero_point, 8)?.execute()?;
     Ok((quantized, scale, zero_point))

@@ -108,9 +108,7 @@ impl RkIntegrator {
     ) -> Result<(Vec<f64>, Vec<Vec<f64>>)> {
         let n = y0.len();
         if n == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "State vector must have at least 1 dimension".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("State vector must have at least 1 dimension"));
         }
 
         self.integrate_hybrid(f, t0, y0, t_end, h_init, tol)
@@ -129,9 +127,7 @@ impl RkIntegrator {
     ) -> Result<(Vec<f64>, Vec<Vec<f64>>)> {
         let n = y0.len();
         if n == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "State vector must have at least 1 dimension".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("State vector must have at least 1 dimension"));
         }
 
         let n_steps = ((t_end - t0) / h).ceil() as usize;

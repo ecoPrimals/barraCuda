@@ -56,13 +56,11 @@ impl ExportedWeights {
         if let Some(ref w_out) = self.w_out {
             let old_outputs = w_out.len() / reservoir_size;
             if old_outputs == 0 || w_out.len() % reservoir_size != 0 {
-                return Err(BarracudaError::InvalidInput {
-                    message: format!(
+                return Err(BarracudaError::invalid_input(format!(
                         "w_out length {} not divisible by reservoir_size {}",
                         w_out.len(),
                         reservoir_size
-                    ),
-                });
+                    )));
             }
             if old_outputs == new_output_size {
                 return Ok(migrated);
@@ -226,12 +224,10 @@ impl ESN {
                 input.reshape(vec![self.config.input_size, 1])?
             }
             other => {
-                return Err(BarracudaError::InvalidInput {
-                    message: format!(
+                return Err(BarracudaError::invalid_input(format!(
                         "Input tensor shape mismatch: expected [{}, 1] (or [1, {}] or [{}]), got {other:?}",
                         self.config.input_size, self.config.input_size, self.config.input_size,
-                    ),
-                });
+                    )));
             }
         };
         let input = &input;
@@ -262,15 +258,11 @@ impl ESN {
         targets: &[Vec<f32>],
     ) -> BarracudaResult<f32> {
         if inputs.is_empty() || targets.is_empty() {
-            return Err(BarracudaError::InvalidInput {
-                message: "Training data cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Training data cannot be empty"));
         }
 
         if inputs.len() != targets.len() {
-            return Err(BarracudaError::InvalidInput {
-                message: "Inputs and targets must have same length".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Inputs and targets must have same length"));
         }
 
         let mut all_states = Vec::new();
@@ -340,26 +332,20 @@ impl ESN {
         let m = self.config.output_size;
 
         if states.is_empty() {
-            return Err(BarracudaError::InvalidInput {
-                message: "States cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("States cannot be empty"));
         }
         if !states.len().is_multiple_of(n) {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "States length {} must be divisible by reservoir_size {}",
                     states.len(),
                     n
-                ),
-            });
+                )));
         }
         let n_samples = states.len() / n;
         expect_size("Targets", m * n_samples, targets.len())?;
 
         if lambda <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "Lambda must be positive".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Lambda must be positive"));
         }
 
         let x = states;
@@ -463,9 +449,7 @@ impl ESN {
         input: &[f32],
     ) -> BarracudaResult<(Vec<f32>, Vec<f32>)> {
         if !self.trained {
-            return Err(BarracudaError::InvalidInput {
-                message: "ESN must be trained before prediction".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("ESN must be trained before prediction"));
         }
 
         expect_size("Input", self.config.input_size, input.len())?;
@@ -497,13 +481,11 @@ impl ESN {
     pub fn set_readout_weights(&mut self, weights: Tensor) -> BarracudaResult<()> {
         let expected = [self.config.reservoir_size, self.config.output_size];
         if weights.shape() != expected {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Readout weight shape mismatch: expected {:?}, got {:?}",
                     expected,
                     weights.shape()
-                ),
-            });
+                )));
         }
         self.w_out = Some(weights);
         self.trained = true;

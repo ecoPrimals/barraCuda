@@ -52,11 +52,9 @@ where
 
     // Check that f(a) and f(b) have opposite signs
     if fa * fb > 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!(
+        return Err(BarracudaError::invalid_input(format!(
                 "f(a) and f(b) must have opposite signs: f({a}) = {fa}, f({b}) = {fb}"
-            ),
-        });
+            )));
     }
 
     for iter in 0..max_iter {
@@ -81,11 +79,9 @@ where
 
         // Last iteration check
         if iter == max_iter - 1 {
-            return Err(BarracudaError::ExecutionError {
-                message: format!(
+            return Err(BarracudaError::execution(format!(
                     "Bisection failed to converge in {max_iter} iterations, interval [{a}, {b}]"
-                ),
-            });
+                )));
         }
     }
 

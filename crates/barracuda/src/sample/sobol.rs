@@ -194,9 +194,7 @@ impl SobolGenerator {
     /// Returns [`Err`] if `dim` is 0 or greater than [`MAX_SOBOL_DIM`].
     pub fn new(dim: usize) -> Result<Self> {
         if dim == 0 || dim > MAX_SOBOL_DIM {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("Dimension must be 1..{MAX_SOBOL_DIM}"),
-            });
+            return Err(BarracudaError::invalid_input(format!("Dimension must be 1..{MAX_SOBOL_DIM}")));
         }
 
         let mut v = vec![vec![0u32; 32]; dim];

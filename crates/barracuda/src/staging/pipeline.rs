@@ -120,9 +120,7 @@ impl PipelineBuilder {
     /// Returns [`Err`] if no stages have been added.
     pub fn build(self) -> Result<StreamingPipeline> {
         if self.stages.is_empty() {
-            return Err(BarracudaError::InvalidInput {
-                message: "StreamingPipeline: at least one stage required".into(),
-            });
+            return Err(BarracudaError::invalid_input("StreamingPipeline: at least one stage required"));
         }
         Ok(StreamingPipeline {
             device: self.device,

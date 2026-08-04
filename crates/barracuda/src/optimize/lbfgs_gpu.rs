@@ -105,19 +105,15 @@ impl LbfgsGpu {
         F: Fn(&[f64]) -> Vec<f64>,
     {
         if n == 0 || batch_size == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "n and batch_size must be > 0".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("n and batch_size must be > 0"));
         }
         if x0.len() != batch_size * n {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "x0 length {} != batch_size({}) * n({})",
                     x0.len(),
                     batch_size,
                     n
-                ),
-            });
+                )));
         }
 
         let m = config.memory;

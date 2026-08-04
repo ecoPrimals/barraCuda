@@ -153,9 +153,7 @@ pub fn adaptive_penalty(feasible_values: &[f64], config: PenaltyConfig) -> Resul
         .collect();
 
     if valid.is_empty() {
-        return Err(BarracudaError::InvalidInput {
-            message: "No finite feasible values provided".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("No finite feasible values provided"));
     }
 
     // Compute statistics
@@ -218,18 +216,14 @@ pub fn adaptive_penalty_mad(
     mad_multiplier: f64,
 ) -> Result<AdaptivePenalty> {
     if values.is_empty() {
-        return Err(BarracudaError::InvalidInput {
-            message: "values cannot be empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("values cannot be empty"));
     }
 
     // Filter finite values
     let mut valid: Vec<f64> = values.iter().filter(|v| v.is_finite()).copied().collect();
 
     if valid.is_empty() {
-        return Err(BarracudaError::InvalidInput {
-            message: "No finite values provided".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("No finite values provided"));
     }
 
     // Compute median

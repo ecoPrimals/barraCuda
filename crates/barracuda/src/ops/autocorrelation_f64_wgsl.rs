@@ -54,9 +54,7 @@ impl AutocorrelationF64 {
             return Ok(Vec::new());
         }
         if max_lag > n {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: format!("max_lag ({max_lag}) exceeds input length ({n})"),
-            });
+            return Err(crate::error::BarracudaError::invalid_input(format!("max_lag ({max_lag}) exceeds input length ({n})")));
         }
 
         let input_buffer =

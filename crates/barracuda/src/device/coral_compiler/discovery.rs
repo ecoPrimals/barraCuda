@@ -21,14 +21,14 @@ use crate::env_keys;
 /// When set, skips capability-based and port-based discovery entirely.
 /// Supports `unix:/path/to/socket` for Unix socket addresses and
 /// `host:port` for TCP addresses.
-const COMPILER_ADDR_ENV: &str = "BARRACUDA_SHADER_COMPILER_ADDR";
+const COMPILER_ADDR_ENV: &str = crate::env_keys::BARRACUDA_SHADER_COMPILER_ADDR;
 
 /// Environment variable for an explicit shader-compiler port.
 ///
 /// When set, enables a localhost probe as the final discovery fallback.
 /// Without this, only env-address, socket, and capability-file discovery
 /// are tried — no hardcoded port is ever probed.
-const COMPILER_PORT_ENV: &str = "BARRACUDA_SHADER_COMPILER_PORT";
+const COMPILER_PORT_ENV: &str = crate::env_keys::BARRACUDA_SHADER_COMPILER_PORT;
 
 /// Loopback address for localhost-only discovery probes.
 const LOCALHOST: &str = env_keys::DEFAULT_LOOPBACK;

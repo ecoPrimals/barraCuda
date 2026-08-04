@@ -38,15 +38,11 @@ impl FusedKlDivergenceGpu {
     /// readback fails (e.g. device lost or out of memory).
     pub fn execute(device: Arc<WgpuDevice>, p: &[f64], q: &[f64]) -> Result<f64> {
         if p.len() != q.len() {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("P and Q must have same length: {} vs {}", p.len(), q.len()),
-            });
+            return Err(BarracudaError::invalid_input(format!("P and Q must have same length: {} vs {}", p.len(), q.len())));
         }
         let n = p.len();
         if n == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "P and Q cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("P and Q cannot be empty"));
         }
 
         let n_workgroups = n.div_ceil(WORKGROUP_SIZE_1D as usize) as u32;

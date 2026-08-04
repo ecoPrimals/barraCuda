@@ -121,23 +121,17 @@ pub(super) fn run_cpu_operation(
             #[cfg(feature = "benchmarks")]
             let _ = crate::linalg::cholesky::cholesky_f64_cpu(data, size);
             #[cfg(not(feature = "benchmarks"))]
-            return Err(BarracudaError::InvalidInput {
-                message: "cholesky CPU benchmark requires --features benchmarks".into(),
-            });
+            return Err(BarracudaError::invalid_input("cholesky CPU benchmark requires --features benchmarks"));
         }
         "lu" => {
             #[cfg(feature = "benchmarks")]
             let _ = crate::linalg::cholesky::cholesky_f64_cpu(data, size);
             #[cfg(not(feature = "benchmarks"))]
-            return Err(BarracudaError::InvalidInput {
-                message: "lu CPU benchmark requires --features benchmarks".into(),
-            });
+            return Err(BarracudaError::invalid_input("lu CPU benchmark requires --features benchmarks"));
         }
         "qr" => {
             let b: Vec<f64> = (0..size).map(|i| (i as f64).sin()).collect();
-            let dev = gpu_device.ok_or_else(|| BarracudaError::InvalidInput {
-                message: "qr benchmark requires GPU".into(),
-            })?;
+            let dev = gpu_device.ok_or_else(|| BarracudaError::invalid_input("qr benchmark requires GPU"))?;
             let _ = crate::linalg::solve_f64(dev.clone(), data, &b, size);
         }
         "svd" => {
@@ -148,9 +142,7 @@ pub(super) fn run_cpu_operation(
         }
         "solve" => {
             let b: Vec<f64> = (0..size).map(|i| (i as f64).sin()).collect();
-            let dev = gpu_device.ok_or_else(|| BarracudaError::InvalidInput {
-                message: "solve benchmark requires GPU".into(),
-            })?;
+            let dev = gpu_device.ok_or_else(|| BarracudaError::invalid_input("solve benchmark requires GPU"))?;
             let _ = crate::linalg::solve_f64(dev.clone(), data, &b, size);
         }
         "cdist" => {
@@ -185,9 +177,7 @@ pub(super) fn run_cpu_operation(
             }
         }
         _ => {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("Unknown operation: {operation}"),
-            });
+            return Err(BarracudaError::invalid_input(format!("Unknown operation: {operation}")));
         }
     }
 

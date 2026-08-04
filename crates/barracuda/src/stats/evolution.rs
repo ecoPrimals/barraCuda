@@ -59,9 +59,7 @@ impl KimuraGpu {
     ) -> Result<Vec<f64>> {
         let n = pop_sizes.len();
         if n != selections.len() || n != freqs.len() {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: "pop_sizes, selections, freqs must have same length".to_string(),
-            });
+            return Err(crate::error::BarracudaError::invalid_input("pop_sizes, selections, freqs must have same length"));
         }
         if n == 0 {
             return Ok(Vec::new());

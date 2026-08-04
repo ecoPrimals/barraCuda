@@ -119,15 +119,13 @@ impl BrayCurtisF64 {
     ) -> Result<Vec<f64>> {
         let expected_len = n_samples * n_features;
         if samples.len() < expected_len {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Expected {} elements ({} samples × {} features), got {}",
                     expected_len,
                     n_samples,
                     n_features,
                     samples.len()
-                ),
-            });
+                )));
         }
 
         if n_samples < 2 {

@@ -85,9 +85,7 @@ impl BrentGpu {
     /// Returns [`Err`] if `tolerance` ≤ 0.
     pub fn new(device: Arc<WgpuDevice>, max_iterations: u32, tolerance: f64) -> Result<Self> {
         if tolerance <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "Tolerance must be positive".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Tolerance must be positive"));
         }
         Ok(Self {
             device,
@@ -183,14 +181,12 @@ impl BrentGpu {
     ) -> Result<BrentGpuResult> {
         let batch_size = lower.len();
         if upper.len() != batch_size || targets.len() != batch_size {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Array lengths must match: lower={}, upper={}, targets={}",
                     lower.len(),
                     upper.len(),
                     targets.len()
-                ),
-            });
+                )));
         }
         if batch_size == 0 {
             return Ok(BrentGpuResult {

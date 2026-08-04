@@ -381,11 +381,9 @@ impl TensorSession {
 
         let total: usize = a.shape.iter().product();
         if !total.is_multiple_of(feature_size) {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "layer_norm: total {total} not divisible by feature_size {feature_size}"
-                ),
-            });
+                )));
         }
         let out = self.alloc_output(&a.shape);
         self.ops.push(SessionOp::LayerNorm {
@@ -425,9 +423,7 @@ impl TensorSession {
     pub fn head_split(&mut self, a: &SessionTensor, dims: &AttentionDims) -> Result<SessionTensor> {
         let expected = dims.total_elements();
         if a.len() != expected {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("head_split: input len {} ≠ B×S×H×D={expected}", a.len()),
-            });
+            return Err(BarracudaError::invalid_input(format!("head_split: input len {} ≠ B×S×H×D={expected}", a.len())));
         }
         let (batch_u32, seq_u32, heads_u32, dim_u32) = dims.as_u32()?;
         let out_shape = [dims.batch_size, dims.n_heads, dims.seq_len, dims.head_dim];
@@ -454,9 +450,7 @@ impl TensorSession {
     ) -> Result<SessionTensor> {
         let expected = dims.total_elements();
         if a.len() != expected {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("head_concat: input len {} ≠ B×H×S×D={expected}", a.len()),
-            });
+            return Err(BarracudaError::invalid_input(format!("head_concat: input len {} ≠ B×H×S×D={expected}", a.len())));
         }
         let (batch_u32, seq_u32, heads_u32, dim_u32) = dims.as_u32()?;
         let out_shape = [dims.batch_size, dims.seq_len, dims.n_heads * dims.head_dim];
@@ -488,9 +482,7 @@ impl TensorSession {
         let expected = dims.total_elements();
         for (name, t) in [("q", q), ("k", k), ("v", v)] {
             if t.len() != expected {
-                return Err(BarracudaError::InvalidInput {
-                    message: format!("attention: {name} len {} ≠ B×H×S×D={expected}", t.len()),
-                });
+                return Err(BarracudaError::invalid_input(format!("attention: {name} len {} ≠ B×H×S×D={expected}", t.len())));
             }
         }
         let (batch_u32, seq_u32, heads_u32, dim_u32) = dims.as_u32()?;

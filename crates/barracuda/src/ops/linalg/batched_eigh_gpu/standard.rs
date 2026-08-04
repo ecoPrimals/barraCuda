@@ -38,16 +38,14 @@ impl BatchedEighGpu {
     ) -> Result<(Vec<f64>, Vec<f64>)> {
         let expected_len = batch_size * n * n;
         if data.len() != expected_len {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Expected {} elements for {} matrices of {}x{}, got {}",
                     expected_len,
                     batch_size,
                     n,
                     n,
                     data.len()
-                ),
-            });
+                )));
         }
 
         let nu = n as u32;

@@ -39,11 +39,9 @@ impl SpectralNorm1D {
         let weight_size: usize = weights.shape().iter().product();
         let expected_size = out_channels * in_channels * kernel_size;
         if weight_size != expected_size {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Weight dimensions mismatch: expected {expected_size}, got {weight_size}"
-                ),
-            });
+                )));
         }
 
         Ok(Self {

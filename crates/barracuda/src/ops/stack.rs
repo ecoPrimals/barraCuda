@@ -25,30 +25,24 @@ impl Stack {
     /// readback fails (e.g. device lost or out of memory).
     pub fn new(tensors: Vec<Tensor>, dim: usize) -> Result<Self> {
         if tensors.is_empty() {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: "Cannot stack empty tensor list".to_string(),
-            });
+            return Err(crate::error::BarracudaError::invalid_input("Cannot stack empty tensor list"));
         }
 
         // Validate all tensors have same shape
         let first_shape = tensors[0].shape();
         for (i, tensor) in tensors.iter().enumerate().skip(1) {
             if tensor.shape() != first_shape {
-                return Err(crate::error::BarracudaError::InvalidInput {
-                    message: format!(
+                return Err(crate::error::BarracudaError::invalid_input(format!(
                         "All tensors must have same shape. Tensor 0: {:?}, Tensor {}: {:?}",
                         first_shape,
                         i,
                         tensor.shape()
-                    ),
-                });
+                    )));
             }
         }
 
         if dim > first_shape.len() {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: format!("dim {} exceeds tensor rank {}", dim, first_shape.len()),
-            });
+            return Err(crate::error::BarracudaError::invalid_input(format!("dim {} exceeds tensor rank {}", dim, first_shape.len())));
         }
 
         Ok(Self { tensors, dim })

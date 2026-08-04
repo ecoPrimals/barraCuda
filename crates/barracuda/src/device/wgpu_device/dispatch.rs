@@ -7,7 +7,7 @@
 //! without requiring callers to manage thread counts.
 
 /// Environment variable to override the concurrency budget for all device types.
-const CONCURRENCY_BUDGET_ENV: &str = "BARRACUDA_CONCURRENCY_BUDGET";
+const CONCURRENCY_BUDGET_ENV: &str = crate::env_keys::BARRACUDA_CONCURRENCY_BUDGET;
 
 const CONCURRENCY_BUDGET_CPU: usize = 2;
 const CONCURRENCY_BUDGET_IGPU: usize = 4;

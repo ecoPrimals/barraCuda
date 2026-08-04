@@ -33,9 +33,7 @@ impl ClipGradValue {
     /// readback fails (e.g. device lost or out of memory).
     pub fn new(gradients: Tensor, clip_value: f32) -> Result<Self> {
         if clip_value < 0.0 {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: "clip_value must be non-negative".to_string(),
-            });
+            return Err(crate::error::BarracudaError::invalid_input("clip_value must be non-negative"));
         }
         Ok(Self {
             gradients,

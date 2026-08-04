@@ -26,15 +26,11 @@ impl RepeatInterleave {
     pub fn new(input: Tensor, repeats: usize, dim: usize) -> Result<Self> {
         let shape = input.shape();
         if dim >= shape.len() {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: format!("dim {} exceeds tensor rank {}", dim, shape.len()),
-            });
+            return Err(crate::error::BarracudaError::invalid_input(format!("dim {} exceeds tensor rank {}", dim, shape.len())));
         }
 
         if repeats == 0 {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: "repeats must be positive".to_string(),
-            });
+            return Err(crate::error::BarracudaError::invalid_input("repeats must be positive"));
         }
 
         Ok(Self {

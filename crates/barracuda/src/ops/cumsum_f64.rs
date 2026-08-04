@@ -72,12 +72,10 @@ impl CumsumF64 {
 
         // Validate dimension
         if self.dim >= n_dims {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Dimension {} out of bounds for tensor with {} dimensions",
                     self.dim, n_dims
-                ),
-            });
+                )));
         }
 
         let size: usize = shape.iter().product();

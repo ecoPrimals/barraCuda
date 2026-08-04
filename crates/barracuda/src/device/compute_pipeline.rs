@@ -173,9 +173,7 @@ impl<'a, B: GpuBackend> ComputeDispatch<'a, B> {
     pub fn build(self) -> Result<DispatchDescriptor<'a, B>> {
         let source = self
             .shader_source
-            .ok_or_else(|| BarracudaError::InvalidInput {
-                message: "ComputeDispatch: shader source required".into(),
-            })?;
+            .ok_or_else(|| BarracudaError::invalid_input("ComputeDispatch: shader source required"))?;
 
         let bindings: Vec<BufferBinding<'_, B>> = self
             .bindings

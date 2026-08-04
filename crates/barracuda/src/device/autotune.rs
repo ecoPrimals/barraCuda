@@ -496,9 +496,9 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {{
 /// Global auto-tuner instance for runtime GPU parameter calibration.
 pub static GLOBAL_TUNER: std::sync::LazyLock<AutoTuner> = std::sync::LazyLock::new(|| {
     // Try to use a standard cache location
-    let cache_dir = std::env::var("XDG_CACHE_HOME").map_or_else(
+    let cache_dir = std::env::var(crate::env_keys::XDG_CACHE_HOME).map_or_else(
         |_| {
-            std::env::var("HOME").map_or_else(
+            std::env::var(crate::env_keys::HOME).map_or_else(
                 |_| std::env::temp_dir(),
                 |h| PathBuf::from(h).join(".cache"),
             )

@@ -40,24 +40,18 @@ impl TimeStretch {
         window: Tensor,
     ) -> Result<Self> {
         if rate <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "Rate must be positive".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Rate must be positive"));
         }
 
         // Validate window length
         let window_size: usize = window.shape().iter().product();
         if window_size != n_fft {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("Window length ({window_size}) must match n_fft ({n_fft})"),
-            });
+            return Err(BarracudaError::invalid_input(format!("Window length ({window_size}) must match n_fft ({n_fft})")));
         }
 
         // Ensure same device
         if !std::ptr::eq(signal.device().as_ref(), window.device().as_ref()) {
-            return Err(BarracudaError::InvalidInput {
-                message: "Signal and window must be on the same device".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Signal and window must be on the same device"));
         }
 
         Ok(Self {

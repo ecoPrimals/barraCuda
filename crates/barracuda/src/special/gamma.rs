@@ -77,9 +77,7 @@ const LANCZOS_COEFFS: [f64; 9] = [
 /// ```
 pub fn ln_gamma(x: f64) -> Result<f64> {
     if x <= 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("ln_gamma requires x > 0, got {x}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("ln_gamma requires x > 0, got {x}")));
     }
 
     if x < 0.5 {
@@ -122,9 +120,7 @@ pub fn ln_gamma(x: f64) -> Result<f64> {
 /// ```
 pub fn gamma(x: f64) -> Result<f64> {
     if x <= 0.0 && x.fract() == 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("gamma is undefined for non-positive integers, got {x}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("gamma is undefined for non-positive integers, got {x}")));
     }
 
     Ok(ln_gamma(x)?.exp())
@@ -160,14 +156,10 @@ pub const WGSL_INCOMPLETE_GAMMA_F64: &str =
 /// ```
 pub fn lower_incomplete_gamma(a: f64, x: f64) -> Result<(f64, f64)> {
     if a <= 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("lower_incomplete_gamma requires a > 0, got {a}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("lower_incomplete_gamma requires a > 0, got {a}")));
     }
     if x < 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("lower_incomplete_gamma requires x >= 0, got {x}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("lower_incomplete_gamma requires x >= 0, got {x}")));
     }
 
     if x == 0.0 {
@@ -239,14 +231,10 @@ pub const WGSL_REGULARIZED_GAMMA_F64: &str =
 /// ```
 pub fn regularized_gamma_p(a: f64, x: f64) -> Result<f64> {
     if a <= 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("regularized_gamma_p requires a > 0, got {a}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("regularized_gamma_p requires a > 0, got {a}")));
     }
     if x < 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("regularized_gamma_p requires x >= 0, got {x}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("regularized_gamma_p requires x >= 0, got {x}")));
     }
 
     if x == 0.0 {
@@ -295,9 +283,7 @@ fn gamma_series(a: f64, x: f64, gln: f64) -> Result<f64> {
         }
     }
 
-    Err(BarracudaError::ExecutionError {
-        message: "gamma_series: convergence failed".to_string(),
-    })
+    Err(BarracudaError::execution("gamma_series: convergence failed"))
 }
 
 /// Continued fraction for regularized incomplete gamma Q(a, x)
@@ -331,9 +317,7 @@ fn gamma_cf(a: f64, x: f64, gln: f64) -> Result<f64> {
         }
     }
 
-    Err(BarracudaError::ExecutionError {
-        message: "gamma_cf: convergence failed".to_string(),
-    })
+    Err(BarracudaError::execution("gamma_cf: convergence failed"))
 }
 
 /// Digamma function: ψ(x) = d/dx ln(Γ(x)) = Γ'(x) / Γ(x)
@@ -381,9 +365,7 @@ fn gamma_cf(a: f64, x: f64, gln: f64) -> Result<f64> {
 /// - hotSpring Phase 5: inline implementation in `validate_special_functions.rs`
 pub fn digamma(x: f64) -> Result<f64> {
     if x <= 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("digamma requires x > 0, got {x}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("digamma requires x > 0, got {x}")));
     }
 
     // Recurrence to shift x >= 7
@@ -455,9 +437,7 @@ pub fn digamma(x: f64) -> Result<f64> {
 /// - hotSpring Phase 5: inline implementation in `validate_special_functions.rs`
 pub fn beta(a: f64, b: f64) -> Result<f64> {
     if a <= 0.0 || b <= 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("beta requires a > 0 and b > 0, got a={a}, b={b}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("beta requires a > 0 and b > 0, got a={a}, b={b}")));
     }
 
     // B(a, b) = exp(ln(Γ(a)) + ln(Γ(b)) - ln(Γ(a+b)))
@@ -491,9 +471,7 @@ pub const WGSL_LN_BETA_F64: &str = include_str!("../shaders/special/ln_beta_f64.
 /// ```
 pub fn ln_beta(a: f64, b: f64) -> Result<f64> {
     if a <= 0.0 || b <= 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("ln_beta requires a > 0 and b > 0, got a={a}, b={b}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("ln_beta requires a > 0 and b > 0, got a={a}, b={b}")));
     }
 
     Ok(ln_gamma(a)? + ln_gamma(b)? - ln_gamma(a + b)?)

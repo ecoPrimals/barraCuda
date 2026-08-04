@@ -52,24 +52,16 @@ pub fn screened_coulomb_eigenvalues(
     n_eigenvalues: usize,
 ) -> Result<Vec<f64>> {
     if z <= 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("screened_coulomb_eigenvalues requires z > 0, got {z}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("screened_coulomb_eigenvalues requires z > 0, got {z}")));
     }
     if mu < 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("screened_coulomb_eigenvalues requires mu >= 0, got {mu}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("screened_coulomb_eigenvalues requires mu >= 0, got {mu}")));
     }
     if n_grid < 2 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("screened_coulomb_eigenvalues requires n_grid >= 2, got {n_grid}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("screened_coulomb_eigenvalues requires n_grid >= 2, got {n_grid}")));
     }
     if r_max <= 0.0 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("screened_coulomb_eigenvalues requires r_max > 0, got {r_max}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("screened_coulomb_eigenvalues requires r_max > 0, got {r_max}")));
     }
     if n_eigenvalues == 0 {
         return Ok(Vec::new());

@@ -202,15 +202,13 @@ impl QrGpu {
         n: usize,
     ) -> Result<(Vec<f64>, Vec<f64>)> {
         if data.len() != m * n {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Expected {} elements for {}x{} matrix, got {}",
                     m * n,
                     m,
                     n,
                     data.len()
-                ),
-            });
+                )));
         }
 
         let mu = m as u32;

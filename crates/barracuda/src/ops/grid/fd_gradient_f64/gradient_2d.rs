@@ -59,15 +59,13 @@ impl Gradient2D {
     pub async fn compute(&self, input: &[f64]) -> Result<(Vec<f64>, Vec<f64>)> {
         let total = self.nx * self.ny;
         if input.len() != total {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Input size mismatch: expected {} ({}×{}), got {}",
                     total,
                     self.nx,
                     self.ny,
                     input.len()
-                ),
-            });
+                )));
         }
 
         #[repr(C)]

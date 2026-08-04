@@ -258,9 +258,7 @@ impl ComputeExecutor for NpuExecutor {
         let op = op.clone();
         Box::pin(async move {
             if inputs.is_empty() {
-                return Err(crate::error::BarracudaError::InvalidInput {
-                    message: "No inputs provided".to_string(),
-                });
+                return Err(crate::error::BarracudaError::invalid_input("No inputs provided"));
             }
             tracing::debug!("NPU execute: op={:?}, inputs={}", op, inputs.len());
             Ok(inputs[0].clone())

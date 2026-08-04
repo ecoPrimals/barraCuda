@@ -67,15 +67,13 @@ impl CylindricalGradient {
     pub async fn compute(&self, input: &[f64]) -> Result<(Vec<f64>, Vec<f64>)> {
         let total = self.n_rho * self.n_z;
         if input.len() != total {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Input size mismatch: expected {} ({}×{}), got {}",
                     total,
                     self.n_rho,
                     self.n_z,
                     input.len()
-                ),
-            });
+                )));
         }
 
         #[repr(C)]
@@ -256,15 +254,13 @@ impl CylindricalLaplacian {
     pub async fn compute(&self, input: &[f64]) -> Result<Vec<f64>> {
         let total = self.n_rho * self.n_z;
         if input.len() != total {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Input size mismatch: expected {} ({}×{}), got {}",
                     total,
                     self.n_rho,
                     self.n_z,
                     input.len()
-                ),
-            });
+                )));
         }
 
         #[repr(C)]

@@ -179,22 +179,18 @@ impl GenEighGpu {
     ) -> Result<GenEighDecompositionGpu> {
         let expected_len = n * n;
         if a.len() != expected_len {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Matrix A has wrong size: expected {}, got {}",
                     expected_len,
                     a.len()
-                ),
-            });
+                )));
         }
         if b.len() != expected_len {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Matrix B has wrong size: expected {}, got {}",
                     expected_len,
                     b.len()
-                ),
-            });
+                )));
         }
 
         // Step 1: Cholesky decomposition of B = LLᵀ (GPU)
@@ -251,22 +247,18 @@ impl GenEighGpu {
     ) -> Result<Vec<GenEighDecompositionGpu>> {
         let expected_len = batch_size * n * n;
         if a_batch.len() != expected_len {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "A batch has wrong size: expected {}, got {}",
                     expected_len,
                     a_batch.len()
-                ),
-            });
+                )));
         }
         if b_batch.len() != expected_len {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "B batch has wrong size: expected {}, got {}",
                     expected_len,
                     b_batch.len()
-                ),
-            });
+                )));
         }
 
         // Transform all matrices to standard form

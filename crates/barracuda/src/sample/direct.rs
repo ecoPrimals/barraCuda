@@ -226,9 +226,7 @@ where
 {
     let n_dims = bounds.len();
     if n_dims == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "bounds cannot be empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("bounds cannot be empty"));
     }
 
     let mut cache = EvaluationCache::with_capacity(config.total_budget());
@@ -322,7 +320,7 @@ where
     // Extract best overall result
     let record = cache
         .best()
-        .ok_or_else(|| BarracudaError::Internal("No evaluations recorded".to_string()))?;
+        .ok_or_else(|| BarracudaError::internal("No evaluations recorded"))?;
     let (x_best, f_best) = (record.x.clone(), record.f);
 
     Ok(DirectSamplerResult {

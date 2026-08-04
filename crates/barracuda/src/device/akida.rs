@@ -435,9 +435,9 @@ fn detect_akida_sdk_version() -> Option<String> {
         search_paths.push(format!("{sdk_dir}/version"));
     }
 
-    if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+    if let Ok(data_home) = std::env::var(crate::env_keys::XDG_DATA_HOME) {
         search_paths.push(format!("{data_home}/akida/version"));
-    } else if let Ok(home) = std::env::var("HOME") {
+    } else if let Ok(home) = std::env::var(crate::env_keys::HOME) {
         search_paths.push(format!("{home}/.local/share/akida/version"));
     }
 
@@ -477,9 +477,9 @@ pub(crate) fn akida_model_dirs() -> Vec<std::path::PathBuf> {
         dirs.push(std::path::PathBuf::from(dir));
     }
 
-    if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+    if let Ok(data_home) = std::env::var(crate::env_keys::XDG_DATA_HOME) {
         dirs.push(std::path::PathBuf::from(data_home).join("akida/models"));
-    } else if let Ok(home) = std::env::var("HOME") {
+    } else if let Ok(home) = std::env::var(crate::env_keys::HOME) {
         dirs.push(std::path::PathBuf::from(home).join(".local/share/akida/models"));
     }
 

@@ -87,29 +87,23 @@ impl FheExtract {
     pub fn new(input: Tensor, degree: u32, index: u32) -> Result<Self> {
         // ✅ VALIDATION: Degree must be power of 2
         if !degree.is_power_of_two() || degree < 4 {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("Degree must be power of 2 >= 4, got {degree}"),
-            });
+            return Err(BarracudaError::invalid_input(format!("Degree must be power of 2 >= 4, got {degree}")));
         }
 
         // ✅ VALIDATION: Index must be in bounds
         if index >= degree {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("Index {index} out of bounds for degree {degree}"),
-            });
+            return Err(BarracudaError::invalid_input(format!("Index {index} out of bounds for degree {degree}")));
         }
 
         // ✅ VALIDATION: Input tensor must be 2*degree (u64 as 2xu32)
         let expected_size = (degree * 2) as usize;
         if input.shape()[0] != expected_size {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Input must have {} elements (degree={}, u64 emulated), got {}",
                     expected_size,
                     degree,
                     input.shape()[0]
-                ),
-            });
+                )));
         }
 
         let device = input.device();

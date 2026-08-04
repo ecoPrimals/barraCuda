@@ -35,5 +35,32 @@ pub const BARRACUDA_POLL_TIMEOUT_SECS: &str = "BARRACUDA_POLL_TIMEOUT_SECS";
 /// Require GPU adapter in validation binaries (`1` or `true`).
 pub const BARRACUDA_REQUIRE_GPU: &str = "BARRACUDA_REQUIRE_GPU";
 
+/// GPU adapter selector override (index, substring match, or `"auto"`).
+pub const BARRACUDA_GPU_ADAPTER: &str = "BARRACUDA_GPU_ADAPTER";
+
+/// Concurrency budget override for GPU command submission.
+pub const BARRACUDA_CONCURRENCY_BUDGET: &str = "BARRACUDA_CONCURRENCY_BUDGET";
+
+/// Small matmul CPU-only threshold (element count).
+pub const BARRACUDA_MATMUL_SMALL_THRESHOLD: &str = "BARRACUDA_MATMUL_SMALL_THRESHOLD";
+
+/// GPU matmul threshold — matrices above this size dispatch to GPU.
+pub const BARRACUDA_MATMUL_GPU_THRESHOLD: &str = "BARRACUDA_MATMUL_GPU_THRESHOLD";
+
+/// Explicit shader compiler address override (`unix:/path` or `host:port`).
+pub const BARRACUDA_SHADER_COMPILER_ADDR: &str = "BARRACUDA_SHADER_COMPILER_ADDR";
+
+/// Shader compiler port for localhost fallback probe.
+pub const BARRACUDA_SHADER_COMPILER_PORT: &str = "BARRACUDA_SHADER_COMPILER_PORT";
+
+/// XDG cache home for autotune and NCBI caches.
+pub const XDG_CACHE_HOME: &str = "XDG_CACHE_HOME";
+
+/// XDG data home for hardware-specific SDK paths.
+pub const XDG_DATA_HOME: &str = "XDG_DATA_HOME";
+
+/// User home directory fallback for XDG paths.
+pub const HOME: &str = "HOME";
+
 /// Default loopback address for localhost-only IPC and discovery probes.
 pub const DEFAULT_LOOPBACK: &str = "127.0.0.1";

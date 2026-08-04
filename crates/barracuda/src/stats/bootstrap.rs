@@ -130,19 +130,13 @@ where
 {
     let n = data.len();
     if n == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "data cannot be empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("data cannot be empty"));
     }
     if n_bootstrap == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "n_bootstrap must be > 0".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("n_bootstrap must be > 0"));
     }
     if !(0.0..1.0).contains(&confidence) {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("confidence must be in (0, 1), got {confidence}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("confidence must be in (0, 1), got {confidence}")));
     }
 
     // Point estimate on original data
@@ -287,19 +281,13 @@ pub fn rawr_mean(
 ) -> Result<BootstrapCI> {
     let n = data.len();
     if n == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "data cannot be empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("data cannot be empty"));
     }
     if n_replicates == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "n_replicates must be > 0".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("n_replicates must be > 0"));
     }
     if !(0.0..1.0).contains(&confidence) {
-        return Err(BarracudaError::InvalidInput {
-            message: format!("confidence must be in (0, 1), got {confidence}"),
-        });
+        return Err(BarracudaError::invalid_input(format!("confidence must be in (0, 1), got {confidence}")));
     }
 
     let estimate = data.iter().sum::<f64>() / n as f64;
@@ -423,14 +411,10 @@ impl BootstrapMeanGpu {
     ) -> crate::error::Result<Vec<f64>> {
         let n = data.len() as u32;
         if n == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "data cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("data cannot be empty"));
         }
         if n_bootstrap == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "n_bootstrap must be > 0".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("n_bootstrap must be > 0"));
         }
 
         let params = BootstrapGpuParams {

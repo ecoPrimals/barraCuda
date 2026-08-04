@@ -135,36 +135,28 @@ impl SpinOrbitGpu {
     ) -> Result<Vec<f64>> {
         let n_grid = r_grid.len();
         if n_grid == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "r_grid cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("r_grid cannot be empty"));
         }
 
         // Infer batch_size and n_states from ls_factors and drho_dr
         let batch_size = drho_dr.len() / n_grid;
         if drho_dr.len() != batch_size * n_grid {
-            return Err(BarracudaError::InvalidInput {
-                message: "drho_dr length must be batch_size × n_grid".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("drho_dr length must be batch_size × n_grid"));
         }
 
         let n_states = ls_factors.len() / batch_size;
         if ls_factors.len() != batch_size * n_states {
-            return Err(BarracudaError::InvalidInput {
-                message: "ls_factors length must be batch_size × n_states".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("ls_factors length must be batch_size × n_states"));
         }
 
         if wf_squared.len() != batch_size * n_states * n_grid {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "wf_squared length {} must be batch({}) × n_states({}) × n_grid({})",
                     wf_squared.len(),
                     batch_size,
                     n_states,
                     n_grid
-                ),
-            });
+                )));
         }
 
         self.compute_internal(&SpinOrbitInputs {
@@ -202,35 +194,27 @@ impl SpinOrbitGpu {
     ) -> Result<Vec<f64>> {
         let n_grid = r_grid.len();
         if n_grid == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "r_grid cannot be empty".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("r_grid cannot be empty"));
         }
 
         let batch_size = density.len() / n_grid;
         if density.len() != batch_size * n_grid {
-            return Err(BarracudaError::InvalidInput {
-                message: "density length must be batch_size × n_grid".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("density length must be batch_size × n_grid"));
         }
 
         let n_states = ls_factors.len() / batch_size;
         if ls_factors.len() != batch_size * n_states {
-            return Err(BarracudaError::InvalidInput {
-                message: "ls_factors length must be batch_size × n_states".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("ls_factors length must be batch_size × n_states"));
         }
 
         if wf_squared.len() != batch_size * n_states * n_grid {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "wf_squared length {} must be batch({}) × n_states({}) × n_grid({})",
                     wf_squared.len(),
                     batch_size,
                     n_states,
                     n_grid
-                ),
-            });
+                )));
         }
 
         self.compute_internal(&SpinOrbitInputs {

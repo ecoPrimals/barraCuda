@@ -77,11 +77,9 @@ pub async fn reshape(
 
     // Validate: total elements must match
     if num_elements != new_total {
-        return Err(BarracudaError::InvalidInput {
-            message: format!(
+        return Err(BarracudaError::invalid_input(format!(
                 "Cannot reshape: input has {num_elements} elements, new shape {new_shape:?} requires {new_total}"
-            ),
-        });
+            )));
     }
 
     // Create params (metadata for shape interpretation)

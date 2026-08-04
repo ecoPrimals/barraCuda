@@ -125,25 +125,19 @@ pub fn latin_hypercube(
     seed: u64,
 ) -> Result<Vec<Vec<f64>>> {
     if n_samples == 0 {
-        return Err(BarracudaError::InvalidInput {
-            message: "n_samples must be > 0".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("n_samples must be > 0"));
     }
 
     if bounds.is_empty() {
-        return Err(BarracudaError::InvalidInput {
-            message: "bounds must be non-empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("bounds must be non-empty"));
     }
 
     // Validate bounds
     for (i, &(lo, hi)) in bounds.iter().enumerate() {
         if lo >= hi {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Bounds for dimension {i} are invalid: [{lo}, {hi}] (lower >= upper)"
-                ),
-            });
+                )));
         }
     }
 

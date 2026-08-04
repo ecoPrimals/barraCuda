@@ -74,15 +74,11 @@ impl Covariance {
     pub fn covariance_with_ddof(&self, x: &[f32], y: &[f32], ddof: u32) -> Result<f32> {
         let n = x.len();
         if y.len() != n {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("Vector lengths must match: x={}, y={}", n, y.len()),
-            });
+            return Err(BarracudaError::invalid_input(format!("Vector lengths must match: x={}, y={}", n, y.len())));
         }
 
         if n <= ddof as usize {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("Need more than {ddof} elements for ddof={ddof}"),
-            });
+            return Err(BarracudaError::invalid_input(format!("Need more than {ddof} elements for ddof={ddof}")));
         }
 
         self.covariance_gpu(x, y, ddof)

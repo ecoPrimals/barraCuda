@@ -158,7 +158,7 @@ impl BatchedRK4F64 {
                 .enumerate()
                 .map(|(i, h)| {
                     h.join().unwrap_or_else(|_| {
-                        Err(BarracudaError::Internal(format!(
+                        Err(BarracudaError::internal(format!(
                             "BatchedRK4F64::integrate_fixed: thread panic for instance {i}"
                         )))
                     })
@@ -225,7 +225,7 @@ impl BatchedRK4F64 {
                 .enumerate()
                 .map(|(i, h)| {
                     h.join().unwrap_or_else(|_| {
-                        Err(BarracudaError::Internal(format!(
+                        Err(BarracudaError::internal(format!(
                             "BatchedRK4F64::integrate_adaptive: thread panic for instance {i}"
                         )))
                     })
@@ -240,12 +240,10 @@ impl BatchedRK4F64 {
 
     fn validate_batch(&self, n_odes: usize, y0_batch: &[Vec<f64>]) -> Result<()> {
         if y0_batch.len() != n_odes {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "BatchedRK4F64: odes.len()={n_odes} but y0_batch.len()={}",
                     y0_batch.len()
-                ),
-            });
+                )));
         }
         if n_odes == 0 {
             return Ok(());
@@ -253,12 +251,10 @@ impl BatchedRK4F64 {
         let d = y0_batch[0].len();
         for (i, y) in y0_batch.iter().enumerate() {
             if y.len() != d {
-                return Err(BarracudaError::InvalidInput {
-                    message: format!(
+                return Err(BarracudaError::invalid_input(format!(
                         "BatchedRK4F64: instance {i} has D={} but expected D={d}",
                         y.len()
-                    ),
-                });
+                    )));
             }
         }
         Ok(())

@@ -43,7 +43,7 @@ async fn jsonrpc_call_ndjson_tcp<P: Serialize, R: for<'de> Deserialize<'de>>(
 
     let stream = TcpStream::connect(host_port)
         .await
-        .map_err(|e| BarracudaError::Internal(format!("TCP connect to {host_port}: {e}")))?;
+        .map_err(|e| BarracudaError::internal(format!("TCP connect to {host_port}: {e}")))?;
 
     jsonrpc_call_ndjson_stream(stream, method, params).await
 }
@@ -63,7 +63,7 @@ async fn jsonrpc_call_unix<P: Serialize, R: for<'de> Deserialize<'de>>(
 
     let stream = tokio::net::UnixStream::connect(path)
         .await
-        .map_err(|e| BarracudaError::Internal(format!("Unix connect to {path}: {e}")))?;
+        .map_err(|e| BarracudaError::internal(format!("Unix connect to {path}: {e}")))?;
 
     jsonrpc_call_ndjson_stream(stream, method, params).await
 }
@@ -74,7 +74,7 @@ async fn jsonrpc_call_unix<P: Serialize, R: for<'de> Deserialize<'de>>(
     _method: &str,
     _params: &P,
 ) -> crate::error::Result<R> {
-    Err(crate::error::BarracudaError::Internal(format!(
+    Err(crate::error::BarracudaError::internal(format!(
         "Unix sockets not supported on this platform: {path}"
     )))
 }
@@ -98,28 +98,28 @@ async fn jsonrpc_call_ndjson_stream<
         "id": 1,
     });
     let mut body = serde_json::to_string(&request)
-        .map_err(|e| BarracudaError::Internal(format!("JSON-RPC serialize: {e}")))?;
+        .map_err(|e| BarracudaError::internal(format!("JSON-RPC serialize: {e}")))?;
     body.push('\n');
 
     stream
         .write_all(body.as_bytes())
         .await
-        .map_err(|e| BarracudaError::Internal(format!("ndjson write: {e}")))?;
+        .map_err(|e| BarracudaError::internal(format!("ndjson write: {e}")))?;
     stream
         .flush()
         .await
-        .map_err(|e| BarracudaError::Internal(format!("ndjson flush: {e}")))?;
+        .map_err(|e| BarracudaError::internal(format!("ndjson flush: {e}")))?;
 
     let mut reader = BufReader::new(&mut stream);
     let mut line = String::new();
     reader
         .read_line(&mut line)
         .await
-        .map_err(|e| BarracudaError::Internal(format!("ndjson read: {e}")))?;
+        .map_err(|e| BarracudaError::internal(format!("ndjson read: {e}")))?;
 
     if line.is_empty() {
-        return Err(BarracudaError::Internal(
-            "empty response from ndjson endpoint".into(),
+        return Err(BarracudaError::internal(
+            "empty response from ndjson endpoint",
         ));
     }
 
@@ -141,7 +141,7 @@ async fn jsonrpc_call_http<P: Serialize, R: for<'de> Deserialize<'de>>(
         "id": 1,
     });
     let body = serde_json::to_string(&request)
-        .map_err(|e| BarracudaError::Internal(format!("JSON-RPC serialize: {e}")))?;
+        .map_err(|e| BarracudaError::internal(format!("JSON-RPC serialize: {e}")))?;
 
     let http_request = format!(
         "POST / HTTP/1.1\r\nHost: {host_port}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
@@ -150,24 +150,24 @@ async fn jsonrpc_call_http<P: Serialize, R: for<'de> Deserialize<'de>>(
 
     let mut stream = TcpStream::connect(host_port)
         .await
-        .map_err(|e| BarracudaError::Internal(format!("TCP connect to {host_port}: {e}")))?;
+        .map_err(|e| BarracudaError::internal(format!("TCP connect to {host_port}: {e}")))?;
 
     stream
         .write_all(http_request.as_bytes())
         .await
-        .map_err(|e| BarracudaError::Internal(format!("TCP write: {e}")))?;
+        .map_err(|e| BarracudaError::internal(format!("TCP write: {e}")))?;
 
     let mut response_buf = Vec::new();
     stream
         .read_to_end(&mut response_buf)
         .await
-        .map_err(|e| BarracudaError::Internal(format!("TCP read: {e}")))?;
+        .map_err(|e| BarracudaError::internal(format!("TCP read: {e}")))?;
 
     let response_str = String::from_utf8_lossy(&response_buf);
 
     let json_start = response_str
         .find('{')
-        .ok_or_else(|| BarracudaError::Internal("no JSON body in HTTP response".into()))?;
+        .ok_or_else(|| BarracudaError::internal("no JSON body in HTTP response"))?;
     let json_body = &response_str[json_start..];
 
     parse_jsonrpc_response(json_body)
@@ -180,23 +180,23 @@ fn parse_jsonrpc_response<R: for<'de> Deserialize<'de>>(
     use crate::error::BarracudaError;
 
     let mut rpc_response: serde_json::Value = serde_json::from_str(json_body)
-        .map_err(|e| BarracudaError::Internal(format!("JSON parse: {e}")))?;
+        .map_err(|e| BarracudaError::internal(format!("JSON parse: {e}")))?;
 
     if let Some(error) = rpc_response.get("error") {
         let msg = error
             .get("message")
             .and_then(|m| m.as_str())
             .unwrap_or("unknown error");
-        return Err(BarracudaError::Internal(format!("JSON-RPC error: {msg}")));
+        return Err(BarracudaError::internal(format!("JSON-RPC error: {msg}")));
     }
 
     let result = rpc_response
         .as_object_mut()
         .and_then(|obj| obj.remove("result"))
-        .ok_or_else(|| BarracudaError::Internal("no result field in JSON-RPC response".into()))?;
+        .ok_or_else(|| BarracudaError::internal("no result field in JSON-RPC response"))?;
 
     serde_json::from_value(result)
-        .map_err(|e| BarracudaError::Internal(format!("deserialize result: {e}")))
+        .map_err(|e| BarracudaError::internal(format!("deserialize result: {e}")))
 }
 
 /// Convert WGSL to SPIR-V words using naga (local, no IPC).

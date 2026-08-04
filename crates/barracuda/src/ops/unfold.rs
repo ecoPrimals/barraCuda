@@ -38,9 +38,7 @@ impl Unfold {
     ) -> Result<Self> {
         let shape = input.shape();
         if shape.len() != 4 {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: format!("Unfold expects 4D tensor [B, C, H, W], got shape {shape:?}"),
-            });
+            return Err(crate::error::BarracudaError::invalid_input(format!("Unfold expects 4D tensor [B, C, H, W], got shape {shape:?}")));
         }
 
         Ok(Self {

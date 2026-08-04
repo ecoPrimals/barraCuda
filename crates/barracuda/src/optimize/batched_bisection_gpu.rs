@@ -95,9 +95,7 @@ impl BatchedBisectionGpu {
     /// Returns [`Err`] if `tolerance` ≤ 0.
     pub fn new(device: Arc<WgpuDevice>, max_iterations: u32, tolerance: f64) -> Result<Self> {
         if tolerance <= 0.0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "Tolerance must be positive".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Tolerance must be positive"));
         }
         Ok(Self {
             device,
@@ -127,14 +125,12 @@ impl BatchedBisectionGpu {
         targets: &[f64],
     ) -> Result<BisectionResult> {
         if lower.len() != upper.len() || lower.len() != targets.len() {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Array lengths must match: lower={}, upper={}, targets={}",
                     lower.len(),
                     upper.len(),
                     targets.len()
-                ),
-            });
+                )));
         }
 
         self.solve_internal(lower, upper, targets, 1, false, "batched_bisection_poly")
@@ -162,20 +158,16 @@ impl BatchedBisectionGpu {
     ) -> Result<BisectionResult> {
         let batch_size = lower.len();
         if upper.len() != batch_size || delta.len() != batch_size || target_n.len() != batch_size {
-            return Err(BarracudaError::InvalidInput {
-                message: "Array lengths must match batch_size".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Array lengths must match batch_size"));
         }
 
         // Calculate n_levels
         if !eigenvalues.len().is_multiple_of(batch_size) {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "eigenvalues length {} must be divisible by batch_size {}",
                     eigenvalues.len(),
                     batch_size
-                ),
-            });
+                )));
         }
         let n_levels = eigenvalues.len() / batch_size;
 
@@ -229,31 +221,25 @@ impl BatchedBisectionGpu {
     ) -> Result<BisectionResult> {
         let batch_size = lower.len();
         if upper.len() != batch_size || delta.len() != batch_size || target_n.len() != batch_size {
-            return Err(BarracudaError::InvalidInput {
-                message: "Array lengths must match batch_size".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("Array lengths must match batch_size"));
         }
 
         // Calculate n_levels
         if !eigenvalues.len().is_multiple_of(batch_size) {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "eigenvalues length {} must be divisible by batch_size {}",
                     eigenvalues.len(),
                     batch_size
-                ),
-            });
+                )));
         }
         let n_levels = eigenvalues.len() / batch_size;
 
         if degeneracies.len() != eigenvalues.len() {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "degeneracies length {} must match eigenvalues length {}",
                     degeneracies.len(),
                     eigenvalues.len()
-                ),
-            });
+                )));
         }
 
         // Pack params: [ε_0, ..., ε_{n-1}, deg_0, ..., deg_{n-1}, Δ, N] per problem
@@ -410,7 +396,7 @@ impl BatchedBisectionGpu {
             .chunks_exact(4)
             .map(|chunk| {
                 let arr: [u8; 4] = chunk.try_into().map_err(|_| {
-                    BarracudaError::Internal("chunks_exact(4) invariant violated".to_string())
+                    BarracudaError::internal("chunks_exact(4) invariant violated")
                 })?;
                 Ok(u32::from_le_bytes(arr))
             })

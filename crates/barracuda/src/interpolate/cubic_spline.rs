@@ -146,28 +146,22 @@ impl CubicSpline {
         let n = x.len();
 
         if n < 2 {
-            return Err(BarracudaError::InvalidInput {
-                message: "CubicSpline requires at least 2 data points".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("CubicSpline requires at least 2 data points"));
         }
 
         if n != y.len() {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("x and y must have same length: {} vs {}", n, y.len()),
-            });
+            return Err(BarracudaError::invalid_input(format!("x and y must have same length: {} vs {}", n, y.len())));
         }
 
         for i in 1..n {
             if x[i] <= x[i - 1] {
-                return Err(BarracudaError::InvalidInput {
-                    message: format!(
+                return Err(BarracudaError::invalid_input(format!(
                         "x must be strictly increasing: x[{}]={} >= x[{}]={}",
                         i,
                         x[i],
                         i - 1,
                         x[i - 1]
-                    ),
-                });
+                    )));
             }
         }
 
@@ -523,9 +517,7 @@ fn solve_tridiagonal(lower: &[f64], diag: &[f64], upper: &[f64], rhs: &[f64]) ->
     for i in 1..n {
         let denom = (-lower[i]).mul_add(c_prime[i - 1], diag[i]);
         if denom.abs() < 1e-14 {
-            return Err(BarracudaError::ExecutionError {
-                message: "Singular tridiagonal system in spline computation".to_string(),
-            });
+            return Err(BarracudaError::execution("Singular tridiagonal system in spline computation"));
         }
         c_prime[i] = upper[i] / denom;
         d_prime[i] = (-lower[i]).mul_add(d_prime[i - 1], rhs[i]) / denom;

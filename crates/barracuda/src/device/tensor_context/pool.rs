@@ -412,11 +412,9 @@ impl BufferPool {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
 
         if solver_buffers.contains_key(solver_id) {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Solver '{solver_id}' already has pinned buffers. Call release_solver_buffers() first."
-                ),
-            });
+                )));
         }
 
         let mut buffer_map = HashMap::new();

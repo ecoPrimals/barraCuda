@@ -77,9 +77,7 @@ impl GridQuadratureGemm {
         grid_size: usize,
     ) -> Result<Self> {
         if batch_size == 0 || n == 0 || grid_size == 0 {
-            return Err(BarracudaError::InvalidInput {
-                message: "batch_size, n, and grid_size must be positive".to_string(),
-            });
+            return Err(BarracudaError::invalid_input("batch_size, n, and grid_size must be positive"));
         }
         Ok(Self {
             device,
@@ -119,36 +117,30 @@ impl GridQuadratureGemm {
         let expected_w_len = self.batch_size * self.grid_size;
 
         if phi.len() != expected_phi_len {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "phi length {} doesn't match expected {} (batch={}, n={}, grid={})",
                     phi.len(),
                     expected_phi_len,
                     self.batch_size,
                     self.n,
                     self.grid_size
-                ),
-            });
+                )));
         }
         if w.len() != expected_w_len {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "w length {} doesn't match expected {} (batch={}, grid={})",
                     w.len(),
                     expected_w_len,
                     self.batch_size,
                     self.grid_size
-                ),
-            });
+                )));
         }
         if quad_weights.len() != self.grid_size {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "quad_weights length {} doesn't match grid_size {}",
                     quad_weights.len(),
                     self.grid_size
-                ),
-            });
+                )));
         }
 
         let shader = self

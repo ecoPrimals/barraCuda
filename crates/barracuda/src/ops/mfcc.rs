@@ -41,20 +41,16 @@ impl MFCC {
         n_mfcc: usize,
     ) -> Result<Self> {
         if n_mfcc > n_mels {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("n_mfcc ({n_mfcc}) cannot exceed n_mels ({n_mels})"),
-            });
+            return Err(BarracudaError::invalid_input(format!("n_mfcc ({n_mfcc}) cannot exceed n_mels ({n_mels})")));
         }
 
         let mel_size: usize = mel_spectrogram.shape().iter().product();
         if mel_size != n_frames * n_mels {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "Mel spectrogram size ({}) must equal n_frames * n_mels ({})",
                     mel_size,
                     n_frames * n_mels
-                ),
-            });
+                )));
         }
 
         Ok(Self {

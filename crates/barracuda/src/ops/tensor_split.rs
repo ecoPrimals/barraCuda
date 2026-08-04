@@ -27,17 +27,13 @@ impl TensorSplit {
     pub fn new(input: Tensor, split_indices: Vec<usize>, dim: usize) -> Result<Self> {
         let shape = input.shape();
         if dim >= shape.len() {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: format!("dim {} exceeds tensor rank {}", dim, shape.len()),
-            });
+            return Err(crate::error::BarracudaError::invalid_input(format!("dim {} exceeds tensor rank {}", dim, shape.len())));
         }
 
         let dim_size = shape[dim];
         for &idx in &split_indices {
             if idx > dim_size {
-                return Err(crate::error::BarracudaError::InvalidInput {
-                    message: format!("Split index {idx} exceeds dimension size {dim_size}"),
-                });
+                return Err(crate::error::BarracudaError::invalid_input(format!("Split index {idx} exceeds dimension size {dim_size}")));
             }
         }
 

@@ -328,13 +328,11 @@ impl SpikingNetwork {
                 reset,
             } => {
                 if input.len() != *size {
-                    return Err(BarracudaError::InvalidInput {
-                        message: format!(
+                    return Err(BarracudaError::invalid_input(format!(
                             "LIF input size mismatch: expected {}, got {}",
                             size,
                             input.len()
-                        ),
-                    });
+                        )));
                 }
 
                 // Leaky Integrate-and-Fire dynamics (pure Rust!)
@@ -393,13 +391,11 @@ impl SpikingNetwork {
                 ..
             } => {
                 if input.len() != *input_size {
-                    return Err(BarracudaError::InvalidInput {
-                        message: format!(
+                    return Err(BarracudaError::invalid_input(format!(
                             "Linear input size mismatch: expected {}, got {}",
                             input_size,
                             input.len()
-                        ),
-                    });
+                        )));
                 }
 
                 let weights = state.weights.as_ref().ok_or_else(|| {

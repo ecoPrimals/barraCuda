@@ -26,19 +26,15 @@ impl Tile {
     pub fn new(input: Tensor, repeats: Vec<usize>) -> Result<Self> {
         let num_dims = input.shape().len();
         if repeats.len() != num_dims {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: format!(
+            return Err(crate::error::BarracudaError::invalid_input(format!(
                     "Repeats length {} doesn't match tensor rank {}",
                     repeats.len(),
                     num_dims
-                ),
-            });
+                )));
         }
 
         if repeats.contains(&0) {
-            return Err(crate::error::BarracudaError::InvalidInput {
-                message: "Repeats must be positive".to_string(),
-            });
+            return Err(crate::error::BarracudaError::invalid_input("Repeats must be positive"));
         }
 
         Ok(Self { input, repeats })

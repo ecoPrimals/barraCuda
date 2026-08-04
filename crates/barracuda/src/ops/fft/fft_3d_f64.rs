@@ -33,9 +33,7 @@ impl Fft3DF64 {
         nz: usize,
     ) -> Result<Self> {
         if !nx.is_power_of_two() || !ny.is_power_of_two() || !nz.is_power_of_two() {
-            return Err(BarracudaError::InvalidInput {
-                message: format!("FFT 3D dimensions must be powers of 2, got ({nx}, {ny}, {nz})"),
-            });
+            return Err(BarracudaError::invalid_input(format!("FFT 3D dimensions must be powers of 2, got ({nx}, {ny}, {nz})")));
         }
 
         let mut twiddles = HashMap::new();
@@ -74,16 +72,14 @@ impl Fft3DF64 {
         let expected_len = size * 2;
 
         if data.len() != expected_len {
-            return Err(BarracudaError::InvalidInput {
-                message: format!(
+            return Err(BarracudaError::invalid_input(format!(
                     "FFT 3D data length {} doesn't match expected {} ({}x{}x{}x2)",
                     data.len(),
                     expected_len,
                     self.nx,
                     self.ny,
                     self.nz
-                ),
-            });
+                )));
         }
 
         let buffer_bytes = (expected_len * size_of::<f64>()) as u64;

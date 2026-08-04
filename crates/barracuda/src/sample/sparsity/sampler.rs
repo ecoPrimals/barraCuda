@@ -74,15 +74,11 @@ where
 {
     use rayon::prelude::*;
     if bounds.is_empty() {
-        return Err(BarracudaError::InvalidInput {
-            message: "bounds must be non-empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("bounds must be non-empty"));
     }
 
     if config.n_initial < 2 {
-        return Err(BarracudaError::InvalidInput {
-            message: "n_initial must be >= 2 for surrogate training".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("n_initial must be >= 2 for surrogate training"));
     }
 
     let _n_dims = bounds.len();
@@ -225,7 +221,7 @@ where
 
     let record = cache
         .best()
-        .ok_or_else(|| BarracudaError::Internal("No evaluations recorded".to_string()))?;
+        .ok_or_else(|| BarracudaError::internal("No evaluations recorded"))?;
     let (x_best, f_best) = (record.x.clone(), record.f);
 
     Ok(SparsitySamplerResult {

@@ -85,15 +85,11 @@ pub fn sparse_matmul_quantized(
     scale: f32,
 ) -> BarracudaResult<Vec<f32>> {
     if sparse_values.is_empty() {
-        return Err(BarracudaError::InvalidInput {
-            message: "Sparse values cannot be empty".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Sparse values cannot be empty"));
     }
 
     if sparse_values.len() != sparse_rows.len() || sparse_values.len() != sparse_cols.len() {
-        return Err(BarracudaError::InvalidInput {
-            message: "Sparse arrays must have same length".to_string(),
-        });
+        return Err(BarracudaError::invalid_input("Sparse arrays must have same length"));
     }
 
     let nnz = crate::utils::checked_u32(sparse_values.len(), "sparse_matmul nnz")?;

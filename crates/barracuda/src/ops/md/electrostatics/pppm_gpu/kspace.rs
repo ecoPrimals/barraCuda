@@ -32,13 +32,11 @@ pub async fn compute_with_kspace(
 ) -> Result<(Vec<f64>, f64)> {
     let n = charges.len();
     if positions.len() != n * 3 {
-        return Err(BarracudaError::InvalidInput {
-            message: format!(
+        return Err(BarracudaError::invalid_input(format!(
                 "positions length {} != charges length {} * 3",
                 positions.len(),
                 n
-            ),
-        });
+            )));
     }
     // Wrap positions to box (matches CPU charge_spread/force_interpolation)
     let positions = wrap_positions(positions, pppm.params().box_dims);

@@ -182,22 +182,18 @@ pub fn gen_eigh_f64(
     n: usize,
 ) -> Result<GenEighDecomposition> {
     if a.len() != n * n {
-        return Err(BarracudaError::InvalidInput {
-            message: format!(
+        return Err(BarracudaError::invalid_input(format!(
                 "Matrix A has wrong size: expected {}, got {}",
                 n * n,
                 a.len()
-            ),
-        });
+            )));
     }
     if b.len() != n * n {
-        return Err(BarracudaError::InvalidInput {
-            message: format!(
+        return Err(BarracudaError::invalid_input(format!(
                 "Matrix B has wrong size: expected {}, got {}",
                 n * n,
                 b.len()
-            ),
-        });
+            )));
     }
 
     // Step 1: Cholesky decomposition of B = LLᵀ (GPU)

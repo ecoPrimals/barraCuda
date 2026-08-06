@@ -136,8 +136,8 @@ pub fn latin_hypercube(
     for (i, &(lo, hi)) in bounds.iter().enumerate() {
         if lo >= hi {
             return Err(BarracudaError::invalid_input(format!(
-                    "Bounds for dimension {i} are invalid: [{lo}, {hi}] (lower >= upper)"
-                )));
+                "Bounds for dimension {i} are invalid: [{lo}, {hi}] (lower >= upper)"
+            )));
         }
     }
 

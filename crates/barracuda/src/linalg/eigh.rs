@@ -149,11 +149,18 @@ impl EighDecomposition {
 /// - Complexity: O(n³) per sweep, typically 5-10 sweeps for convergence
 pub fn eigh_f64(a: &[f64], n: usize) -> Result<EighDecomposition> {
     if a.len() != n * n {
-        return Err(BarracudaError::invalid_input(format!("Matrix has {} elements, expected {}×{}", a.len(), n, n)));
+        return Err(BarracudaError::invalid_input(format!(
+            "Matrix has {} elements, expected {}×{}",
+            a.len(),
+            n,
+            n
+        )));
     }
 
     if n == 0 {
-        return Err(BarracudaError::invalid_input("Matrix dimension must be positive"));
+        return Err(BarracudaError::invalid_input(
+            "Matrix dimension must be positive",
+        ));
     }
 
     // Symmetry guard: non-symmetric input produces silently wrong results.
@@ -164,10 +171,10 @@ pub fn eigh_f64(a: &[f64], n: usize) -> Result<EighDecomposition> {
             let diff = (a[i * n + j] - a[j * n + i]).abs();
             if diff > sym_tol {
                 return Err(BarracudaError::invalid_input(format!(
-                        "Matrix is not symmetric: A[{i},{j}]={} vs A[{j},{i}]={} (diff={diff:.2e})",
-                        a[i * n + j],
-                        a[j * n + i],
-                    )));
+                    "Matrix is not symmetric: A[{i},{j}]={} vs A[{j},{i}]={} (diff={diff:.2e})",
+                    a[i * n + j],
+                    a[j * n + i],
+                )));
             }
         }
     }

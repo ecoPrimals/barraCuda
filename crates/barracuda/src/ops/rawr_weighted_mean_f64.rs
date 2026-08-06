@@ -76,10 +76,10 @@ impl RawrWeightedMeanGpu {
     ) -> Result<RawrResult> {
         if data.len() != weights.len() {
             return Err(BarracudaError::invalid_input(format!(
-                    "data and weights must have same length: {} vs {}",
-                    data.len(),
-                    weights.len()
-                )));
+                "data and weights must have same length: {} vs {}",
+                data.len(),
+                weights.len()
+            )));
         }
         let n = data.len();
         if n == 0 {
@@ -89,7 +89,9 @@ impl RawrWeightedMeanGpu {
             return Err(BarracudaError::invalid_input("n_resamples must be > 0"));
         }
         if !(0.0..1.0).contains(&confidence) {
-            return Err(BarracudaError::invalid_input(format!("confidence must be in (0, 1), got {confidence}")));
+            return Err(BarracudaError::invalid_input(format!(
+                "confidence must be in (0, 1), got {confidence}"
+            )));
         }
 
         let sum_wx: f64 = data.iter().zip(weights.iter()).map(|(d, w)| d * w).sum();

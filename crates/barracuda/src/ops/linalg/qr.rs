@@ -42,7 +42,11 @@ impl QrDecomposition {
     /// Returns [`Err`] if b length does not match m, or if the matrix is rank deficient.
     pub fn solve_least_squares(&self, b: &[f64]) -> Result<Vec<f64>> {
         if b.len() != self.m {
-            return Err(BarracudaError::invalid_input(format!("b has length {}, expected {}", b.len(), self.m)));
+            return Err(BarracudaError::invalid_input(format!(
+                "b has length {}, expected {}",
+                b.len(),
+                self.m
+            )));
         }
 
         // Compute Q^T * b
@@ -105,15 +109,24 @@ impl QrDecomposition {
 /// Returns [`Err`] if matrix length does not match m×n, dimensions are zero, or m < n.
 pub fn qr_decompose(a: &[f64], m: usize, n: usize) -> Result<QrDecomposition> {
     if a.len() != m * n {
-        return Err(BarracudaError::invalid_input(format!("Matrix has {} elements, expected {}×{}", a.len(), m, n)));
+        return Err(BarracudaError::invalid_input(format!(
+            "Matrix has {} elements, expected {}×{}",
+            a.len(),
+            m,
+            n
+        )));
     }
 
     if m == 0 || n == 0 {
-        return Err(BarracudaError::invalid_input("Matrix dimensions must be positive"));
+        return Err(BarracudaError::invalid_input(
+            "Matrix dimensions must be positive",
+        ));
     }
 
     if m < n {
-        return Err(BarracudaError::invalid_input(format!("QR requires m ≥ n, got m={m}, n={n}")));
+        return Err(BarracudaError::invalid_input(format!(
+            "QR requires m ≥ n, got m={m}, n={n}"
+        )));
     }
 
     // Initialize Q as identity, R as copy of A

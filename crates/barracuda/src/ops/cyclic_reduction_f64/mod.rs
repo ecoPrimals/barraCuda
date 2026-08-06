@@ -78,13 +78,13 @@ impl CyclicReductionF64 {
 
         if a.len() != n || c.len() != n || d.len() != n {
             return Err(BarracudaError::invalid_input(format!(
-                    "All vectors must have length {}: a={}, b={}, c={}, d={}",
-                    n,
-                    a.len(),
-                    b.len(),
-                    c.len(),
-                    d.len()
-                )));
+                "All vectors must have length {}: a={}, b={}, c={}, d={}",
+                n,
+                a.len(),
+                b.len(),
+                c.len(),
+                d.len()
+            )));
         }
 
         if n == 0 {

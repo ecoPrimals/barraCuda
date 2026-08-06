@@ -326,7 +326,9 @@ impl SequenceAnalyzer {
         }
 
         if patterns.is_empty() {
-            return Err(BarracudaError::invalid_input("At least one pattern required"));
+            return Err(BarracudaError::invalid_input(
+                "At least one pattern required",
+            ));
         }
 
         let mut matches = Vec::new();

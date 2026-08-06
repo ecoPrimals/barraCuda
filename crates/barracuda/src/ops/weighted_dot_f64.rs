@@ -76,11 +76,11 @@ impl WeightedDotF64 {
         let n = weights.len();
         if a.len() != n || b.len() != n {
             return Err(BarracudaError::invalid_input(format!(
-                    "Vector lengths must match: weights={}, a={}, b={}",
-                    n,
-                    a.len(),
-                    b.len()
-                )));
+                "Vector lengths must match: weights={}, a={}, b={}",
+                n,
+                a.len(),
+                b.len()
+            )));
         }
 
         if n == 0 {
@@ -108,7 +108,11 @@ impl WeightedDotF64 {
     pub fn dot(&self, a: &[f64], b: &[f64]) -> Result<f64> {
         let n = a.len();
         if b.len() != n {
-            return Err(BarracudaError::invalid_input(format!("Vector lengths must match: a={}, b={}", n, b.len())));
+            return Err(BarracudaError::invalid_input(format!(
+                "Vector lengths must match: a={}, b={}",
+                n,
+                b.len()
+            )));
         }
 
         if n == 0 {

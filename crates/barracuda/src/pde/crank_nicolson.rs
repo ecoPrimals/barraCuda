@@ -160,10 +160,10 @@ impl HeatEquation1D {
 
         if initial.len() != config.nx {
             return Err(BarracudaError::invalid_input(format!(
-                    "Initial condition length {} != nx {}",
-                    initial.len(),
-                    config.nx
-                )));
+                "Initial condition length {} != nx {}",
+                initial.len(),
+                config.nx
+            )));
         }
 
         let r = config.courant_number();
@@ -348,7 +348,9 @@ pub fn crank_nicolson_step(
 ) -> Result<Vec<f64>> {
     let n = u.len();
     if n == 0 {
-        return Err(BarracudaError::invalid_input("u must have at least 1 interior point"));
+        return Err(BarracudaError::invalid_input(
+            "u must have at least 1 interior point",
+        ));
     }
 
     let r = alpha * dt / (dx * dx);

@@ -188,7 +188,9 @@ impl RichardsConfig {
     /// readback fails (e.g. device lost or out of memory).
     pub fn validate(&self) -> Result<()> {
         if self.n_nodes < 3 {
-            return Err(BarracudaError::invalid_input("Richards solver requires at least 3 nodes"));
+            return Err(BarracudaError::invalid_input(
+                "Richards solver requires at least 3 nodes",
+            ));
         }
         if self.dz <= 0.0 || self.dt <= 0.0 {
             return Err(BarracudaError::invalid_input("dz and dt must be positive"));
@@ -234,7 +236,11 @@ pub fn solve_richards(
     let n = config.n_nodes;
 
     if h0.len() != n {
-        return Err(BarracudaError::invalid_input(format!("h0 length {} != n_nodes {}", h0.len(), n)));
+        return Err(BarracudaError::invalid_input(format!(
+            "h0 length {} != n_nodes {}",
+            h0.len(),
+            n
+        )));
     }
 
     let soil = &config.soil;

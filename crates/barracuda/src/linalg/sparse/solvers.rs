@@ -180,7 +180,11 @@ pub fn cg_solve_with_config(
         return Err(BarracudaError::invalid_input("CG requires square matrix"));
     }
     if b.len() != n {
-        return Err(BarracudaError::invalid_input(format!("Vector length {} doesn't match matrix size {}", b.len(), n)));
+        return Err(BarracudaError::invalid_input(format!(
+            "Vector length {} doesn't match matrix size {}",
+            b.len(),
+            n
+        )));
     }
 
     // Initial guess: x = 0
@@ -327,10 +331,16 @@ pub fn bicgstab_solve_with_config(
 ) -> Result<SolverResult> {
     let n = a.n_rows;
     if a.n_cols != n {
-        return Err(BarracudaError::invalid_input("BiCGSTAB requires square matrix"));
+        return Err(BarracudaError::invalid_input(
+            "BiCGSTAB requires square matrix",
+        ));
     }
     if b.len() != n {
-        return Err(BarracudaError::invalid_input(format!("Vector length {} doesn't match matrix size {}", b.len(), n)));
+        return Err(BarracudaError::invalid_input(format!(
+            "Vector length {} doesn't match matrix size {}",
+            b.len(),
+            n
+        )));
     }
 
     // Initial guess: x = 0
@@ -374,9 +384,7 @@ pub fn bicgstab_solve_with_config(
         let rho_new = dot(&r_hat, &r);
 
         if rho_new.abs() < 1e-14 {
-            return Err(BarracudaError::internal(
-                "BiCGSTAB breakdown: rho = 0",
-            ));
+            return Err(BarracudaError::internal("BiCGSTAB breakdown: rho = 0"));
         }
 
         // β = (ρ_new / ρ) * (α / ω)
@@ -398,9 +406,7 @@ pub fn bicgstab_solve_with_config(
         // α = ρ / (r_hat · v)
         let rv = dot(&r_hat, &v);
         if rv.abs() < 1e-14 {
-            return Err(BarracudaError::internal(
-                "BiCGSTAB breakdown: r_hat·v = 0",
-            ));
+            return Err(BarracudaError::internal("BiCGSTAB breakdown: r_hat·v = 0"));
         }
         alpha = rho / rv;
 
@@ -458,9 +464,7 @@ pub fn bicgstab_solve_with_config(
         }
 
         if omega.abs() < 1e-14 {
-            return Err(BarracudaError::internal(
-                "BiCGSTAB breakdown: omega = 0",
-            ));
+            return Err(BarracudaError::internal("BiCGSTAB breakdown: omega = 0"));
         }
     }
 
@@ -510,7 +514,9 @@ pub fn jacobi_solve(a: &CsrMatrix, b: &[f64], tol: f64, max_iter: usize) -> Resu
     // Check diagonal is non-zero
     for (i, d) in diag.iter().enumerate() {
         if d.abs() < 1e-14 {
-            return Err(BarracudaError::invalid_input(format!("Zero diagonal at row {i}")));
+            return Err(BarracudaError::invalid_input(format!(
+                "Zero diagonal at row {i}"
+            )));
         }
     }
 

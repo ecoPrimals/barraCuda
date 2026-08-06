@@ -70,5 +70,5 @@ pub use tolerance::Tolerance;
 #[cfg(feature = "gpu")]
 #[must_use]
 pub fn wgsl_hessian_column() -> &'static str {
-        include_str!("../shaders/numerical/hessian_column_f64.wgsl")
-    }
+    include_str!("../shaders/numerical/hessian_column_f64.wgsl")
+}

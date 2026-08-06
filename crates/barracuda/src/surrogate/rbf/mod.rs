@@ -147,15 +147,17 @@ impl RBFSurrogate {
         let n_train = x_data.len();
 
         if n_train == 0 {
-            return Err(BarracudaError::invalid_input("Training data cannot be empty"));
+            return Err(BarracudaError::invalid_input(
+                "Training data cannot be empty",
+            ));
         }
 
         if y_data.len() != n_train {
             return Err(BarracudaError::invalid_input(format!(
-                    "x_data and y_data length mismatch: {} vs {}",
-                    n_train,
-                    y_data.len()
-                )));
+                "x_data and y_data length mismatch: {} vs {}",
+                n_train,
+                y_data.len()
+            )));
         }
 
         let n_dim = x_data[0].len();
@@ -246,10 +248,10 @@ impl RBFSurrogate {
 
         if x_eval[0].len() != self.n_dim {
             return Err(BarracudaError::invalid_input(format!(
-                    "Dimension mismatch: expected {}, got {}",
-                    self.n_dim,
-                    x_eval[0].len()
-                )));
+                "Dimension mismatch: expected {}, got {}",
+                self.n_dim,
+                x_eval[0].len()
+            )));
         }
 
         // Flatten evaluation points (can't use extend_from_slice due to nested structure)
@@ -502,7 +504,9 @@ pub fn loo_cv_optimal_smoothing(
     let grid = smoothing_grid.unwrap_or(&default_grid);
 
     if grid.is_empty() {
-        return Err(BarracudaError::invalid_input("smoothing_grid cannot be empty"));
+        return Err(BarracudaError::invalid_input(
+            "smoothing_grid cannot be empty",
+        ));
     }
 
     // Parallelize grid search: each smoothing value trains an independent
@@ -520,7 +524,9 @@ pub fn loo_cv_optimal_smoothing(
         .collect();
 
     if results.is_empty() {
-        return Err(BarracudaError::execution("No valid smoothing values found during grid search"));
+        return Err(BarracudaError::execution(
+            "No valid smoothing values found during grid search",
+        ));
     }
 
     let (best_smoothing, best_rmse) = results

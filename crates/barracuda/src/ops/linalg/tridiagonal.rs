@@ -72,18 +72,20 @@ pub fn tridiagonal_solve(a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Result<V
 
     if a.len() != n - 1 || c.len() != n - 1 || d.len() != n {
         return Err(BarracudaError::invalid_input(format!(
-                "Dimension mismatch: a.len()={}, b.len()={}, c.len()={}, d.len()={}",
-                a.len(),
-                b.len(),
-                c.len(),
-                d.len()
-            )));
+            "Dimension mismatch: a.len()={}, b.len()={}, c.len()={}, d.len()={}",
+            a.len(),
+            b.len(),
+            c.len(),
+            d.len()
+        )));
     }
 
     // Special case: n=1
     if n == 1 {
         if b[0].abs() < 1e-15 {
-            return Err(BarracudaError::numerical("Division by zero: b[0] is near zero"));
+            return Err(BarracudaError::numerical(
+                "Division by zero: b[0] is near zero",
+            ));
         }
         return Ok(vec![d[0] / b[0]]);
     }
@@ -94,7 +96,9 @@ pub fn tridiagonal_solve(a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Result<V
 
     // First row
     if b[0].abs() < 1e-15 {
-        return Err(BarracudaError::numerical("Division by zero: b[0] is near zero"));
+        return Err(BarracudaError::numerical(
+            "Division by zero: b[0] is near zero",
+        ));
     }
     c_prime[0] = c[0] / b[0];
     d_prime[0] = d[0] / b[0];
@@ -103,7 +107,9 @@ pub fn tridiagonal_solve(a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Result<V
     for i in 1..n {
         let denom = a[i - 1].mul_add(-c_prime[i - 1], b[i]);
         if denom.abs() < 1e-15 {
-            return Err(BarracudaError::numerical(format!("Division by zero at row {i}: matrix may be singular")));
+            return Err(BarracudaError::numerical(format!(
+                "Division by zero at row {i}: matrix may be singular"
+            )));
         }
         if i < n - 1 {
             c_prime[i] = c[i] / denom;
@@ -139,17 +145,19 @@ pub fn tridiagonal_solve_f32(a: &[f32], b: &[f32], c: &[f32], d: &[f32]) -> Resu
 
     if a.len() != n - 1 || c.len() != n - 1 || d.len() != n {
         return Err(BarracudaError::invalid_input(format!(
-                "Dimension mismatch: a.len()={}, b.len()={}, c.len()={}, d.len()={}",
-                a.len(),
-                b.len(),
-                c.len(),
-                d.len()
-            )));
+            "Dimension mismatch: a.len()={}, b.len()={}, c.len()={}, d.len()={}",
+            a.len(),
+            b.len(),
+            c.len(),
+            d.len()
+        )));
     }
 
     if n == 1 {
         if b[0].abs() < 1e-7 {
-            return Err(BarracudaError::numerical("Division by zero: b[0] is near zero"));
+            return Err(BarracudaError::numerical(
+                "Division by zero: b[0] is near zero",
+            ));
         }
         return Ok(vec![d[0] / b[0]]);
     }
@@ -158,7 +166,9 @@ pub fn tridiagonal_solve_f32(a: &[f32], b: &[f32], c: &[f32], d: &[f32]) -> Resu
     let mut d_prime = vec![0.0f32; n];
 
     if b[0].abs() < 1e-7 {
-        return Err(BarracudaError::numerical("Division by zero: b[0] is near zero"));
+        return Err(BarracudaError::numerical(
+            "Division by zero: b[0] is near zero",
+        ));
     }
     c_prime[0] = c[0] / b[0];
     d_prime[0] = d[0] / b[0];
@@ -166,7 +176,9 @@ pub fn tridiagonal_solve_f32(a: &[f32], b: &[f32], c: &[f32], d: &[f32]) -> Resu
     for i in 1..n {
         let denom = a[i - 1].mul_add(-c_prime[i - 1], b[i]);
         if denom.abs() < 1e-7 {
-            return Err(BarracudaError::numerical(format!("Division by zero at row {i}: matrix may be singular")));
+            return Err(BarracudaError::numerical(format!(
+                "Division by zero at row {i}: matrix may be singular"
+            )));
         }
         if i < n - 1 {
             c_prime[i] = c[i] / denom;

@@ -56,36 +56,44 @@ pub fn fst_variance_decomposition(
     let r = allele_freqs.len();
     if r != population_sizes.len() {
         return Err(BarracudaError::invalid_input(format!(
-                "fst_variance_decomposition: allele_freqs len {} != population_sizes len {}",
-                allele_freqs.len(),
-                population_sizes.len()
-            )));
+            "fst_variance_decomposition: allele_freqs len {} != population_sizes len {}",
+            allele_freqs.len(),
+            population_sizes.len()
+        )));
     }
     if r < 2 {
-        return Err(BarracudaError::invalid_input("fst_variance_decomposition requires at least 2 populations"));
+        return Err(BarracudaError::invalid_input(
+            "fst_variance_decomposition requires at least 2 populations",
+        ));
     }
 
     let n: Vec<f64> = population_sizes.iter().map(|&s| s as f64).collect();
     let n_total: f64 = n.iter().sum();
     if n_total < 1.0 {
-        return Err(BarracudaError::invalid_input("fst_variance_decomposition: total sample size must be >= 1"));
+        return Err(BarracudaError::invalid_input(
+            "fst_variance_decomposition: total sample size must be >= 1",
+        ));
     }
 
     for (i, &p) in allele_freqs.iter().enumerate() {
         if !(0.0..=1.0).contains(&p) {
             return Err(BarracudaError::invalid_input(format!(
-                    "fst_variance_decomposition: allele_freqs[{i}] = {p} must be in [0,1]"
-                )));
+                "fst_variance_decomposition: allele_freqs[{i}] = {p} must be in [0,1]"
+            )));
         }
     }
 
     let n_bar = n.iter().sum::<f64>() / r as f64;
     if n_bar <= 1.0 {
-        return Err(BarracudaError::invalid_input("fst_variance_decomposition: mean sample size must be > 1"));
+        return Err(BarracudaError::invalid_input(
+            "fst_variance_decomposition: mean sample size must be > 1",
+        ));
     }
     let n_c = (n_total - n.iter().map(|ni| ni * ni).sum::<f64>() / n_total) / (r - 1) as f64;
     if n_c <= 0.0 {
-        return Err(BarracudaError::invalid_input("fst_variance_decomposition: n_c <= 0 (check population sizes)"));
+        return Err(BarracudaError::invalid_input(
+            "fst_variance_decomposition: n_c <= 0 (check population sizes)",
+        ));
     }
 
     // Weighted mean allele frequency

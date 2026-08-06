@@ -60,10 +60,14 @@ impl WrightFisherF32 {
     /// Returns an error if `n_pops == 0`, `n_loci == 0`, or `two_n == 0`.
     pub fn new(device: Arc<WgpuDevice>, config: WrightFisherConfig) -> Result<Self> {
         if config.n_pops == 0 || config.n_loci == 0 {
-            return Err(BarracudaError::invalid_input("WrightFisherF32: n_pops and n_loci must be > 0"));
+            return Err(BarracudaError::invalid_input(
+                "WrightFisherF32: n_pops and n_loci must be > 0",
+            ));
         }
         if config.two_n == 0 {
-            return Err(BarracudaError::invalid_input("WrightFisherF32: two_n must be > 0"));
+            return Err(BarracudaError::invalid_input(
+                "WrightFisherF32: two_n must be > 0",
+            ));
         }
         Ok(Self { device, config })
     }
@@ -92,23 +96,23 @@ impl WrightFisherF32 {
         let total = (self.config.n_pops as usize) * (self.config.n_loci as usize);
         if freq_in.len() != total {
             return Err(BarracudaError::invalid_input(format!(
-                    "freq_in length {} != n_pops*n_loci = {total}",
-                    freq_in.len()
-                )));
+                "freq_in length {} != n_pops*n_loci = {total}",
+                freq_in.len()
+            )));
         }
         if selection.len() != self.config.n_loci as usize {
             return Err(BarracudaError::invalid_input(format!(
-                    "selection length {} != n_loci = {}",
-                    selection.len(),
-                    self.config.n_loci
-                )));
+                "selection length {} != n_loci = {}",
+                selection.len(),
+                self.config.n_loci
+            )));
         }
         let expected_prng = total * 4;
         if prng_state.len() != expected_prng {
             return Err(BarracudaError::invalid_input(format!(
-                    "prng_state length {} != 4*n_pops*n_loci = {expected_prng}",
-                    prng_state.len()
-                )));
+                "prng_state length {} != 4*n_pops*n_loci = {expected_prng}",
+                prng_state.len()
+            )));
         }
 
         let dev = &self.device;

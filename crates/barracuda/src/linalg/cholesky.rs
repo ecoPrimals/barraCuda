@@ -39,7 +39,11 @@ impl CholeskyDecomposition {
     /// positive definite (zero diagonal in L).
     pub fn solve(&self, b: &[f64]) -> Result<Vec<f64>> {
         if b.len() != self.n {
-            return Err(BarracudaError::invalid_input(format!("b has length {}, expected {}", b.len(), self.n)));
+            return Err(BarracudaError::invalid_input(format!(
+                "b has length {}, expected {}",
+                b.len(),
+                self.n
+            )));
         }
 
         // Forward substitution: Ly = b
@@ -51,7 +55,9 @@ impl CholeskyDecomposition {
             }
             let diag = self.l[i * self.n + i];
             if diag.abs() < 1e-14 {
-                return Err(BarracudaError::numerical("Matrix is singular or not positive definite"));
+                return Err(BarracudaError::numerical(
+                    "Matrix is singular or not positive definite",
+                ));
             }
             y[i] = sum / diag;
         }
@@ -130,11 +136,18 @@ impl CholeskyDecomposition {
 /// Returns error if matrix dimensions are invalid.
 pub fn cholesky_f64(device: Arc<WgpuDevice>, a: &[f64], n: usize) -> Result<CholeskyDecomposition> {
     if a.len() != n * n {
-        return Err(BarracudaError::invalid_input(format!("Matrix has {} elements, expected {}×{}", a.len(), n, n)));
+        return Err(BarracudaError::invalid_input(format!(
+            "Matrix has {} elements, expected {}×{}",
+            a.len(),
+            n,
+            n
+        )));
     }
 
     if n == 0 {
-        return Err(BarracudaError::invalid_input("Matrix dimension must be positive"));
+        return Err(BarracudaError::invalid_input(
+            "Matrix dimension must be positive",
+        ));
     }
 
     let l = crate::ops::linalg::cholesky::CholeskyF64::execute(device, a, n)?;
@@ -144,7 +157,9 @@ pub fn cholesky_f64(device: Arc<WgpuDevice>, a: &[f64], n: usize) -> Result<Chol
     for i in 0..n {
         let diag = l[i * n + i];
         if diag.is_nan() || diag <= 0.0 {
-            return Err(BarracudaError::invalid_input(format!("Matrix is not positive definite (L[{i},{i}] = {diag})")));
+            return Err(BarracudaError::invalid_input(format!(
+                "Matrix is not positive definite (L[{i},{i}] = {diag})"
+            )));
         }
     }
 
@@ -160,11 +175,18 @@ pub fn cholesky_f64(device: Arc<WgpuDevice>, a: &[f64], n: usize) -> Result<Chol
 #[cfg(any(test, feature = "benchmarks"))]
 pub fn cholesky_f64_cpu(a: &[f64], n: usize) -> Result<CholeskyDecomposition> {
     if a.len() != n * n {
-        return Err(BarracudaError::invalid_input(format!("Matrix has {} elements, expected {}×{}", a.len(), n, n)));
+        return Err(BarracudaError::invalid_input(format!(
+            "Matrix has {} elements, expected {}×{}",
+            a.len(),
+            n,
+            n
+        )));
     }
 
     if n == 0 {
-        return Err(BarracudaError::invalid_input("Matrix dimension must be positive"));
+        return Err(BarracudaError::invalid_input(
+            "Matrix dimension must be positive",
+        ));
     }
 
     let mut l = vec![0.0_f64; n * n];
@@ -182,8 +204,8 @@ pub fn cholesky_f64_cpu(a: &[f64], n: usize) -> Result<CholeskyDecomposition> {
                 // Diagonal element
                 if sum <= 0.0 {
                     return Err(BarracudaError::numerical(format!(
-                            "Matrix is not positive definite: L[{i},{i}]² = {sum} ≤ 0"
-                        )));
+                        "Matrix is not positive definite: L[{i},{i}]² = {sum} ≤ 0"
+                    )));
                 }
                 l[i * n + j] = sum.sqrt();
             } else {

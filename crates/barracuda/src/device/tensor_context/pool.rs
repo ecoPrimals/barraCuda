@@ -413,8 +413,8 @@ impl BufferPool {
 
         if solver_buffers.contains_key(solver_id) {
             return Err(BarracudaError::invalid_input(format!(
-                    "Solver '{solver_id}' already has pinned buffers. Call release_solver_buffers() first."
-                )));
+                "Solver '{solver_id}' already has pinned buffers. Call release_solver_buffers() first."
+            )));
         }
 
         let mut buffer_map = HashMap::new();

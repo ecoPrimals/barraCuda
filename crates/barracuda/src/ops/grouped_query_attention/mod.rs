@@ -85,7 +85,9 @@ impl GroupedQueryAttention {
         let v_shape = value.shape();
 
         if q_shape.len() != 4 || k_shape.len() != 4 || v_shape.len() != 4 {
-            return Err(crate::error::BarracudaError::invalid_input("All inputs must be 4D tensors [batch, heads, seq_len, head_dim]"));
+            return Err(crate::error::BarracudaError::invalid_input(
+                "All inputs must be 4D tensors [batch, heads, seq_len, head_dim]",
+            ));
         }
 
         let batch_size = q_shape[0];
@@ -112,8 +114,8 @@ impl GroupedQueryAttention {
         // Validate num_q_heads is divisible by num_kv_heads
         if !num_q_heads.is_multiple_of(num_kv_heads) {
             return Err(crate::error::BarracudaError::invalid_input(format!(
-                    "num_q_heads ({num_q_heads}) must be divisible by num_kv_heads ({num_kv_heads})"
-                )));
+                "num_q_heads ({num_q_heads}) must be divisible by num_kv_heads ({num_kv_heads})"
+            )));
         }
 
         let heads_per_group = num_q_heads / num_kv_heads;

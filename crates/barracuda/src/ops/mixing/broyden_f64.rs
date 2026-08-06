@@ -149,11 +149,11 @@ impl LinearMixer {
     pub async fn mix(&self, x_old: &[f64], x_computed: &[f64]) -> Result<Vec<f64>> {
         if x_old.len() != self.vec_dim || x_computed.len() != self.vec_dim {
             return Err(BarracudaError::invalid_input(format!(
-                    "Vector dimension mismatch: expected {}, got {} and {}",
-                    self.vec_dim,
-                    x_old.len(),
-                    x_computed.len()
-                )));
+                "Vector dimension mismatch: expected {}, got {} and {}",
+                self.vec_dim,
+                x_old.len(),
+                x_computed.len()
+            )));
         }
 
         // Create uniform params buffer

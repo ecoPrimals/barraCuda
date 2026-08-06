@@ -363,13 +363,19 @@ where
             n_rejected += 1;
 
             if h <= config.h_min {
-                return Err(BarracudaError::numerical(format!("Step size {} below minimum {} at t={}", h, config.h_min, t)));
+                return Err(BarracudaError::numerical(format!(
+                    "Step size {} below minimum {} at t={}",
+                    h, config.h_min, t
+                )));
             }
         }
     }
 
     if n_steps >= config.max_steps {
-        return Err(BarracudaError::numerical(format!("Max steps {} exceeded", config.max_steps)));
+        return Err(BarracudaError::numerical(format!(
+            "Max steps {} exceeded",
+            config.max_steps
+        )));
     }
 
     Ok(Rk45Result {

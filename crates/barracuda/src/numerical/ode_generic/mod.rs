@@ -233,19 +233,19 @@ impl<S: OdeSystem> BatchedOdeRK4<S> {
 
         if initial_states.len() != batch_size * n_vars {
             return Err(BarracudaError::invalid_input(format!(
-                    "initial_states: expected {} ([batch_size×{}]), got {}",
-                    batch_size * n_vars,
-                    n_vars,
-                    initial_states.len()
-                )));
+                "initial_states: expected {} ([batch_size×{}]), got {}",
+                batch_size * n_vars,
+                n_vars,
+                initial_states.len()
+            )));
         }
         if params.len() != batch_size * n_params {
             return Err(BarracudaError::invalid_input(format!(
-                    "params: expected {} ([batch_size×{}]), got {}",
-                    batch_size * n_params,
-                    n_params,
-                    params.len()
-                )));
+                "params: expected {} ([batch_size×{}]), got {}",
+                batch_size * n_params,
+                n_params,
+                params.len()
+            )));
         }
 
         let mut state: Vec<f64> = initial_states.to_vec();
@@ -311,17 +311,17 @@ impl<S: OdeSystem> BatchedOdeRK4<S> {
 
         if initial_states.len() != batch_size * n_vars {
             return Err(BarracudaError::invalid_input(format!(
-                    "initial_states: expected {} ([batch_size×{n_vars}]), got {}",
-                    batch_size * n_vars,
-                    initial_states.len()
-                )));
+                "initial_states: expected {} ([batch_size×{n_vars}]), got {}",
+                batch_size * n_vars,
+                initial_states.len()
+            )));
         }
         if params.len() != batch_size * n_params {
             return Err(BarracudaError::invalid_input(format!(
-                    "params: expected {} ([batch_size×{n_params}]), got {}",
-                    batch_size * n_params,
-                    params.len()
-                )));
+                "params: expected {} ([batch_size×{n_params}]), got {}",
+                batch_size * n_params,
+                params.len()
+            )));
         }
 
         let stride = batch_size * n_vars;

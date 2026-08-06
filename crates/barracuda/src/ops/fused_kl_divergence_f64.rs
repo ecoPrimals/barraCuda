@@ -38,7 +38,11 @@ impl FusedKlDivergenceGpu {
     /// readback fails (e.g. device lost or out of memory).
     pub fn execute(device: Arc<WgpuDevice>, p: &[f64], q: &[f64]) -> Result<f64> {
         if p.len() != q.len() {
-            return Err(BarracudaError::invalid_input(format!("P and Q must have same length: {} vs {}", p.len(), q.len())));
+            return Err(BarracudaError::invalid_input(format!(
+                "P and Q must have same length: {} vs {}",
+                p.len(),
+                q.len()
+            )));
         }
         let n = p.len();
         if n == 0 {

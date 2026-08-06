@@ -177,15 +177,17 @@ pub fn train_adaptive(
     let n_train = x_data.len();
 
     if n_train == 0 {
-        return Err(BarracudaError::invalid_input("Training data cannot be empty"));
+        return Err(BarracudaError::invalid_input(
+            "Training data cannot be empty",
+        ));
     }
 
     if y_data.len() != n_train {
         return Err(BarracudaError::invalid_input(format!(
-                "x_data and y_data length mismatch: {} vs {}",
-                n_train,
-                y_data.len()
-            )));
+            "x_data and y_data length mismatch: {} vs {}",
+            n_train,
+            y_data.len()
+        )));
     }
 
     let n_dim = x_data[0].len();
@@ -276,15 +278,17 @@ pub async fn train_adaptive_gpu(
     let n_train = x_data.len();
 
     if n_train == 0 {
-        return Err(BarracudaError::invalid_input("Training data cannot be empty"));
+        return Err(BarracudaError::invalid_input(
+            "Training data cannot be empty",
+        ));
     }
 
     if y_data.len() != n_train {
         return Err(BarracudaError::invalid_input(format!(
-                "x_data and y_data length mismatch: {} vs {}",
-                n_train,
-                y_data.len()
-            )));
+            "x_data and y_data length mismatch: {} vs {}",
+            n_train,
+            y_data.len()
+        )));
     }
 
     let n_dim = x_data[0].len();
@@ -369,15 +373,17 @@ pub fn train_with_validation(
     let n_train = x_data.len();
 
     if n_train == 0 {
-        return Err(BarracudaError::invalid_input("Training data cannot be empty"));
+        return Err(BarracudaError::invalid_input(
+            "Training data cannot be empty",
+        ));
     }
 
     if y_data.len() != n_train {
         return Err(BarracudaError::invalid_input(format!(
-                "x_data and y_data length mismatch: {} vs {}",
-                n_train,
-                y_data.len()
-            )));
+            "x_data and y_data length mismatch: {} vs {}",
+            n_train,
+            y_data.len()
+        )));
     }
 
     let n_dim = x_data[0].len();

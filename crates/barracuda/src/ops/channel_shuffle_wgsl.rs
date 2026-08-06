@@ -53,10 +53,10 @@ impl ChannelShuffle {
         // Expect 4D tensor [batch, channels, height, width]
         if shape.len() != 4 {
             return Err(crate::error::BarracudaError::invalid_input(format!(
-                    "ChannelShuffle requires 4D tensor [N, C, H, W], got {}D {:?}",
-                    shape.len(),
-                    shape
-                )));
+                "ChannelShuffle requires 4D tensor [N, C, H, W], got {}D {:?}",
+                shape.len(),
+                shape
+            )));
         }
 
         let batch_size = shape[0];

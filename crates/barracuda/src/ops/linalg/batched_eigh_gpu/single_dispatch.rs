@@ -30,17 +30,17 @@ impl BatchedEighGpu {
 
         if n > MAX_N {
             return Err(BarracudaError::invalid_input(format!(
-                    "Single-dispatch eigensolve limited to n≤{MAX_N}, got n={n}. Use execute_f64() for larger matrices."
-                )));
+                "Single-dispatch eigensolve limited to n≤{MAX_N}, got n={n}. Use execute_f64() for larger matrices."
+            )));
         }
 
         if data.len() != batch_size * n * n {
             return Err(BarracudaError::invalid_input(format!(
-                    "Data length {} does not match batch_size={} × n²={}",
-                    data.len(),
-                    batch_size,
-                    n * n
-                )));
+                "Data length {} does not match batch_size={} × n²={}",
+                data.len(),
+                batch_size,
+                n * n
+            )));
         }
 
         let a_buffer = device
@@ -216,7 +216,9 @@ impl BatchedEighGpu {
         const MAX_N: usize = 32;
 
         if n > MAX_N {
-            return Err(BarracudaError::invalid_input(format!("Single-dispatch eigensolve limited to n≤{MAX_N}, got n={n}")));
+            return Err(BarracudaError::invalid_input(format!(
+                "Single-dispatch eigensolve limited to n≤{MAX_N}, got n={n}"
+            )));
         }
 
         let params = SingleDispatchParams {

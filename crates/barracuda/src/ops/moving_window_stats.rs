@@ -62,7 +62,9 @@ impl MovingWindowStats {
     pub fn compute(&self, input: &[f32], window_size: usize) -> Result<MovingWindowResult> {
         let n = input.len();
         if window_size == 0 || window_size > n {
-            return Err(BarracudaError::invalid_input(format!("window_size {window_size} must be in [1, {n}]")));
+            return Err(BarracudaError::invalid_input(format!(
+                "window_size {window_size} must be in [1, {n}]"
+            )));
         }
 
         self.compute_gpu(input, window_size)

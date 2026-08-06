@@ -83,7 +83,11 @@ impl SvdDecomposition {
     /// Returns [`Err`] if `b.len() != self.m` (right-hand side length must match matrix row count).
     pub fn solve(&self, b: &[f64], tol: f64) -> Result<Vec<f64>> {
         if b.len() != self.m {
-            return Err(BarracudaError::invalid_input(format!("b has length {}, expected {}", b.len(), self.m)));
+            return Err(BarracudaError::invalid_input(format!(
+                "b has length {}, expected {}",
+                b.len(),
+                self.m
+            )));
         }
 
         let pinv = self.pseudoinverse(tol);
@@ -176,11 +180,18 @@ impl SvdDecomposition {
 /// readback fails (e.g. device lost or out of memory).
 pub fn svd_decompose(a: &[f64], m: usize, n: usize) -> Result<SvdDecomposition> {
     if a.len() != m * n {
-        return Err(BarracudaError::invalid_input(format!("Matrix has {} elements, expected {}×{}", a.len(), m, n)));
+        return Err(BarracudaError::invalid_input(format!(
+            "Matrix has {} elements, expected {}×{}",
+            a.len(),
+            m,
+            n
+        )));
     }
 
     if m == 0 || n == 0 {
-        return Err(BarracudaError::invalid_input("Matrix dimensions must be positive"));
+        return Err(BarracudaError::invalid_input(
+            "Matrix dimensions must be positive",
+        ));
     }
 
     // For simplicity, we compute A^T A eigenvalues and eigenvectors

@@ -78,7 +78,9 @@ where
     }
 
     if config.n_initial < 2 {
-        return Err(BarracudaError::invalid_input("n_initial must be >= 2 for surrogate training"));
+        return Err(BarracudaError::invalid_input(
+            "n_initial must be >= 2 for surrogate training",
+        ));
     }
 
     let _n_dims = bounds.len();

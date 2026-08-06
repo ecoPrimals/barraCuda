@@ -57,8 +57,8 @@ impl BoltzmannSamplingGpu {
         let n_classes = n / batch_size;
         if n_classes * batch_size != n {
             return Err(BarracudaError::invalid_input(format!(
-                    "logits.len() must be divisible by batch_size: {n} / {batch_size}"
-                )));
+                "logits.len() must be divisible by batch_size: {n} / {batch_size}"
+            )));
         }
 
         let temp_safe = if temperature > 1e-10 {

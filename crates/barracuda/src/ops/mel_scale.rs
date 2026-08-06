@@ -55,10 +55,10 @@ impl MelScale {
         let spec_size: usize = spectrogram.shape().iter().product();
         if spec_size != n_frames * n_freqs {
             return Err(BarracudaError::invalid_input(format!(
-                    "Spectrogram size ({}) must equal n_frames * n_freqs ({})",
-                    spec_size,
-                    n_frames * n_freqs
-                )));
+                "Spectrogram size ({}) must equal n_frames * n_freqs ({})",
+                spec_size,
+                n_frames * n_freqs
+            )));
         }
 
         Ok(Self {

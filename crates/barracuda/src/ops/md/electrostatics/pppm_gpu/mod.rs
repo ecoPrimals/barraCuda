@@ -142,10 +142,10 @@ impl PppmGpu {
         let n = charges.len();
         if positions.len() != n * 3 {
             return Err(BarracudaError::invalid_input(format!(
-                    "positions length {} != charges length {} * 3",
-                    positions.len(),
-                    n
-                )));
+                "positions length {} != charges length {} * 3",
+                positions.len(),
+                n
+            )));
         }
         let order = self.params.interpolation_order;
         let [kx, ky, kz] = self.params.mesh_dims;

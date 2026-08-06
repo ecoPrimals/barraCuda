@@ -95,7 +95,11 @@ impl LuDecomposition {
     /// matrix is singular (zero pivot encountered during back substitution).
     pub fn solve(&self, b: &[f64]) -> Result<Vec<f64>> {
         if b.len() != self.n {
-            return Err(BarracudaError::invalid_input(format!("b has length {}, expected {}", b.len(), self.n)));
+            return Err(BarracudaError::invalid_input(format!(
+                "b has length {}, expected {}",
+                b.len(),
+                self.n
+            )));
         }
 
         // Apply permutation to b
@@ -179,11 +183,18 @@ impl LuDecomposition {
 /// Returns [`Err`] if `a.len() != n * n` (invalid matrix size), or if `n == 0`.
 pub fn lu_decompose(a: &[f64], n: usize) -> Result<LuDecomposition> {
     if a.len() != n * n {
-        return Err(BarracudaError::invalid_input(format!("Matrix has {} elements, expected {}×{}", a.len(), n, n)));
+        return Err(BarracudaError::invalid_input(format!(
+            "Matrix has {} elements, expected {}×{}",
+            a.len(),
+            n,
+            n
+        )));
     }
 
     if n == 0 {
-        return Err(BarracudaError::invalid_input("Matrix dimension must be positive"));
+        return Err(BarracudaError::invalid_input(
+            "Matrix dimension must be positive",
+        ));
     }
 
     // Copy matrix

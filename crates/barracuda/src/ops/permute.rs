@@ -29,20 +29,24 @@ impl Permute {
         let num_dims = input.shape().len();
         if permutation.len() != num_dims {
             return Err(crate::error::BarracudaError::invalid_input(format!(
-                    "Permutation length {} doesn't match tensor rank {}",
-                    permutation.len(),
-                    num_dims
-                )));
+                "Permutation length {} doesn't match tensor rank {}",
+                permutation.len(),
+                num_dims
+            )));
         }
 
         // Validate permutation is valid (contains all indices 0..num_dims-1)
         let mut seen = vec![false; num_dims];
         for &idx in &permutation {
             if idx >= num_dims {
-                return Err(crate::error::BarracudaError::invalid_input(format!("Invalid permutation index {idx} for rank {num_dims}")));
+                return Err(crate::error::BarracudaError::invalid_input(format!(
+                    "Invalid permutation index {idx} for rank {num_dims}"
+                )));
             }
             if seen[idx] {
-                return Err(crate::error::BarracudaError::invalid_input(format!("Duplicate index {idx} in permutation")));
+                return Err(crate::error::BarracudaError::invalid_input(format!(
+                    "Duplicate index {idx} in permutation"
+                )));
             }
             seen[idx] = true;
         }

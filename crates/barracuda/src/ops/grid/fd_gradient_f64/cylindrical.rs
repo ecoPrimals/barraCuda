@@ -68,12 +68,12 @@ impl CylindricalGradient {
         let total = self.n_rho * self.n_z;
         if input.len() != total {
             return Err(BarracudaError::invalid_input(format!(
-                    "Input size mismatch: expected {} ({}×{}), got {}",
-                    total,
-                    self.n_rho,
-                    self.n_z,
-                    input.len()
-                )));
+                "Input size mismatch: expected {} ({}×{}), got {}",
+                total,
+                self.n_rho,
+                self.n_z,
+                input.len()
+            )));
         }
 
         #[repr(C)]
@@ -255,12 +255,12 @@ impl CylindricalLaplacian {
         let total = self.n_rho * self.n_z;
         if input.len() != total {
             return Err(BarracudaError::invalid_input(format!(
-                    "Input size mismatch: expected {} ({}×{}), got {}",
-                    total,
-                    self.n_rho,
-                    self.n_z,
-                    input.len()
-                )));
+                "Input size mismatch: expected {} ({}×{}), got {}",
+                total,
+                self.n_rho,
+                self.n_z,
+                input.len()
+            )));
         }
 
         #[repr(C)]

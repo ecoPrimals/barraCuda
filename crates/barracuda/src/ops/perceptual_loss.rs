@@ -40,8 +40,8 @@ impl PerceptualLoss {
             let weights_size: usize = w.shape().iter().product();
             if !features_size.is_multiple_of(weights_size) {
                 return Err(BarracudaError::invalid_input(format!(
-                        "Weights dimension mismatch: features size {features_size} must be divisible by weights size {weights_size}"
-                    )));
+                    "Weights dimension mismatch: features size {features_size} must be divisible by weights size {weights_size}"
+                )));
             }
         }
 

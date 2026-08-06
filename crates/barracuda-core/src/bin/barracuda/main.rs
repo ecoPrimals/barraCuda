@@ -409,7 +409,12 @@ async fn run_server(
         barracuda_core::ipc::IpcServer::try_bind_tcp(&bind_addr).await
     {
         let effective_addr = local_addr.to_string();
-        discovery_file::write_discovery_file(Some(&effective_addr), tarpc_bind.as_deref(), None, None);
+        discovery_file::write_discovery_file(
+            Some(&effective_addr),
+            tarpc_bind.as_deref(),
+            None,
+            None,
+        );
         barracuda_core::discovery::register_with_discovery(&format!("tcp://{effective_addr}"))
             .await;
 

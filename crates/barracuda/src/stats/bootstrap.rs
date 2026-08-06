@@ -136,7 +136,9 @@ where
         return Err(BarracudaError::invalid_input("n_bootstrap must be > 0"));
     }
     if !(0.0..1.0).contains(&confidence) {
-        return Err(BarracudaError::invalid_input(format!("confidence must be in (0, 1), got {confidence}")));
+        return Err(BarracudaError::invalid_input(format!(
+            "confidence must be in (0, 1), got {confidence}"
+        )));
     }
 
     // Point estimate on original data
@@ -287,7 +289,9 @@ pub fn rawr_mean(
         return Err(BarracudaError::invalid_input("n_replicates must be > 0"));
     }
     if !(0.0..1.0).contains(&confidence) {
-        return Err(BarracudaError::invalid_input(format!("confidence must be in (0, 1), got {confidence}")));
+        return Err(BarracudaError::invalid_input(format!(
+            "confidence must be in (0, 1), got {confidence}"
+        )));
     }
 
     let estimate = data.iter().sum::<f64>() / n as f64;

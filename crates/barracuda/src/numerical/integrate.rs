@@ -44,7 +44,11 @@ use crate::error::{BarracudaError, Result};
 /// - numpy.trapz: <https://numpy.org/doc/stable/reference/generated/numpy.trapz.html>
 pub fn trapz(y: &[f64], x: &[f64]) -> Result<f64> {
     if y.len() != x.len() {
-        return Err(BarracudaError::invalid_input(format!("y and x must have same length: {} vs {}", y.len(), x.len())));
+        return Err(BarracudaError::invalid_input(format!(
+            "y and x must have same length: {} vs {}",
+            y.len(),
+            x.len()
+        )));
     }
 
     let n = y.len();
@@ -61,12 +65,12 @@ pub fn trapz(y: &[f64], x: &[f64]) -> Result<f64> {
     for i in 1..n {
         if x[i] < x[i - 1] {
             return Err(BarracudaError::invalid_input(format!(
-                    "x must be non-decreasing: x[{}] = {} < x[{}] = {}",
-                    i,
-                    x[i],
-                    i - 1,
-                    x[i - 1]
-                )));
+                "x must be non-decreasing: x[{}] = {} < x[{}] = {}",
+                i,
+                x[i],
+                i - 1,
+                x[i - 1]
+            )));
         }
     }
 
@@ -121,13 +125,13 @@ pub fn trapz_product(f: &[f64], g1: &[f64], g2: &[f64], x: &[f64], weights: &[f6
     if f.len() != g1.len() || f.len() != g2.len() || f.len() != x.len() || f.len() != weights.len()
     {
         return Err(BarracudaError::invalid_input(format!(
-                "All arrays must have same length: f={}, g1={}, g2={}, x={}, weights={}",
-                f.len(),
-                g1.len(),
-                g2.len(),
-                x.len(),
-                weights.len()
-            )));
+            "All arrays must have same length: f={}, g1={}, g2={}, x={}, weights={}",
+            f.len(),
+            g1.len(),
+            g2.len(),
+            x.len(),
+            weights.len()
+        )));
     }
 
     let n = f.len();

@@ -56,11 +56,17 @@ impl Correlation {
     pub fn correlate(&self, x: &[f32], y: &[f32]) -> Result<f32> {
         let n = x.len();
         if y.len() != n {
-            return Err(BarracudaError::invalid_input(format!("Vector lengths must match: x={}, y={}", n, y.len())));
+            return Err(BarracudaError::invalid_input(format!(
+                "Vector lengths must match: x={}, y={}",
+                n,
+                y.len()
+            )));
         }
 
         if n < 2 {
-            return Err(BarracudaError::invalid_input("Need at least 2 elements for correlation"));
+            return Err(BarracudaError::invalid_input(
+                "Need at least 2 elements for correlation",
+            ));
         }
 
         self.correlate_gpu(x, y)
@@ -86,11 +92,11 @@ impl Correlation {
     ) -> Result<Vec<f32>> {
         if x_batch.len() != num_pairs * size || y_batch.len() != num_pairs * size {
             return Err(BarracudaError::invalid_input(format!(
-                    "Batch size mismatch: expected {} elements, got x={}, y={}",
-                    num_pairs * size,
-                    x_batch.len(),
-                    y_batch.len()
-                )));
+                "Batch size mismatch: expected {} elements, got x={}, y={}",
+                num_pairs * size,
+                x_batch.len(),
+                y_batch.len()
+            )));
         }
 
         self.correlate_batch_gpu(x_batch, y_batch, size, num_pairs)

@@ -29,8 +29,8 @@ impl Flatten {
         let shape = input.shape();
         if start_dim >= shape.len() || end_dim >= shape.len() || start_dim > end_dim {
             return Err(crate::error::BarracudaError::invalid_input(format!(
-                    "Invalid flatten dimensions: start_dim={start_dim}, end_dim={end_dim}, shape={shape:?}"
-                )));
+                "Invalid flatten dimensions: start_dim={start_dim}, end_dim={end_dim}, shape={shape:?}"
+            )));
         }
         Ok(Self {
             input,

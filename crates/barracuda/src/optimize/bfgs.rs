@@ -277,7 +277,9 @@ where
     let dg: f64 = d.iter().zip(gx.iter()).map(|(di, gi)| di * gi).sum(); // directional derivative
 
     if dg >= 0.0 {
-        return Err(BarracudaError::numerical("Search direction is not a descent direction"));
+        return Err(BarracudaError::numerical(
+            "Search direction is not a descent direction",
+        ));
     }
 
     let mut n_evals = 0;

@@ -39,16 +39,18 @@ impl Put {
 
         if indices.len() != values_size {
             return Err(crate::error::BarracudaError::invalid_input(format!(
-                    "Indices length {} doesn't match values size {}",
-                    indices.len(),
-                    values_size
-                )));
+                "Indices length {} doesn't match values size {}",
+                indices.len(),
+                values_size
+            )));
         }
 
         // Validate indices are in bounds
         for &idx in &indices {
             if idx as usize >= output_size {
-                return Err(crate::error::BarracudaError::invalid_input(format!("Index {idx} out of bounds for output size {output_size}")));
+                return Err(crate::error::BarracudaError::invalid_input(format!(
+                    "Index {idx} out of bounds for output size {output_size}"
+                )));
             }
         }
 

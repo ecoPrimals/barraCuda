@@ -147,7 +147,9 @@ pub fn expect_size(label: &str, expected: usize, actual: usize) -> BarracudaResu
     if actual == expected {
         return Ok(());
     }
-    Err(BarracudaError::invalid_input(format!("{label} size mismatch: expected {expected}, got {actual}")))
+    Err(BarracudaError::invalid_input(format!(
+        "{label} size mismatch: expected {expected}, got {actual}"
+    )))
 }
 
 #[cfg(test)]

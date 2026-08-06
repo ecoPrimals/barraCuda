@@ -60,10 +60,14 @@ pub const WGSL_CHI2_DECOMPOSED_F64: &str =
 /// ```
 pub fn chi_squared_pdf(x: f64, k: f64) -> Result<f64> {
     if k <= 0.0 {
-        return Err(BarracudaError::invalid_input(format!("chi_squared_pdf requires k > 0, got {k}")));
+        return Err(BarracudaError::invalid_input(format!(
+            "chi_squared_pdf requires k > 0, got {k}"
+        )));
     }
     if x < 0.0 {
-        return Err(BarracudaError::invalid_input(format!("chi_squared_pdf requires x >= 0, got {x}")));
+        return Err(BarracudaError::invalid_input(format!(
+            "chi_squared_pdf requires x >= 0, got {x}"
+        )));
     }
 
     if x == 0.0 {
@@ -111,7 +115,9 @@ pub fn chi_squared_pdf(x: f64, k: f64) -> Result<f64> {
 /// ```
 pub fn chi_squared_cdf(x: f64, k: f64) -> Result<f64> {
     if k <= 0.0 {
-        return Err(BarracudaError::invalid_input(format!("chi_squared_cdf requires k > 0, got {k}")));
+        return Err(BarracudaError::invalid_input(format!(
+            "chi_squared_cdf requires k > 0, got {k}"
+        )));
     }
     if x < 0.0 {
         return Ok(0.0);
@@ -139,7 +145,9 @@ pub fn chi_squared_cdf(x: f64, k: f64) -> Result<f64> {
 /// Returns [`Err`] if `k <= 0`, or if the underlying regularized gamma computation fails.
 pub fn chi_squared_sf(x: f64, k: f64) -> Result<f64> {
     if k <= 0.0 {
-        return Err(BarracudaError::invalid_input(format!("chi_squared_sf requires k > 0, got {k}")));
+        return Err(BarracudaError::invalid_input(format!(
+            "chi_squared_sf requires k > 0, got {k}"
+        )));
     }
     if x < 0.0 {
         return Ok(1.0);
@@ -179,10 +187,14 @@ pub fn chi_squared_sf(x: f64, k: f64) -> Result<f64> {
 /// ```
 pub fn chi_squared_quantile(p: f64, k: f64) -> Result<f64> {
     if k <= 0.0 {
-        return Err(BarracudaError::invalid_input(format!("chi_squared_quantile requires k > 0, got {k}")));
+        return Err(BarracudaError::invalid_input(format!(
+            "chi_squared_quantile requires k > 0, got {k}"
+        )));
     }
     if p <= 0.0 || p >= 1.0 {
-        return Err(BarracudaError::invalid_input(format!("chi_squared_quantile requires 0 < p < 1, got {p}")));
+        return Err(BarracudaError::invalid_input(format!(
+            "chi_squared_quantile requires 0 < p < 1, got {p}"
+        )));
     }
 
     const BISECTION_LOWER_BRACKET: f64 = 0.001;
@@ -290,16 +302,18 @@ pub fn chi_squared_f64(observed: &[f64], expected: &[f64]) -> Result<f64> {
 pub fn chi_squared_statistic(observed: &[f64], expected: &[f64]) -> Result<f64> {
     if observed.len() != expected.len() {
         return Err(BarracudaError::invalid_input(format!(
-                "observed and expected must have same length: {} vs {}",
-                observed.len(),
-                expected.len()
-            )));
+            "observed and expected must have same length: {} vs {}",
+            observed.len(),
+            expected.len()
+        )));
     }
 
     let mut chi2 = 0.0;
     for (o, e) in observed.iter().zip(expected.iter()) {
         if *e <= 0.0 {
-            return Err(BarracudaError::invalid_input("expected frequencies must be positive"));
+            return Err(BarracudaError::invalid_input(
+                "expected frequencies must be positive",
+            ));
         }
         chi2 += (o - e).powi(2) / e;
     }

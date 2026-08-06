@@ -107,7 +107,9 @@ impl Prod {
             }
             Some(dim) => {
                 if dim >= shape.len() {
-                    return Err(crate::error::BarracudaError::invalid_input(format!("Dimension {dim} out of range for shape {shape:?}")));
+                    return Err(crate::error::BarracudaError::invalid_input(format!(
+                        "Dimension {dim} out of range for shape {shape:?}"
+                    )));
                 }
 
                 let dim_size = shape[dim];

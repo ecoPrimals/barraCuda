@@ -89,7 +89,10 @@ impl MultiHeadEsn {
         }
         for h in &heads {
             if h.output_size == 0 {
-                return Err(BarracudaError::invalid_input(format!("Head '{}' has zero output_size", h.label)));
+                return Err(BarracudaError::invalid_input(format!(
+                    "Head '{}' has zero output_size",
+                    h.label
+                )));
             }
         }
 
@@ -131,7 +134,9 @@ impl MultiHeadEsn {
             return Err(BarracudaError::invalid_input("At least one head required"));
         }
         if weights.reservoir_size == 0 || weights.input_size == 0 {
-            return Err(BarracudaError::invalid_input("ExportedWeights must have non-zero reservoir_size and input_size"));
+            return Err(BarracudaError::invalid_input(
+                "ExportedWeights must have non-zero reservoir_size and input_size",
+            ));
         }
 
         let config = ESNConfig {
@@ -216,7 +221,9 @@ impl MultiHeadEsn {
         lambda: f64,
     ) -> BarracudaResult<()> {
         let Some(cfg) = self.head_configs.get(head_idx) else {
-            return Err(BarracudaError::invalid_input(format!("Head index {head_idx} out of range")));
+            return Err(BarracudaError::invalid_input(format!(
+                "Head index {head_idx} out of range"
+            )));
         };
         let n = self.reservoir.config().reservoir_size;
         let m = cfg.output_size;
@@ -226,18 +233,18 @@ impl MultiHeadEsn {
         }
         if !states.len().is_multiple_of(n) {
             return Err(BarracudaError::invalid_input(format!(
-                    "States length {} must be divisible by reservoir_size {}",
-                    states.len(),
-                    n
-                )));
+                "States length {} must be divisible by reservoir_size {}",
+                states.len(),
+                n
+            )));
         }
         let n_samples = states.len() / n;
         if targets.len() != m * n_samples {
             return Err(BarracudaError::invalid_input(format!(
-                    "Targets length {} expected {}",
-                    targets.len(),
-                    m * n_samples
-                )));
+                "Targets length {} expected {}",
+                targets.len(),
+                m * n_samples
+            )));
         }
         if lambda <= 0.0 {
             return Err(BarracudaError::invalid_input("Lambda must be positive"));
@@ -294,10 +301,9 @@ impl MultiHeadEsn {
     /// Returns [`Err`] if head index is out of range, if the head is not trained,
     /// or if transpose/matmul operations fail (e.g. shape mismatch).
     pub fn predict_head(&self, head_idx: usize, state: &Tensor) -> BarracudaResult<Tensor> {
-        let head = self
-            .heads
-            .get(head_idx)
-            .ok_or_else(|| BarracudaError::invalid_input(format!("Head index {head_idx} out of range")))?;
+        let head = self.heads.get(head_idx).ok_or_else(|| {
+            BarracudaError::invalid_input(format!("Head index {head_idx} out of range"))
+        })?;
         let w_out = head
             .w_out
             .as_ref()

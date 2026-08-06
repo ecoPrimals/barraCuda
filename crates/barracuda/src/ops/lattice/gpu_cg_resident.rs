@@ -98,7 +98,8 @@ impl BidirectionalStream {
     /// Returns [`Err`] if the observables channel is disconnected.
     pub fn send_observables(&self, obs: StreamObservables) -> Result<()> {
         if let Some(ref tx) = self.obs_tx {
-            tx.send(obs).map_err(|_| BarracudaError::execution("observables channel disconnected"))?;
+            tx.send(obs)
+                .map_err(|_| BarracudaError::execution("observables channel disconnected"))?;
         }
         Ok(())
     }

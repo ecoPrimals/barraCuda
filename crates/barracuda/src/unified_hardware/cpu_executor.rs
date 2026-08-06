@@ -139,7 +139,9 @@ impl ComputeExecutor for CpuExecutor {
         let standalone = crate::cpu_executor::CpuExecutor::new();
         Box::pin(async move {
             if inputs.is_empty() {
-                return Err(crate::error::BarracudaError::invalid_input("No inputs provided"));
+                return Err(crate::error::BarracudaError::invalid_input(
+                    "No inputs provided",
+                ));
             }
             standalone.execute(&op, inputs).await
         })
@@ -211,10 +213,10 @@ impl TensorStorage for CpuTensorStorageSimple {
         Box::pin(async move {
             if new_data.len() != self.data.len() {
                 return Err(crate::error::BarracudaError::invalid_input(format!(
-                        "Data size mismatch: expected {}, got {}",
-                        self.data.len(),
-                        new_data.len()
-                    )));
+                    "Data size mismatch: expected {}, got {}",
+                    self.data.len(),
+                    new_data.len()
+                )));
             }
             self.data = new_data;
             Ok(())

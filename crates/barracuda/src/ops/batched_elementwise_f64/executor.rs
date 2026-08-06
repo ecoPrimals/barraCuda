@@ -99,12 +99,12 @@ impl BatchedElementwiseF64 {
 
         if data.len() < expected_len {
             return Err(crate::error::BarracudaError::invalid_input(format!(
-                    "Input data length {} too short for {} batches with stride {} (expected {})",
-                    data.len(),
-                    batch_size,
-                    stride,
-                    expected_len
-                )));
+                "Input data length {} too short for {} batches with stride {} (expected {})",
+                data.len(),
+                batch_size,
+                stride,
+                expected_len
+            )));
         }
 
         // Create input buffer

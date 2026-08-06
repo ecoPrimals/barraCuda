@@ -260,9 +260,7 @@ impl GpuBackend for WgpuDevice {
         }
         if let [_] = descs.as_slice() {
             let desc = descs.into_iter().next().ok_or_else(|| {
-                crate::error::BarracudaError::internal(
-                    "batch dispatch empty after len check",
-                )
+                crate::error::BarracudaError::internal("batch dispatch empty after len check")
             })?;
             return self.dispatch_compute(desc);
         }

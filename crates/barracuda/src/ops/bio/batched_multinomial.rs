@@ -112,13 +112,15 @@ impl BatchedMultinomialGpu {
                 })
                 .collect()
         } else {
-            let s = seeds.ok_or_else(|| BarracudaError::invalid_input("seeds required when config.seed is None"))?;
+            let s = seeds.ok_or_else(|| {
+                BarracudaError::invalid_input("seeds required when config.seed is None")
+            })?;
             if s.len() != n_reps as usize * 4 {
                 return Err(BarracudaError::invalid_input(format!(
-                        "seeds length {} must equal n_reps * 4 = {}",
-                        s.len(),
-                        n_reps as usize * 4
-                    )));
+                    "seeds length {} must equal n_reps * 4 = {}",
+                    s.len(),
+                    n_reps as usize * 4
+                )));
             }
             s.clone()
         };

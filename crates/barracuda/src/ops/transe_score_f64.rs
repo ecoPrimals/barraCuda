@@ -52,7 +52,9 @@ impl TranseScoreF64<'_> {
     pub fn execute(&self, device: &Arc<WgpuDevice>) -> Result<Vec<f64>> {
         let n_triples = self.heads.len();
         if n_triples != self.rels.len() || n_triples != self.tails.len() {
-            return Err(BarracudaError::invalid_input("heads, rels, tails must have same length"));
+            return Err(BarracudaError::invalid_input(
+                "heads, rels, tails must have same length",
+            ));
         }
         if self.entities.len() != self.n_entities * self.dim {
             return Err(BarracudaError::InvalidShape {

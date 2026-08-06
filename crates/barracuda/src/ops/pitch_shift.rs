@@ -34,7 +34,9 @@ impl PitchShift {
     /// readback fails (e.g. device lost or out of memory).
     pub fn new(signal: Tensor, n_steps: f32, bins_per_octave: f32) -> Result<Self> {
         if bins_per_octave <= 0.0 {
-            return Err(BarracudaError::invalid_input("bins_per_octave must be positive"));
+            return Err(BarracudaError::invalid_input(
+                "bins_per_octave must be positive",
+            ));
         }
 
         Ok(Self {

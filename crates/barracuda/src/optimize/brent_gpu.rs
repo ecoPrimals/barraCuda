@@ -182,11 +182,11 @@ impl BrentGpu {
         let batch_size = lower.len();
         if upper.len() != batch_size || targets.len() != batch_size {
             return Err(BarracudaError::invalid_input(format!(
-                    "Array lengths must match: lower={}, upper={}, targets={}",
-                    lower.len(),
-                    upper.len(),
-                    targets.len()
-                )));
+                "Array lengths must match: lower={}, upper={}, targets={}",
+                lower.len(),
+                upper.len(),
+                targets.len()
+            )));
         }
         if batch_size == 0 {
             return Ok(BrentGpuResult {

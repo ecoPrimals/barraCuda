@@ -65,7 +65,9 @@ impl WindowFunction {
         device: Arc<crate::device::WgpuDevice>,
     ) -> Result<Self> {
         if length == 0 {
-            return Err(BarracudaError::invalid_input("Window length must be greater than 0"));
+            return Err(BarracudaError::invalid_input(
+                "Window length must be greater than 0",
+            ));
         }
         Ok(Self {
             length,

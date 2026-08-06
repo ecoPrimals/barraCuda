@@ -16,8 +16,8 @@ use crate::tensor::Tensor;
 /// Simple norm reduction variant (scalar path).
 #[must_use]
 pub fn wgsl_norm_simple() -> &'static str {
-        include_str!("../shaders/misc/norm_simple_f64.wgsl")
-    }
+    include_str!("../shaders/misc/norm_simple_f64.wgsl")
+}
 
 /// Norm reduction operation
 pub struct Norm {
@@ -113,7 +113,9 @@ impl Norm {
             Some(dim) => {
                 // Dimension-wise norm reduction
                 if dim >= shape.len() {
-                    return Err(crate::error::BarracudaError::invalid_input(format!("Dimension {dim} out of range for shape {shape:?}")));
+                    return Err(crate::error::BarracudaError::invalid_input(format!(
+                        "Dimension {dim} out of range for shape {shape:?}"
+                    )));
                 }
 
                 let dim_size = shape[dim];

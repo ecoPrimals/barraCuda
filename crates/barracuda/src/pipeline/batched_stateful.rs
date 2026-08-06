@@ -52,11 +52,11 @@ impl BatchedStatefulF64 {
         let expected = n_cells * n_state_per_cell;
         if initial_state.len() != expected {
             return Err(BarracudaError::invalid_input(format!(
-                    "initial_state length {} != n_cells({}) * n_state_per_cell({})",
-                    initial_state.len(),
-                    n_cells,
-                    n_state_per_cell,
-                )));
+                "initial_state length {} != n_cells({}) * n_state_per_cell({})",
+                initial_state.len(),
+                n_cells,
+                n_state_per_cell,
+            )));
         }
 
         let bytes: &[u8] = bytemuck::cast_slice(initial_state);
@@ -127,7 +127,10 @@ impl BatchedStatefulF64 {
     pub fn write_state(&self, state: &[f64]) -> Result<()> {
         let expected = self.n_cells * self.n_state_per_cell;
         if state.len() != expected {
-            return Err(BarracudaError::invalid_input(format!("state length {} != expected {expected}", state.len())));
+            return Err(BarracudaError::invalid_input(format!(
+                "state length {} != expected {expected}",
+                state.len()
+            )));
         }
         let bytes: &[u8] = bytemuck::cast_slice(state);
         self.device.queue.write_buffer(self.state_in(), 0, bytes);

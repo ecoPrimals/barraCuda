@@ -101,10 +101,16 @@ impl BiCgStabGpu {
     ) -> Result<BiCgStabGpuResult> {
         let n = a.n_rows;
         if a.n_cols != n {
-            return Err(BarracudaError::invalid_input("BiCGSTAB requires square matrix"));
+            return Err(BarracudaError::invalid_input(
+                "BiCGSTAB requires square matrix",
+            ));
         }
         if b.len() != n {
-            return Err(BarracudaError::invalid_input(format!("Vector length {} doesn't match matrix size {}", b.len(), n)));
+            return Err(BarracudaError::invalid_input(format!(
+                "Vector length {} doesn't match matrix size {}",
+                b.len(),
+                n
+            )));
         }
 
         // Early exit for zero RHS

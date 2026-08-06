@@ -73,7 +73,9 @@ impl<T: GpuViewElement> GpuView<T> {
     /// Returns [`Err`] if `data` is empty or buffer allocation fails.
     pub fn upload(device: Arc<WgpuDevice>, data: &[T]) -> Result<Self> {
         if data.is_empty() {
-            return Err(BarracudaError::invalid_input("GpuView: cannot create from empty data"));
+            return Err(BarracudaError::invalid_input(
+                "GpuView: cannot create from empty data",
+            ));
         }
         let buffer = device
             .device
@@ -98,7 +100,9 @@ impl<T: GpuViewElement> GpuView<T> {
     /// Returns [`Err`] if `len` is zero or buffer allocation fails.
     pub fn uninit(device: Arc<WgpuDevice>, len: usize) -> Result<Self> {
         if len == 0 {
-            return Err(BarracudaError::invalid_input("GpuView: cannot create zero-length view"));
+            return Err(BarracudaError::invalid_input(
+                "GpuView: cannot create zero-length view",
+            ));
         }
         let buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("GpuView:uninit"),
@@ -160,10 +164,10 @@ impl<T: GpuViewElement> GpuView<T> {
     pub fn upload_into(&self, data: &[T]) -> Result<()> {
         if data.len() != self.len {
             return Err(BarracudaError::invalid_input(format!(
-                    "GpuView: upload_into length {} != view length {}",
-                    data.len(),
-                    self.len
-                )));
+                "GpuView: upload_into length {} != view length {}",
+                data.len(),
+                self.len
+            )));
         }
         self.device
             .queue
@@ -236,10 +240,10 @@ impl GpuViewF64 {
     pub fn correlation(a: &Self, b: &Self) -> Result<f64> {
         if a.len() != b.len() {
             return Err(BarracudaError::invalid_input(format!(
-                    "GpuView::correlation: length mismatch ({} vs {})",
-                    a.len(),
-                    b.len()
-                )));
+                "GpuView::correlation: length mismatch ({} vs {})",
+                a.len(),
+                b.len()
+            )));
         }
         let data_a = a.download()?;
         let data_b = b.download()?;

@@ -82,10 +82,10 @@ pub async fn batched_nelder_mead_gpu(
     let expected = n_problems * n_points * n;
     if initial_simplices.len() != expected {
         return Err(BarracudaError::invalid_input(format!(
-                "initial_simplices len {} != n_problems*(dims+1)*dims = {}",
-                initial_simplices.len(),
-                expected
-            )));
+            "initial_simplices len {} != n_problems*(dims+1)*dims = {}",
+            initial_simplices.len(),
+            expected
+        )));
     }
 
     let shader = device.compile_shader_f64(WGSL_SIMPLEX, Some("Batched NM simplex"));

@@ -153,7 +153,9 @@ pub fn adaptive_penalty(feasible_values: &[f64], config: PenaltyConfig) -> Resul
         .collect();
 
     if valid.is_empty() {
-        return Err(BarracudaError::invalid_input("No finite feasible values provided"));
+        return Err(BarracudaError::invalid_input(
+            "No finite feasible values provided",
+        ));
     }
 
     // Compute statistics

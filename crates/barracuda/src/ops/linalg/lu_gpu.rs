@@ -274,10 +274,10 @@ impl LuGpu {
     ) -> Result<(Vec<f64>, Vec<u32>)> {
         if data.len() != n * n {
             return Err(BarracudaError::invalid_input(format!(
-                    "Expected {} elements for {n}x{n} matrix, got {}",
-                    n * n,
-                    data.len()
-                )));
+                "Expected {} elements for {n}x{n} matrix, got {}",
+                n * n,
+                data.len()
+            )));
         }
         let nu = n as u32;
 

@@ -35,16 +35,22 @@ impl FlatTree {
     pub fn from_newick(newick: &str) -> BarracudaResult<Self> {
         let newick = newick.trim();
         if newick.is_empty() {
-            return Err(BarracudaError::invalid_input("Newick string cannot be empty"));
+            return Err(BarracudaError::invalid_input(
+                "Newick string cannot be empty",
+            ));
         }
-        let s = newick
-            .strip_suffix(';')
-            .ok_or_else(|| BarracudaError::invalid_input("Newick string must end with semicolon"))?;
+        let s = newick.strip_suffix(';').ok_or_else(|| {
+            BarracudaError::invalid_input("Newick string must end with semicolon")
+        })?;
         let (root_idx, nodes) = parse_newick_subtree(s, 0)?;
         if root_idx.is_none() {
-            return Err(BarracudaError::invalid_input("Newick parse produced no root"));
+            return Err(BarracudaError::invalid_input(
+                "Newick parse produced no root",
+            ));
         }
-        let root = root_idx.ok_or_else(|| BarracudaError::invalid_input("Newick parse produced no root (unreachable)"))?;
+        let root = root_idx.ok_or_else(|| {
+            BarracudaError::invalid_input("Newick parse produced no root (unreachable)")
+        })?;
         build_flat_tree_from_parsed(nodes, root)
     }
 
@@ -88,23 +94,32 @@ impl FlatTree {
         let n = self.n_nodes();
         if self.branch_length.len() != n {
             return Err(BarracudaError::invalid_input(format!(
-                    "branch_length len {} != n_nodes {n}",
-                    self.branch_length.len()
-                )));
+                "branch_length len {} != n_nodes {n}",
+                self.branch_length.len()
+            )));
         }
         if self.n_leaves > n {
-            return Err(BarracudaError::invalid_input(format!("n_leaves {} exceeds n_nodes {n}", self.n_leaves)));
+            return Err(BarracudaError::invalid_input(format!(
+                "n_leaves {} exceeds n_nodes {n}",
+                self.n_leaves
+            )));
         }
         let root_count = self.parent.iter().filter(|&&p| p < 0).count();
         if root_count != 1 {
-            return Err(BarracudaError::invalid_input(format!("tree must have exactly one root (found {root_count})")));
+            return Err(BarracudaError::invalid_input(format!(
+                "tree must have exactly one root (found {root_count})"
+            )));
         }
         for (i, &p) in self.parent.iter().enumerate() {
             if p >= 0 && p as usize >= n {
-                return Err(BarracudaError::invalid_input(format!("parent[{i}]={p} out of bounds (n={n})")));
+                return Err(BarracudaError::invalid_input(format!(
+                    "parent[{i}]={p} out of bounds (n={n})"
+                )));
             }
             if p >= 0 && p as usize == i {
-                return Err(BarracudaError::invalid_input(format!("self-loop at node {i}")));
+                return Err(BarracudaError::invalid_input(format!(
+                    "self-loop at node {i}"
+                )));
             }
         }
         Ok(())
@@ -198,7 +213,9 @@ fn parse_newick_subtree(
             loop {
                 skip_ws(s, i);
                 if *i >= s.len() {
-                    return Err(BarracudaError::invalid_input("Unclosed parenthesis in Newick"));
+                    return Err(BarracudaError::invalid_input(
+                        "Unclosed parenthesis in Newick",
+                    ));
                 }
                 if s[*i] == b')' {
                     *i += 1;
@@ -221,9 +238,8 @@ fn parse_newick_subtree(
             while *i < s.len() && s[*i] != b':' && s[*i] != b',' && s[*i] != b')' && s[*i] != b';' {
                 *i += 1;
             }
-            let n = std::str::from_utf8(&s[name_start..*i]).map_err(|_| {
-                BarracudaError::invalid_input("Invalid UTF-8 in Newick label")
-            })?;
+            let n = std::str::from_utf8(&s[name_start..*i])
+                .map_err(|_| BarracudaError::invalid_input("Invalid UTF-8 in Newick label"))?;
             let n = n.trim();
             if !n.is_empty() {
                 name = Some(n.to_string());
@@ -237,12 +253,11 @@ fn parse_newick_subtree(
             {
                 *i += 1;
             }
-            let bl_str = std::str::from_utf8(&s[bl_start..*i]).map_err(|_| {
-                BarracudaError::invalid_input("Invalid branch length in Newick")
+            let bl_str = std::str::from_utf8(&s[bl_start..*i])
+                .map_err(|_| BarracudaError::invalid_input("Invalid branch length in Newick"))?;
+            branch_length = bl_str.parse::<f64>().map_err(|_| {
+                BarracudaError::invalid_input(format!("Invalid branch length: {bl_str}"))
             })?;
-            branch_length = bl_str
-                .parse::<f64>()
-                .map_err(|_| BarracudaError::invalid_input(format!("Invalid branch length: {bl_str}")))?;
         }
 
         nodes.push(ParsedNode {
@@ -294,7 +309,8 @@ fn build_flat_tree_from_parsed(
     let mut branch_length = vec![0.0; n];
 
     for (old_idx, node) in nodes.iter().enumerate() {
-        let new_idx = old_to_new[old_idx].ok_or_else(|| BarracudaError::invalid_input("Node index mapping failed"))?;
+        let new_idx = old_to_new[old_idx]
+            .ok_or_else(|| BarracudaError::invalid_input("Node index mapping failed"))?;
         branch_length[new_idx] = node.branch_length;
 
         if node.children.is_empty() {
@@ -306,20 +322,21 @@ fn build_flat_tree_from_parsed(
                     .iter()
                     .position(|n| n.children.contains(&child_old))
                     .ok_or_else(|| BarracudaError::invalid_input("Leaf has no parent in Newick"))?;
-                let parent_new =
-                    old_to_new[parent_old].ok_or_else(|| BarracudaError::invalid_input("Parent mapping failed"))?;
+                let parent_new = old_to_new[parent_old]
+                    .ok_or_else(|| BarracudaError::invalid_input("Parent mapping failed"))?;
                 parent[new_idx] = parent_new as i32;
             }
         } else {
             for &child_old in &node.children {
-                let child_new =
-                    old_to_new[child_old].ok_or_else(|| BarracudaError::invalid_input("Child mapping failed"))?;
+                let child_new = old_to_new[child_old]
+                    .ok_or_else(|| BarracudaError::invalid_input("Child mapping failed"))?;
                 parent[child_new] = new_idx as i32;
             }
         }
     }
 
-    let root_new = old_to_new[root_idx].ok_or_else(|| BarracudaError::invalid_input("Root mapping failed"))?;
+    let root_new =
+        old_to_new[root_idx].ok_or_else(|| BarracudaError::invalid_input("Root mapping failed"))?;
     parent[root_new] = -1;
 
     let tree = FlatTree {

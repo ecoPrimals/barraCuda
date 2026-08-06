@@ -1,10 +1,41 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-08-04.
+Prioritized work items, ordered by impact. Updated 2026-08-06.
+
+---
+
+## Upcoming
+
+### G65 Protocol Negotiation (Phase 3 Cephalization)
+- **Status**: Spec published (`specs/PROTOCOL_NEGOTIATION_SPEC.md`). squirrel has 432-line
+  reference impl. **Blocked on C7** — sourDough extraction, then all 15 primals adopt.
+- **barraCuda readiness**: Accept loop (`serve_listener`) already uses first-bytes
+  peek pattern (BTSP guard). G65 adds `PROTOCOLS: tarpc,jsonrpc\n` header detection
+  before BTSP. Architecture supports it — no pre-factoring needed.
+- **Impact**: Eliminates dual-socket (`.sock` + `.tarpc.sock`). Single socket with
+  protocol negotiation. Backward-compatible (no header = JSON-RPC).
 
 ---
 
 ## Recently Completed
+
+### Wave 156l — Fmt Drift + G65 Readiness Review (Aug 6, 2026)
+- **182-file `cargo fmt` correction** — systematic line-length and indentation drift
+  accumulated across the barracuda crate. All formatting now clean.
+- **G65 readiness assessment** — server accept loop architecture confirmed ready for
+  Phase 3 protocol negotiation. No structural changes needed.
+- **Full quality gate verification**:
+  - Zero clippy warnings (including `suboptimal_flops`, `inefficient_to_string`,
+    `needless_pass_by_value`, `cloned_instead_of_copied`, `implicit_clone`,
+    `match_same_arms`, `unused_self`, `redundant_else`, `map_unwrap_or`)
+  - Zero `#[allow]`, zero TODO/FIXME/HACK, zero `#[ignore]` on unit tests
+  - All `unsafe` confined to test code (env var mutation, serialized by ENV_MUTEX)
+  - `#![forbid(unsafe_code)]` on all 4 crates
+  - All production files under 800 LOC
+  - Cross-architecture: Windows `x86_64-pc-windows-gnu` compiles clean
+- 4,984 tests pass, 0 failed.
+
+### Wave 156k — GPU Buffer Alignment Fix (Aug 6, 2026)
 
 ### Wave 155u — Deep Idiom Evolution (Aug 4, 2026)
 - **LazyLock\<String\> → const &str Phase 2** — Converted remaining 323 shader

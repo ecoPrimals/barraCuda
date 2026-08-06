@@ -119,17 +119,17 @@ impl BatchedOdeRK4F64 {
 
         if initial_states.len() != b * Self::N_VARS {
             return Err(BarracudaError::invalid_input(format!(
-                    "initial_states: expected {} ([B×5]), got {}",
-                    b * Self::N_VARS,
-                    initial_states.len()
-                )));
+                "initial_states: expected {} ([B×5]), got {}",
+                b * Self::N_VARS,
+                initial_states.len()
+            )));
         }
         if batch_params.len() != b * Self::N_PARAMS {
             return Err(BarracudaError::invalid_input(format!(
-                    "batch_params: expected {} ([B×17]), got {}",
-                    b * Self::N_PARAMS,
-                    batch_params.len()
-                )));
+                "batch_params: expected {} ([B×17]), got {}",
+                b * Self::N_PARAMS,
+                batch_params.len()
+            )));
         }
 
         let dev = &self.device;

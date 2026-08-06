@@ -101,7 +101,9 @@ impl MultiHeadAttention {
         let v_shape = value.shape();
 
         if q_shape.len() != 3 || k_shape.len() != 3 || v_shape.len() != 3 {
-            return Err(crate::error::BarracudaError::invalid_input("All inputs must be 3D tensors [batch, seq_len, d_model]"));
+            return Err(crate::error::BarracudaError::invalid_input(
+                "All inputs must be 3D tensors [batch, seq_len, d_model]",
+            ));
         }
 
         let batch_size = q_shape[0];
@@ -123,8 +125,8 @@ impl MultiHeadAttention {
         // Validate d_model is divisible by num_heads
         if !d_model.is_multiple_of(num_heads) {
             return Err(crate::error::BarracudaError::invalid_input(format!(
-                    "d_model ({d_model}) must be divisible by num_heads ({num_heads})"
-                )));
+                "d_model ({d_model}) must be divisible by num_heads ({num_heads})"
+            )));
         }
 
         let head_dim = d_model / num_heads;

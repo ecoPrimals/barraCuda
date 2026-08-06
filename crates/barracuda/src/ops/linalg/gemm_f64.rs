@@ -174,10 +174,18 @@ impl GemmF64 {
         let expected_a = batch_size * m * k;
         let expected_b = batch_size * k * n;
         if a.len() != expected_a {
-            return Err(BarracudaError::invalid_input(format!("A: expected {} elements, got {}", expected_a, a.len())));
+            return Err(BarracudaError::invalid_input(format!(
+                "A: expected {} elements, got {}",
+                expected_a,
+                a.len()
+            )));
         }
         if b.len() != expected_b {
-            return Err(BarracudaError::invalid_input(format!("B: expected {} elements, got {}", expected_b, b.len())));
+            return Err(BarracudaError::invalid_input(format!(
+                "B: expected {} elements, got {}",
+                expected_b,
+                b.len()
+            )));
         }
 
         let c_size = batch_size * m * n;
@@ -295,10 +303,10 @@ impl GemmCachedF64 {
     ) -> Result<Self> {
         if b.len() != batch_size * k * n {
             return Err(BarracudaError::invalid_input(format!(
-                    "GemmCachedF64: B has {} elements, expected batch×K×N={}",
-                    b.len(),
-                    batch_size * k * n
-                )));
+                "GemmCachedF64: B has {} elements, expected batch×K×N={}",
+                b.len(),
+                batch_size * k * n
+            )));
         }
 
         let dev = &device;
@@ -389,10 +397,10 @@ impl GemmCachedF64 {
 
         if a.len() != batch_size * m * k {
             return Err(BarracudaError::invalid_input(format!(
-                    "GemmCachedF64::execute_to_buffer: A has {} elements, expected batch×M×K={}",
-                    a.len(),
-                    batch_size * m * k
-                )));
+                "GemmCachedF64::execute_to_buffer: A has {} elements, expected batch×M×K={}",
+                a.len(),
+                batch_size * m * k
+            )));
         }
 
         let dev = &self.device;

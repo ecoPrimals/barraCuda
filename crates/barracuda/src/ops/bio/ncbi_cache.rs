@@ -107,16 +107,24 @@ fn validate_accession(accession: &str) -> Result<()> {
         return Err(BarracudaError::invalid_input("accession cannot be empty"));
     }
     if accession.contains('/') || accession.contains('\\') {
-        return Err(BarracudaError::invalid_input("accession cannot contain path separators"));
+        return Err(BarracudaError::invalid_input(
+            "accession cannot contain path separators",
+        ));
     }
     if accession.contains("..") {
-        return Err(BarracudaError::invalid_input("accession cannot contain path traversal"));
+        return Err(BarracudaError::invalid_input(
+            "accession cannot contain path traversal",
+        ));
     }
     if accession.contains('\0') {
-        return Err(BarracudaError::invalid_input("accession cannot contain null byte"));
+        return Err(BarracudaError::invalid_input(
+            "accession cannot contain null byte",
+        ));
     }
     if Path::new(accession).has_root() {
-        return Err(BarracudaError::invalid_input("accession cannot be an absolute path"));
+        return Err(BarracudaError::invalid_input(
+            "accession cannot be an absolute path",
+        ));
     }
     Ok(())
 }

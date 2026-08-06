@@ -257,10 +257,10 @@ impl SvdGpu {
     ) -> Result<(Vec<f64>, Vec<f64>)> {
         if data.len() != m * n {
             return Err(BarracudaError::invalid_input(format!(
-                    "Expected {} elements for {m}x{n} matrix, got {}",
-                    m * n,
-                    data.len()
-                )));
+                "Expected {} elements for {m}x{n} matrix, got {}",
+                m * n,
+                data.len()
+            )));
         }
         let (mu, nu) = (m as u32, n as u32);
 

@@ -35,12 +35,12 @@ impl RidgeResult {
     pub fn predict(&self, x: &[f64], n_samples: usize) -> Result<Vec<f64>> {
         if x.len() != n_samples * self.n_features {
             return Err(BarracudaError::invalid_input(format!(
-                    "x has {} elements, expected {} × {} = {}",
-                    x.len(),
-                    n_samples,
-                    self.n_features,
-                    n_samples * self.n_features
-                )));
+                "x has {} elements, expected {} × {} = {}",
+                x.len(),
+                n_samples,
+                self.n_features,
+                n_samples * self.n_features
+            )));
         }
         let mut out = vec![0.0; n_samples * self.n_outputs];
         for s in 0..n_samples {
@@ -76,24 +76,26 @@ pub fn ridge_regression(
 ) -> Result<RidgeResult> {
     if x.len() != n_samples * n_features {
         return Err(BarracudaError::invalid_input(format!(
-                "x has {} elements, expected {} × {} = {}",
-                x.len(),
-                n_samples,
-                n_features,
-                n_samples * n_features
-            )));
+            "x has {} elements, expected {} × {} = {}",
+            x.len(),
+            n_samples,
+            n_features,
+            n_samples * n_features
+        )));
     }
     if y.len() != n_samples * n_outputs {
         return Err(BarracudaError::invalid_input(format!(
-                "y has {} elements, expected {} × {} = {}",
-                y.len(),
-                n_samples,
-                n_outputs,
-                n_samples * n_outputs
-            )));
+            "y has {} elements, expected {} × {} = {}",
+            y.len(),
+            n_samples,
+            n_outputs,
+            n_samples * n_outputs
+        )));
     }
     if regularization < 0.0 {
-        return Err(BarracudaError::invalid_input(format!("regularization must be ≥ 0, got {regularization}")));
+        return Err(BarracudaError::invalid_input(format!(
+            "regularization must be ≥ 0, got {regularization}"
+        )));
     }
 
     // Gram matrix: XᵀX + λI  (n_features × n_features)

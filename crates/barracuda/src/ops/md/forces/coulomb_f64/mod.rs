@@ -164,10 +164,10 @@ impl CoulombForceF64 {
         let n = charges.len();
         if positions.len() != n * 3 {
             return Err(BarracudaError::invalid_input(format!(
-                    "Position length {} != 3 * charges length {}",
-                    positions.len(),
-                    n * 3
-                )));
+                "Position length {} != 3 * charges length {}",
+                positions.len(),
+                n * 3
+            )));
         }
 
         self.compute_gpu(
@@ -194,10 +194,10 @@ impl CoulombForceF64 {
         let n = charges.len();
         if positions.len() != n * 3 {
             return Err(BarracudaError::invalid_input(format!(
-                    "Position length {} != 3 * charges length {}",
-                    positions.len(),
-                    n * 3
-                )));
+                "Position length {} != 3 * charges length {}",
+                positions.len(),
+                n * 3
+            )));
         }
 
         let k = coulomb_constant.unwrap_or(1.0);

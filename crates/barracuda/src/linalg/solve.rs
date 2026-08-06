@@ -44,16 +44,20 @@ use std::sync::Arc;
 pub fn solve_f64(device: Arc<WgpuDevice>, a: &[f64], b: &[f64], n: usize) -> Result<Vec<f64>> {
     if a.len() != n * n {
         return Err(BarracudaError::invalid_input(format!(
-                "Matrix size mismatch: expected {}×{} = {}, got {}",
-                n,
-                n,
-                n * n,
-                a.len()
-            )));
+            "Matrix size mismatch: expected {}×{} = {}, got {}",
+            n,
+            n,
+            n * n,
+            a.len()
+        )));
     }
 
     if b.len() != n {
-        return Err(BarracudaError::invalid_input(format!("Vector size mismatch: expected {}, got {}", n, b.len())));
+        return Err(BarracudaError::invalid_input(format!(
+            "Vector size mismatch: expected {}, got {}",
+            n,
+            b.len()
+        )));
     }
 
     if n == 0 {
@@ -87,16 +91,20 @@ pub fn solve_f64(device: Arc<WgpuDevice>, a: &[f64], b: &[f64], n: usize) -> Res
 pub fn solve_f64_cpu(a: &[f64], b: &[f64], n: usize) -> Result<Vec<f64>> {
     if a.len() != n * n {
         return Err(BarracudaError::invalid_input(format!(
-                "Matrix size mismatch: expected {}×{} = {}, got {}",
-                n,
-                n,
-                n * n,
-                a.len()
-            )));
+            "Matrix size mismatch: expected {}×{} = {}, got {}",
+            n,
+            n,
+            n * n,
+            a.len()
+        )));
     }
 
     if b.len() != n {
-        return Err(BarracudaError::invalid_input(format!("Vector size mismatch: expected {}, got {}", n, b.len())));
+        return Err(BarracudaError::invalid_input(format!(
+            "Vector size mismatch: expected {}, got {}",
+            n,
+            b.len()
+        )));
     }
 
     if n == 0 {
@@ -129,7 +137,9 @@ pub fn solve_f64_cpu(a: &[f64], b: &[f64], n: usize) -> Result<Vec<f64>> {
 
         // Check for singularity
         if max_val < 1e-14 {
-            return Err(BarracudaError::execution(format!("Singular matrix: pivot at column {k} is near-zero ({max_val:e})")));
+            return Err(BarracudaError::execution(format!(
+                "Singular matrix: pivot at column {k} is near-zero ({max_val:e})"
+            )));
         }
 
         // Swap rows k and max_row (full row swap)

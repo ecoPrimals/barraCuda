@@ -46,7 +46,11 @@ impl CgGpu {
             return Err(BarracudaError::invalid_input("CG requires square matrix"));
         }
         if b.len() != n {
-            return Err(BarracudaError::invalid_input(format!("Vector length {} doesn't match matrix size {}", b.len(), n)));
+            return Err(BarracudaError::invalid_input(format!(
+                "Vector length {} doesn't match matrix size {}",
+                b.len(),
+                n
+            )));
         }
 
         let check_interval = check_interval.max(1);

@@ -59,7 +59,9 @@ pub fn anderson_conductance(
     energy: f64,
 ) -> Result<f64> {
     if disorder_strength < 0.0 {
-        return Err(BarracudaError::invalid_input(format!("disorder_strength must be non-negative, got {disorder_strength}")));
+        return Err(BarracudaError::invalid_input(format!(
+            "disorder_strength must be non-negative, got {disorder_strength}"
+        )));
     }
 
     let xi = localization_length(disorder_strength, energy);

@@ -76,34 +76,34 @@ impl RNNCell {
 
         if weights.w_ih.len() != expected_w_ih_size {
             return Err(BarracudaError::invalid_input(format!(
-                    "w_ih size mismatch: expected {}, got {}",
-                    expected_w_ih_size,
-                    weights.w_ih.len()
-                )));
+                "w_ih size mismatch: expected {}, got {}",
+                expected_w_ih_size,
+                weights.w_ih.len()
+            )));
         }
 
         if weights.w_hh.len() != expected_w_hh_size {
             return Err(BarracudaError::invalid_input(format!(
-                    "w_hh size mismatch: expected {}, got {}",
-                    expected_w_hh_size,
-                    weights.w_hh.len()
-                )));
+                "w_hh size mismatch: expected {}, got {}",
+                expected_w_hh_size,
+                weights.w_hh.len()
+            )));
         }
 
         if weights.b_ih.len() != hidden_size {
             return Err(BarracudaError::invalid_input(format!(
-                    "b_ih size mismatch: expected {}, got {}",
-                    hidden_size,
-                    weights.b_ih.len()
-                )));
+                "b_ih size mismatch: expected {}, got {}",
+                hidden_size,
+                weights.b_ih.len()
+            )));
         }
 
         if weights.b_hh.len() != hidden_size {
             return Err(BarracudaError::invalid_input(format!(
-                    "b_hh size mismatch: expected {}, got {}",
-                    hidden_size,
-                    weights.b_hh.len()
-                )));
+                "b_hh size mismatch: expected {}, got {}",
+                hidden_size,
+                weights.b_hh.len()
+            )));
         }
 
         Ok(Self {

@@ -90,7 +90,11 @@ impl CosineSimilarityF64 {
     /// GPU dispatch fails, buffer readback fails, or the device is lost.
     pub fn similarity(&self, a: &[f64], b: &[f64]) -> Result<f64> {
         if a.len() != b.len() {
-            return Err(BarracudaError::invalid_input(format!("Vector dimensions must match: a={}, b={}", a.len(), b.len())));
+            return Err(BarracudaError::invalid_input(format!(
+                "Vector dimensions must match: a={}, b={}",
+                a.len(),
+                b.len()
+            )));
         }
 
         let n = a.len();
@@ -125,12 +129,22 @@ impl CosineSimilarityF64 {
 
         for (i, v) in vectors_a.iter().enumerate() {
             if v.len() != dim {
-                return Err(BarracudaError::invalid_input(format!("vectors_a[{}] has dim {}, expected {}", i, v.len(), dim)));
+                return Err(BarracudaError::invalid_input(format!(
+                    "vectors_a[{}] has dim {}, expected {}",
+                    i,
+                    v.len(),
+                    dim
+                )));
             }
         }
         for (i, v) in vectors_b.iter().enumerate() {
             if v.len() != dim {
-                return Err(BarracudaError::invalid_input(format!("vectors_b[{}] has dim {}, expected {}", i, v.len(), dim)));
+                return Err(BarracudaError::invalid_input(format!(
+                    "vectors_b[{}] has dim {}, expected {}",
+                    i,
+                    v.len(),
+                    dim
+                )));
             }
         }
 

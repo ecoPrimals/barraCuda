@@ -9,7 +9,13 @@ use std::sync::Arc;
 /// fixed-size buffers where the slice length is guaranteed to be N.
 #[inline]
 pub(crate) fn chunk_to_array<const N: usize>(chunk: &[u8]) -> Result<[u8; N]> {
-    chunk.try_into().map_err(|_| BarracudaError::invalid_input(format!("byte slice length {} != expected {}", chunk.len(), N)))
+    chunk.try_into().map_err(|_| {
+        BarracudaError::invalid_input(format!(
+            "byte slice length {} != expected {}",
+            chunk.len(),
+            N
+        ))
+    })
 }
 
 /// Checked conversion from `usize` to `u32` for GPU uniform/dispatch values.
@@ -18,10 +24,12 @@ pub(crate) fn chunk_to_array<const N: usize>(chunk: &[u8]) -> Result<[u8; N]> {
 /// preventing silent truncation for large tensors.
 #[inline]
 pub(crate) fn checked_u32(value: usize, context: &str) -> Result<u32> {
-    u32::try_from(value).map_err(|_| BarracudaError::invalid_input(format!(
+    u32::try_from(value).map_err(|_| {
+        BarracudaError::invalid_input(format!(
             "{context}: {value} exceeds u32::MAX ({max})",
             max = u32::MAX
-        )))
+        ))
+    })
 }
 
 /// Convert a shape slice to `Vec<u32>` for GPU uniform buffers.

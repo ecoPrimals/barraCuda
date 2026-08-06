@@ -5,9 +5,10 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Waves 109–156k (Aug 6 2026)
+## [Unreleased] — Waves 109–156l (Aug 6 2026)
 
 ### Fixed
+- **182-file `cargo fmt` correction** (Wave 156l) — systematic line-length and indentation drift accumulated across the barracuda crate. All formatting now clean.
 - **GPU buffer alignment panic** (Wave 156k) — `bytemuck::cast_slice` in `map_staging_buffer` and `submit_and_map` panicked with `TargetAlignmentGreaterAndInputNotAligned` when GPU mapped memory wasn't aligned to `T` (8-byte for f64). Root cause of 3 test failures across peak detection, velocity Verlet, and sparsity sampler. Fix: `aligned_copy_from_mapped<T>()` copies through byte slices into correctly-aligned `Vec<T>`.
 - **13 double-gated `#[ignore]` tests promoted to active** (Wave 156k) — tests had both `#[ignore = "requires GPU hardware"]` AND `get_test_device_if_f64_gpu_available()` early-return. The `#[ignore]` was redundant, artificially hiding tests from CI. All pass on both real GPU and llvmpipe (via early return). Affected: `max_abs_diff_f64` (7), `spin_orbit_f64` (2), `pppm_gpu` (3), `boltzmann_sampling_f64` (1), `three_springs` edge case (1). Net: +13 active tests.
 

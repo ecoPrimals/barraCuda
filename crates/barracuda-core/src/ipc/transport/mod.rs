@@ -12,12 +12,12 @@ mod connection;
 mod dispatch;
 mod server;
 
+#[cfg(unix)]
+pub use super::transport_config::default_tarpc_socket_path;
 pub use super::transport_config::{
     DEFAULT_BIND_HOST, DEFAULT_ECOSYSTEM_SOCKET_DIR, discovery_socket_path, resolve_bind_address,
     resolve_bind_host, resolve_family_id, resolve_socket_dir, validate_insecure_guard,
 };
-#[cfg(unix)]
-pub use super::transport_config::default_tarpc_socket_path;
 pub use super::transport_endpoint::{
     TransportEndpoint, TransportListener, TransportStream, connect_transport,
 };

@@ -82,7 +82,11 @@ where
     let n = x0.len();
 
     if bounds.len() != n {
-        return Err(BarracudaError::invalid_input(format!("Bounds length {} must match x0 length {}", bounds.len(), n)));
+        return Err(BarracudaError::invalid_input(format!(
+            "Bounds length {} must match x0 length {}",
+            bounds.len(),
+            n
+        )));
     }
 
     // Nelder-Mead parameters

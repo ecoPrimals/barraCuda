@@ -27,8 +27,8 @@ impl Take {
         let input_size = input.shape().iter().product::<usize>();
         if indices.iter().any(|&idx| idx as usize >= input_size) {
             return Err(crate::error::BarracudaError::invalid_input(format!(
-                    "Index out of bounds: input_size={input_size}, indices={indices:?}"
-                )));
+                "Index out of bounds: input_size={input_size}, indices={indices:?}"
+            )));
         }
         Ok(Self { input, indices })
     }

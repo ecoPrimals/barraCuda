@@ -72,13 +72,13 @@ impl BatchedEighGpu {
         for (i, m) in matrices.iter().enumerate() {
             if m.len() != n * n {
                 return Err(BarracudaError::invalid_input(format!(
-                        "Matrix {} has {} elements, expected {} for {}x{} matrix",
-                        i,
-                        m.len(),
-                        n * n,
-                        n,
-                        n
-                    )));
+                    "Matrix {} has {} elements, expected {} for {}x{} matrix",
+                    i,
+                    m.len(),
+                    n * n,
+                    n,
+                    n
+                )));
             }
         }
 

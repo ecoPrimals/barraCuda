@@ -46,12 +46,16 @@ impl TimeStretch {
         // Validate window length
         let window_size: usize = window.shape().iter().product();
         if window_size != n_fft {
-            return Err(BarracudaError::invalid_input(format!("Window length ({window_size}) must match n_fft ({n_fft})")));
+            return Err(BarracudaError::invalid_input(format!(
+                "Window length ({window_size}) must match n_fft ({n_fft})"
+            )));
         }
 
         // Ensure same device
         if !std::ptr::eq(signal.device().as_ref(), window.device().as_ref()) {
-            return Err(BarracudaError::invalid_input("Signal and window must be on the same device"));
+            return Err(BarracudaError::invalid_input(
+                "Signal and window must be on the same device",
+            ));
         }
 
         Ok(Self {

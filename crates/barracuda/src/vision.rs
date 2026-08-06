@@ -163,18 +163,20 @@ impl VisionPipeline {
         channels: usize,
     ) -> BarracudaResult<Vec<f32>> {
         if !self.built {
-            return Err(BarracudaError::invalid_input("Pipeline not built. Call .build() before processing."));
+            return Err(BarracudaError::invalid_input(
+                "Pipeline not built. Call .build() before processing.",
+            ));
         }
 
         if image.len() != height * width * channels {
             return Err(BarracudaError::invalid_input(format!(
-                    "Image size mismatch: expected {}×{}×{} = {} elements, got {}",
-                    height,
-                    width,
-                    channels,
-                    height * width * channels,
-                    image.len()
-                )));
+                "Image size mismatch: expected {}×{}×{} = {} elements, got {}",
+                height,
+                width,
+                channels,
+                height * width * channels,
+                image.len()
+            )));
         }
 
         let mut current = image.to_vec();
@@ -202,8 +204,8 @@ impl VisionPipeline {
                     // Center crop (random crop requires RNG)
                     if *size > curr_h || *size > curr_w {
                         return Err(BarracudaError::invalid_input(format!(
-                                "Crop size {size} exceeds image dimensions {curr_h}×{curr_w}"
-                            )));
+                            "Crop size {size} exceeds image dimensions {curr_h}×{curr_w}"
+                        )));
                     }
 
                     let start_y = (curr_h - size) / 2;
@@ -289,21 +291,21 @@ impl ImageBatch {
     ) -> BarracudaResult<Self> {
         if images.len() != labels.len() {
             return Err(BarracudaError::invalid_input(format!(
-                    "Batch size mismatch: {} images, {} labels",
-                    images.len(),
-                    labels.len()
-                )));
+                "Batch size mismatch: {} images, {} labels",
+                images.len(),
+                labels.len()
+            )));
         }
 
         let expected_size = height * width * channels;
         for (i, img) in images.iter().enumerate() {
             if img.len() != expected_size {
                 return Err(BarracudaError::invalid_input(format!(
-                        "Image {} has wrong size: expected {}, got {}",
-                        i,
-                        expected_size,
-                        img.len()
-                    )));
+                    "Image {} has wrong size: expected {}, got {}",
+                    i,
+                    expected_size,
+                    img.len()
+                )));
             }
         }
 

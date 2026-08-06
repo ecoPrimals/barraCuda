@@ -85,25 +85,27 @@ impl FheModulusSwitch {
     pub fn new(input: Tensor, degree: u32, modulus_old: u64, modulus_new: u64) -> Result<Self> {
         // ✅ VALIDATION: Degree must be power of 2
         if !degree.is_power_of_two() || degree < 4 {
-            return Err(BarracudaError::invalid_input(format!("Degree must be power of 2 >= 4, got {degree}")));
+            return Err(BarracudaError::invalid_input(format!(
+                "Degree must be power of 2 >= 4, got {degree}"
+            )));
         }
 
         // ✅ VALIDATION: New modulus must be smaller
         if modulus_new >= modulus_old {
             return Err(BarracudaError::invalid_input(format!(
-                    "New modulus ({modulus_new}) must be < old modulus ({modulus_old})"
-                )));
+                "New modulus ({modulus_new}) must be < old modulus ({modulus_old})"
+            )));
         }
 
         // ✅ VALIDATION: Input tensor must be 2*degree (u64 as 2xu32)
         let expected_size = (degree * 2) as usize;
         if input.shape()[0] != expected_size {
             return Err(BarracudaError::invalid_input(format!(
-                    "Input must have {} elements (degree={}, u64 emulated), got {}",
-                    expected_size,
-                    degree,
-                    input.shape()[0]
-                )));
+                "Input must have {} elements (degree={}, u64 emulated), got {}",
+                expected_size,
+                degree,
+                input.shape()[0]
+            )));
         }
 
         Ok(Self {

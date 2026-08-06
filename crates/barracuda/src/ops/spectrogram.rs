@@ -33,7 +33,9 @@ impl Spectrogram {
     pub fn new(stft_data: Tensor, power: f32) -> Result<Self> {
         let size = stft_data.shape().iter().product::<usize>();
         if size % 2 != 0 {
-            return Err(BarracudaError::invalid_input("STFT data must contain even number of elements (complex pairs)"));
+            return Err(BarracudaError::invalid_input(
+                "STFT data must contain even number of elements (complex pairs)",
+            ));
         }
         Ok(Self { stft_data, power })
     }

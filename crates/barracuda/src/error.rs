@@ -379,7 +379,10 @@ impl From<std::io::Error> for BarracudaError {
 #[inline]
 pub fn u32_from_u64(v: u64) -> Result<u32> {
     u32::try_from(v).map_err(|_| {
-        BarracudaError::invalid_input(format!("value {v} exceeds u32::MAX ({max})", max = u32::MAX))
+        BarracudaError::invalid_input(format!(
+            "value {v} exceeds u32::MAX ({max})",
+            max = u32::MAX
+        ))
     })
 }
 
@@ -391,7 +394,10 @@ pub fn u32_from_u64(v: u64) -> Result<u32> {
 #[inline]
 pub fn u32_from_usize(v: usize) -> Result<u32> {
     u32::try_from(v).map_err(|_| {
-        BarracudaError::invalid_input(format!("value {v} exceeds u32::MAX ({max})", max = u32::MAX))
+        BarracudaError::invalid_input(format!(
+            "value {v} exceeds u32::MAX ({max})",
+            max = u32::MAX
+        ))
     })
 }
 

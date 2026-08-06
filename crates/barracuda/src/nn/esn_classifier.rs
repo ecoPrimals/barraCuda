@@ -135,8 +135,8 @@ impl EsnClassifier {
     /// # Errors
     /// Returns [`Err`] if the JSON fails to parse or the parsed configuration is invalid.
     pub fn from_json(json: &str) -> Result<Self> {
-        let weights: EsnWeights =
-            serde_json::from_str(json).map_err(|e| BarracudaError::invalid_input(format!("ESN JSON parse error: {e}")))?;
+        let weights: EsnWeights = serde_json::from_str(json)
+            .map_err(|e| BarracudaError::invalid_input(format!("ESN JSON parse error: {e}")))?;
 
         validate_esn_config(&weights.config)?;
 
@@ -159,7 +159,8 @@ impl EsnClassifier {
             w_res: self.w_res.clone(),
             w_out: self.w_out.clone(),
         };
-        serde_json::to_string_pretty(&weights).map_err(|e| BarracudaError::invalid_input(format!("ESN JSON serialize error: {e}")))
+        serde_json::to_string_pretty(&weights)
+            .map_err(|e| BarracudaError::invalid_input(format!("ESN JSON serialize error: {e}")))
     }
 
     /// Reset reservoir state to zero.
@@ -183,10 +184,10 @@ impl EsnClassifier {
     fn update_state(&mut self, input: &[f64]) -> Result<()> {
         if input.len() != self.config.input_size {
             return Err(BarracudaError::invalid_input(format!(
-                    "Input size {} != expected {}",
-                    input.len(),
-                    self.config.input_size
-                )));
+                "Input size {} != expected {}",
+                input.len(),
+                self.config.input_size
+            )));
         }
 
         let n = self.config.reservoir_size;
@@ -221,11 +222,15 @@ impl EsnClassifier {
     /// has wrong size, any target has wrong size, or ridge regression fails.
     pub fn train(&mut self, inputs: &[Vec<f64>], targets: &[Vec<f64>]) -> Result<()> {
         if inputs.is_empty() || targets.is_empty() {
-            return Err(BarracudaError::invalid_input("Training data cannot be empty"));
+            return Err(BarracudaError::invalid_input(
+                "Training data cannot be empty",
+            ));
         }
 
         if inputs.len() != targets.len() {
-            return Err(BarracudaError::invalid_input("Inputs and targets must have same length"));
+            return Err(BarracudaError::invalid_input(
+                "Inputs and targets must have same length",
+            ));
         }
 
         self.reset_state();
@@ -241,14 +246,19 @@ impl EsnClassifier {
         for (s, (input, target)) in inputs.iter().zip(targets.iter()).enumerate() {
             if input.len() != self.config.input_size {
                 return Err(BarracudaError::invalid_input(format!(
-                        "Input[{}] size {} != expected {}",
-                        s,
-                        input.len(),
-                        self.config.input_size
-                    )));
+                    "Input[{}] size {} != expected {}",
+                    s,
+                    input.len(),
+                    self.config.input_size
+                )));
             }
             if target.len() != m {
-                return Err(BarracudaError::invalid_input(format!("Target[{}] size {} != expected {}", s, target.len(), m)));
+                return Err(BarracudaError::invalid_input(format!(
+                    "Target[{}] size {} != expected {}",
+                    s,
+                    target.len(),
+                    m
+                )));
             }
 
             self.update_state(input)?;
@@ -281,7 +291,9 @@ impl EsnClassifier {
     /// the configured input size.
     pub fn predict(&mut self, input: &[f64]) -> Result<Vec<f64>> {
         if self.w_out.is_none() {
-            return Err(BarracudaError::invalid_input("ESN must be trained before prediction"));
+            return Err(BarracudaError::invalid_input(
+                "ESN must be trained before prediction",
+            ));
         }
 
         self.update_state(input)?;
@@ -289,10 +301,9 @@ impl EsnClassifier {
         let n = self.config.reservoir_size;
         let m = self.config.output_size;
         let n_features = n + 1;
-        let w_out = self
-            .w_out
-            .as_ref()
-            .ok_or_else(|| BarracudaError::invalid_input("readout weights missing after training guard"))?;
+        let w_out = self.w_out.as_ref().ok_or_else(|| {
+            BarracudaError::invalid_input("readout weights missing after training guard")
+        })?;
 
         let mut output = vec![0.0; m];
         for j in 0..m {
@@ -311,10 +322,9 @@ impl EsnClassifier {
     /// # Errors
     /// Returns [`Err`] if the ESN is untrained.
     pub fn predict_from_state(&self) -> Result<Vec<f64>> {
-        let w_out = self
-            .w_out
-            .as_ref()
-            .ok_or_else(|| BarracudaError::invalid_input("ESN must be trained before prediction"))?;
+        let w_out = self.w_out.as_ref().ok_or_else(|| {
+            BarracudaError::invalid_input("ESN must be trained before prediction")
+        })?;
 
         let n = self.config.reservoir_size;
         let m = self.config.output_size;
@@ -342,10 +352,14 @@ impl EsnClassifier {
 
 fn validate_esn_config(config: &EsnConfig) -> Result<()> {
     if config.input_size == 0 || config.reservoir_size == 0 || config.output_size == 0 {
-        return Err(BarracudaError::invalid_input("All sizes must be greater than zero"));
+        return Err(BarracudaError::invalid_input(
+            "All sizes must be greater than zero",
+        ));
     }
     if config.spectral_radius <= 0.0 || config.spectral_radius > 2.0 {
-        return Err(BarracudaError::invalid_input("Spectral radius must be in (0, 2]"));
+        return Err(BarracudaError::invalid_input(
+            "Spectral radius must be in (0, 2]",
+        ));
     }
     if config.sparsity <= 0.0 || config.sparsity > 1.0 {
         return Err(BarracudaError::invalid_input("Sparsity must be in (0, 1]"));
@@ -354,7 +368,9 @@ fn validate_esn_config(config: &EsnConfig) -> Result<()> {
         return Err(BarracudaError::invalid_input("Leak rate must be in (0, 1]"));
     }
     if config.regularization <= 0.0 {
-        return Err(BarracudaError::invalid_input("Regularization must be positive"));
+        return Err(BarracudaError::invalid_input(
+            "Regularization must be positive",
+        ));
     }
     Ok(())
 }

@@ -30,7 +30,9 @@ where
     }
 
     if config.n_initial < 2 {
-        return Err(BarracudaError::invalid_input("n_initial must be >= 2 for surrogate training"));
+        return Err(BarracudaError::invalid_input(
+            "n_initial must be >= 2 for surrogate training",
+        ));
     }
 
     let _n_dims = bounds.len();
@@ -56,9 +58,13 @@ where
             let device = config
                 .gpu_device
                 .as_ref()
-                .ok_or_else(|| BarracudaError::invalid_input("gpu_device must be set when should_use_gpu returns true; \
+                .ok_or_else(|| {
+                    BarracudaError::invalid_input(
+                        "gpu_device must be set when should_use_gpu returns true; \
                               set SparsitySamplerConfig::gpu_device before calling \
-                              sparsity_sampler_gpu"))?
+                              sparsity_sampler_gpu",
+                    )
+                })?
                 .clone();
             if let Ok((s, _diag)) =
                 train_adaptive_gpu(&x_data, &y_data, config.kernel, config.smoothing, device).await
@@ -68,7 +74,9 @@ where
                 let dev = config
                     .gpu_device
                     .as_ref()
-                    .ok_or_else(|| BarracudaError::invalid_input("gpu_device required for fallback"))?
+                    .ok_or_else(|| {
+                        BarracudaError::invalid_input("gpu_device required for fallback")
+                    })?
                     .clone();
                 if let Ok(s) =
                     RBFSurrogate::train(dev, &x_data, &y_data, config.kernel, config.smoothing)
@@ -91,7 +99,9 @@ where
             let dev = config
                 .gpu_device
                 .as_ref()
-                .ok_or_else(|| BarracudaError::invalid_input("gpu_device must be set for sparsity_sampler_gpu"))?
+                .ok_or_else(|| {
+                    BarracudaError::invalid_input("gpu_device must be set for sparsity_sampler_gpu")
+                })?
                 .clone();
             if let Ok(s) =
                 RBFSurrogate::train(dev, &x_data, &y_data, config.kernel, config.smoothing)

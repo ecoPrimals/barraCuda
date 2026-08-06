@@ -279,17 +279,17 @@ impl PipelineBuilder {
             for input in &stage.inputs {
                 if !buffers.contains_key(input) {
                     return Err(BarracudaError::invalid_input(format!(
-                            "Stage '{}' references unknown input buffer '{}'",
-                            stage.name, input
-                        )));
+                        "Stage '{}' references unknown input buffer '{}'",
+                        stage.name, input
+                    )));
                 }
             }
             for output in &stage.outputs {
                 if !buffers.contains_key(output) {
                     return Err(BarracudaError::invalid_input(format!(
-                            "Stage '{}' references unknown output buffer '{}'",
-                            stage.name, output
-                        )));
+                        "Stage '{}' references unknown output buffer '{}'",
+                        stage.name, output
+                    )));
                 }
             }
 

@@ -54,10 +54,10 @@ impl Gradient1D {
     pub async fn compute(&self, input: &[f64]) -> Result<Vec<f64>> {
         if input.len() != self.n {
             return Err(BarracudaError::invalid_input(format!(
-                    "Input size mismatch: expected {}, got {}",
-                    self.n,
-                    input.len()
-                )));
+                "Input size mismatch: expected {}, got {}",
+                self.n,
+                input.len()
+            )));
         }
 
         #[repr(C)]

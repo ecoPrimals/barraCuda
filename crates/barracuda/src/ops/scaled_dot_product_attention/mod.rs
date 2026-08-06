@@ -105,7 +105,9 @@ impl ScaledDotProductAttention {
         let v_shape = value.shape();
 
         if q_shape.len() != 4 || k_shape.len() != 4 || v_shape.len() != 4 {
-            return Err(crate::error::BarracudaError::invalid_input("All inputs must be 4D tensors [batch, heads, seq_len, head_dim]"));
+            return Err(crate::error::BarracudaError::invalid_input(
+                "All inputs must be 4D tensors [batch, heads, seq_len, head_dim]",
+            ));
         }
 
         let batch_size = q_shape[0];

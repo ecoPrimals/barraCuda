@@ -16,8 +16,8 @@ const SHADER_F32: &str = SHADER_F64;
 /// Returns the WGSL meshgrid shader (expand coords to grid).
 #[must_use]
 pub fn wgsl_meshgrid() -> &'static str {
-        include_str!("../shaders/misc/meshgrid_f64.wgsl")
-    }
+    include_str!("../shaders/misc/meshgrid_f64.wgsl")
+}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]

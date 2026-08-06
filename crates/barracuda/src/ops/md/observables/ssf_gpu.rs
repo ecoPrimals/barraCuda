@@ -61,10 +61,16 @@ impl SsfGpu {
         k_vectors: &[f64],
     ) -> Result<Vec<f64>> {
         if !positions.len().is_multiple_of(3) {
-            return Err(BarracudaError::invalid_input(format!("positions length {} not divisible by 3", positions.len())));
+            return Err(BarracudaError::invalid_input(format!(
+                "positions length {} not divisible by 3",
+                positions.len()
+            )));
         }
         if !k_vectors.len().is_multiple_of(3) {
-            return Err(BarracudaError::invalid_input(format!("k_vectors length {} not divisible by 3", k_vectors.len())));
+            return Err(BarracudaError::invalid_input(format!(
+                "k_vectors length {} not divisible by 3",
+                k_vectors.len()
+            )));
         }
 
         let n_particles = positions.len() / 3;

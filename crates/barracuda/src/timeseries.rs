@@ -236,7 +236,9 @@ impl TimeSeriesAnalyzer {
     /// were added, or the underlying model (e.g., ESN training/prediction) fails.
     pub async fn forecast(&mut self, history: &[f32], horizon: usize) -> BarracudaResult<Forecast> {
         if !self.built {
-            return Err(BarracudaError::invalid_input("Analyzer not built. Call .build() first."));
+            return Err(BarracudaError::invalid_input(
+                "Analyzer not built. Call .build() first.",
+            ));
         }
 
         if history.is_empty() {
@@ -245,7 +247,9 @@ impl TimeSeriesAnalyzer {
 
         // Use first available model
         if self.models.is_empty() {
-            return Err(BarracudaError::invalid_input("No models added. Use .add_model() before building."));
+            return Err(BarracudaError::invalid_input(
+                "No models added. Use .add_model() before building.",
+            ));
         }
 
         match &self.models[0] {
@@ -280,7 +284,9 @@ impl TimeSeriesAnalyzer {
         threshold: f32,
     ) -> BarracudaResult<Vec<Anomaly>> {
         if series.len() < 10 {
-            return Err(BarracudaError::invalid_input("Series too short for anomaly detection (need at least 10 points)"));
+            return Err(BarracudaError::invalid_input(
+                "Series too short for anomaly detection (need at least 10 points)",
+            ));
         }
 
         // Use moving average as baseline
@@ -330,10 +336,10 @@ impl TimeSeriesAnalyzer {
     pub async fn decompose(&self, series: &[f32], period: usize) -> BarracudaResult<Decomposition> {
         if series.len() < period * 2 {
             return Err(BarracudaError::invalid_input(format!(
-                    "Series too short for period {} (need at least {})",
-                    period,
-                    period * 2
-                )));
+                "Series too short for period {} (need at least {})",
+                period,
+                period * 2
+            )));
         }
 
         // Simple moving average for trend

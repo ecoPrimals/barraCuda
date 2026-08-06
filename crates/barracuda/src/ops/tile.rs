@@ -27,14 +27,16 @@ impl Tile {
         let num_dims = input.shape().len();
         if repeats.len() != num_dims {
             return Err(crate::error::BarracudaError::invalid_input(format!(
-                    "Repeats length {} doesn't match tensor rank {}",
-                    repeats.len(),
-                    num_dims
-                )));
+                "Repeats length {} doesn't match tensor rank {}",
+                repeats.len(),
+                num_dims
+            )));
         }
 
         if repeats.contains(&0) {
-            return Err(crate::error::BarracudaError::invalid_input("Repeats must be positive"));
+            return Err(crate::error::BarracudaError::invalid_input(
+                "Repeats must be positive",
+            ));
         }
 
         Ok(Self { input, repeats })

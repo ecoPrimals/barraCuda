@@ -38,11 +38,15 @@ impl LpPool2D {
     ) -> Result<Self> {
         let shape = input.shape();
         if shape.len() != 4 {
-            return Err(crate::error::BarracudaError::invalid_input(format!("LpPool2D expects 4D tensor [B, C, H, W], got shape {shape:?}")));
+            return Err(crate::error::BarracudaError::invalid_input(format!(
+                "LpPool2D expects 4D tensor [B, C, H, W], got shape {shape:?}"
+            )));
         }
 
         if p <= 0.0 {
-            return Err(crate::error::BarracudaError::invalid_input("p must be positive"));
+            return Err(crate::error::BarracudaError::invalid_input(
+                "p must be positive",
+            ));
         }
 
         Ok(Self {

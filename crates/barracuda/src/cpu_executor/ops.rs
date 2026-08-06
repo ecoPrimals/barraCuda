@@ -21,7 +21,9 @@ pub(super) fn dispatch(
     inputs: Vec<Arc<dyn TensorStorage>>,
 ) -> Result<Arc<dyn TensorStorage>> {
     if inputs.is_empty() {
-        return Err(crate::error::BarracudaError::invalid_input("No inputs provided"));
+        return Err(crate::error::BarracudaError::invalid_input(
+            "No inputs provided",
+        ));
     }
 
     use MathOp::{
@@ -42,7 +44,10 @@ pub(super) fn dispatch(
         }
         Add | Sub | Mul | Div | Pow | Max | Min => {
             if inputs.len() < 2 {
-                return Err(crate::error::BarracudaError::invalid_input(format!("{op:?} requires 2 inputs, got {}", inputs.len())));
+                return Err(crate::error::BarracudaError::invalid_input(format!(
+                    "{op:?} requires 2 inputs, got {}",
+                    inputs.len()
+                )));
             }
             let a = CpuExecutor::read_f32(inputs[0].as_ref())?;
             let b = CpuExecutor::read_f32(inputs[1].as_ref())?;
@@ -67,7 +72,9 @@ pub(super) fn dispatch(
             transpose_b,
         } => {
             if inputs.len() < 2 {
-                return Err(crate::error::BarracudaError::invalid_input("MatMul requires 2 inputs"));
+                return Err(crate::error::BarracudaError::invalid_input(
+                    "MatMul requires 2 inputs",
+                ));
             }
             let a_desc = inputs[0].descriptor();
             let b_desc = inputs[1].descriptor();
@@ -82,7 +89,9 @@ pub(super) fn dispatch(
                     (a_desc.shape[r - 2], a_desc.shape[r - 1])
                 }
             } else {
-                return Err(crate::error::BarracudaError::invalid_input("MatMul requires 2D+ tensors"));
+                return Err(crate::error::BarracudaError::invalid_input(
+                    "MatMul requires 2D+ tensors",
+                ));
             };
 
             let (k_b, n) = if b_desc.shape.len() >= 2 {
@@ -93,11 +102,15 @@ pub(super) fn dispatch(
                     (b_desc.shape[r - 2], b_desc.shape[r - 1])
                 }
             } else {
-                return Err(crate::error::BarracudaError::invalid_input("MatMul requires 2D+ tensors"));
+                return Err(crate::error::BarracudaError::invalid_input(
+                    "MatMul requires 2D+ tensors",
+                ));
             };
 
             if k_a != k_b {
-                return Err(crate::error::BarracudaError::invalid_input(format!("MatMul inner dimension mismatch: {k_a} vs {k_b}")));
+                return Err(crate::error::BarracudaError::invalid_input(format!(
+                    "MatMul inner dimension mismatch: {k_a} vs {k_b}"
+                )));
             }
 
             let result = executor.execute_matmul_cpu(&a_data, &b_data, m, k_a, n)?;
@@ -122,7 +135,9 @@ pub(super) fn dispatch(
             transpose_b,
         } => {
             if inputs.len() < 2 {
-                return Err(crate::error::BarracudaError::invalid_input("BatchMatMul requires 2 inputs"));
+                return Err(crate::error::BarracudaError::invalid_input(
+                    "BatchMatMul requires 2 inputs",
+                ));
             }
             let a_desc = inputs[0].descriptor();
             let b_desc = inputs[1].descriptor();
@@ -137,7 +152,9 @@ pub(super) fn dispatch(
                     (a_desc.shape[r - 2], a_desc.shape[r - 1])
                 }
             } else {
-                return Err(crate::error::BarracudaError::invalid_input("BatchMatMul requires 2D+ tensors"));
+                return Err(crate::error::BarracudaError::invalid_input(
+                    "BatchMatMul requires 2D+ tensors",
+                ));
             };
 
             let (k_b, n) = if b_desc.shape.len() >= 2 {
@@ -148,11 +165,15 @@ pub(super) fn dispatch(
                     (b_desc.shape[r - 2], b_desc.shape[r - 1])
                 }
             } else {
-                return Err(crate::error::BarracudaError::invalid_input("BatchMatMul requires 2D+ tensors"));
+                return Err(crate::error::BarracudaError::invalid_input(
+                    "BatchMatMul requires 2D+ tensors",
+                ));
             };
 
             if k_a != k_b {
-                return Err(crate::error::BarracudaError::invalid_input(format!("BatchMatMul inner dimension mismatch: {k_a} vs {k_b}")));
+                return Err(crate::error::BarracudaError::invalid_input(format!(
+                    "BatchMatMul inner dimension mismatch: {k_a} vs {k_b}"
+                )));
             }
 
             let result = executor.execute_matmul_cpu(&a_data, &b_data, m, k_a, n)?;
@@ -209,7 +230,9 @@ pub(super) fn dispatch(
         }
         Concat { .. } => {
             if inputs.len() < 2 {
-                return Err(crate::error::BarracudaError::invalid_input("Concat requires at least 2 inputs"));
+                return Err(crate::error::BarracudaError::invalid_input(
+                    "Concat requires at least 2 inputs",
+                ));
             }
             let a = CpuExecutor::read_f32(inputs[0].as_ref())?;
             let b = CpuExecutor::read_f32(inputs[1].as_ref())?;
@@ -246,10 +269,14 @@ pub(super) fn dispatch(
             groups,
         } => {
             if inputs.len() < 2 {
-                return Err(crate::error::BarracudaError::invalid_input("Conv2D requires 2 inputs (input, kernel)"));
+                return Err(crate::error::BarracudaError::invalid_input(
+                    "Conv2D requires 2 inputs (input, kernel)",
+                ));
             }
             if *groups != 1 {
-                return Err(crate::error::BarracudaError::invalid_input("Conv2D groups > 1 not yet supported"));
+                return Err(crate::error::BarracudaError::invalid_input(
+                    "Conv2D groups > 1 not yet supported",
+                ));
             }
 
             let in_desc = inputs[0].descriptor();
@@ -257,15 +284,15 @@ pub(super) fn dispatch(
 
             if in_desc.shape.len() != 4 {
                 return Err(crate::error::BarracudaError::invalid_input(format!(
-                        "Conv2D input must be 4D [N, C_in, H, W], got {:?}",
-                        in_desc.shape
-                    )));
+                    "Conv2D input must be 4D [N, C_in, H, W], got {:?}",
+                    in_desc.shape
+                )));
             }
             if kernel_desc.shape.len() != 4 {
                 return Err(crate::error::BarracudaError::invalid_input(format!(
-                        "Conv2D kernel must be 4D [C_out, C_in, kH, kW], got {:?}",
-                        kernel_desc.shape
-                    )));
+                    "Conv2D kernel must be 4D [C_out, C_in, kH, kW], got {:?}",
+                    kernel_desc.shape
+                )));
             }
 
             let n = in_desc.shape[0];
@@ -279,7 +306,9 @@ pub(super) fn dispatch(
             let k_w = kernel_desc.shape[3];
 
             if c_in != k_c_in {
-                return Err(crate::error::BarracudaError::invalid_input(format!("Conv2D input channels {c_in} != kernel in-channels {k_c_in}")));
+                return Err(crate::error::BarracudaError::invalid_input(format!(
+                    "Conv2D input channels {c_in} != kernel in-channels {k_c_in}"
+                )));
             }
 
             let input_data = CpuExecutor::read_f32(inputs[0].as_ref())?;
@@ -311,9 +340,9 @@ pub(super) fn dispatch(
             let in_desc = inputs[0].descriptor();
             if in_desc.shape.len() != 4 {
                 return Err(crate::error::BarracudaError::invalid_input(format!(
-                        "MaxPool2D input must be 4D [N, C, H, W], got {:?}",
-                        in_desc.shape
-                    )));
+                    "MaxPool2D input must be 4D [N, C, H, W], got {:?}",
+                    in_desc.shape
+                )));
             }
 
             let n = in_desc.shape[0];
@@ -344,9 +373,9 @@ pub(super) fn dispatch(
             let in_desc = inputs[0].descriptor();
             if in_desc.shape.len() != 4 {
                 return Err(crate::error::BarracudaError::invalid_input(format!(
-                        "AvgPool2D input must be 4D [N, C, H, W], got {:?}",
-                        in_desc.shape
-                    )));
+                    "AvgPool2D input must be 4D [N, C, H, W], got {:?}",
+                    in_desc.shape
+                )));
             }
 
             let n = in_desc.shape[0];

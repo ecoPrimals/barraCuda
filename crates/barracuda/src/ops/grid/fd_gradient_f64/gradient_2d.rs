@@ -60,12 +60,12 @@ impl Gradient2D {
         let total = self.nx * self.ny;
         if input.len() != total {
             return Err(BarracudaError::invalid_input(format!(
-                    "Input size mismatch: expected {} ({}×{}), got {}",
-                    total,
-                    self.nx,
-                    self.ny,
-                    input.len()
-                )));
+                "Input size mismatch: expected {} ({}×{}), got {}",
+                total,
+                self.nx,
+                self.ny,
+                input.len()
+            )));
         }
 
         #[repr(C)]

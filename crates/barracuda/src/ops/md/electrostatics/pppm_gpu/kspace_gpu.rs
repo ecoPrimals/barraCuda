@@ -35,10 +35,10 @@ pub async fn compute_with_kspace_gpu(
     let n = charges.len();
     if positions.len() != n * 3 {
         return Err(BarracudaError::invalid_input(format!(
-                "positions length {} != charges length {} * 3",
-                positions.len(),
-                n
-            )));
+            "positions length {} != charges length {} * 3",
+            positions.len(),
+            n
+        )));
     }
     // Wrap positions to box (matches CPU)
     let positions = wrap_positions(positions, pppm.params().box_dims);
@@ -47,7 +47,9 @@ pub async fn compute_with_kspace_gpu(
     let mesh_size = kx * ky * kz;
     let o3 = order * order * order;
     if !kx.is_power_of_two() || !ky.is_power_of_two() || !kz.is_power_of_two() {
-        return Err(BarracudaError::invalid_input(format!("GPU FFT requires power-of-2 mesh dims, got ({kx}, {ky}, {kz})")));
+        return Err(BarracudaError::invalid_input(format!(
+            "GPU FFT requires power-of-2 mesh dims, got ({kx}, {ky}, {kz})"
+        )));
     }
 
     let (device, queue, wgpu_device, layouts, pipelines) = (

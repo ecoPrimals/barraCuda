@@ -43,7 +43,7 @@ impl L1Loss {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute L1 loss computation on GPU.

@@ -52,7 +52,7 @@ impl Stack {
     fn wgsl_shader() -> &'static str {
         {
             const S: &str = include_str!("../shaders/tensor/stack_f64.wgsl");
-            &S
+            S
         }
     }
 

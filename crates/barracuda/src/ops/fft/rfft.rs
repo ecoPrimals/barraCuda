@@ -18,12 +18,12 @@ use std::mem::size_of;
 
 fn rtc_shader_f32() -> &'static str {
     const SHADER: &str = include_str!("real_to_complex_f64.wgsl");
-    &SHADER
+    SHADER
 }
 
 fn extract_shader_f32() -> &'static str {
     const SHADER: &str = include_str!("rfft_extract_f64.wgsl");
-    &SHADER
+    SHADER
 }
 
 #[repr(C)]

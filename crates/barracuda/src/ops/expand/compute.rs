@@ -361,7 +361,7 @@ pub fn execute_expand(input: Tensor, target_shape: Vec<usize>) -> Result<Tensor>
         ],
     });
 
-    let shader = device.compile_shader(&SHADER_F32, Some("Expand"));
+    let shader = device.compile_shader(SHADER_F32, Some("Expand"));
     let pipeline_layout = device
         .device
         .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {

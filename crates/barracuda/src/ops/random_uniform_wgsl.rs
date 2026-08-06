@@ -41,7 +41,7 @@ impl RandomUniformGpu {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/sample/random_uniform_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Generate uniform random samples

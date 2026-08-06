@@ -89,7 +89,7 @@ impl SpatialPayoffGpu {
 
         let module = d.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("SpatialPayoff Shader"),
-            source: wgpu::ShaderSource::Wgsl((&*WGSL_SPATIAL_PAYOFF).into()),
+            source: wgpu::ShaderSource::Wgsl(WGSL_SPATIAL_PAYOFF.into()),
         });
 
         let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {

@@ -40,7 +40,7 @@ impl Spectrogram {
 
     /// Get the WGSL shader source
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute the spectrogram operation

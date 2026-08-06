@@ -41,7 +41,7 @@ impl Sum {
     }
 
     fn wgsl_shader_dim() -> &'static str {
-        &WGSL_SUM_DIM_F32
+        WGSL_SUM_DIM_F32
     }
 
     /// Execute the sum operation.

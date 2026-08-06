@@ -93,7 +93,7 @@ impl Diag {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute the diagonal operation and return the output tensor.

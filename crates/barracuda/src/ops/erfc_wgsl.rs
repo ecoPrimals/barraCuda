@@ -26,7 +26,7 @@ impl Erfc {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/math/erfc_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute the complementary error function and return the output tensor.

@@ -32,7 +32,7 @@ impl MaskedFill {
     fn wgsl_shader() -> &'static str {
         {
             const S: &str = include_str!("../shaders/tensor/masked_fill_f64.wgsl");
-            &S
+            S
         }
     }
 

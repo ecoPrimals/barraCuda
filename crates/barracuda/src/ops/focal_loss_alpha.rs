@@ -51,7 +51,7 @@ impl FocalLossAlpha {
     /// WGSL shader source (embedded at compile time)
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/loss/focal_loss_alpha_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute `FocalLossAlpha` on tensor

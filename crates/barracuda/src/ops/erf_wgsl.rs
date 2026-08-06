@@ -26,7 +26,7 @@ impl Erf {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/math/erf_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute the error function and return the output tensor.

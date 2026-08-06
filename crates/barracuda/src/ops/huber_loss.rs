@@ -64,7 +64,7 @@ pub struct HuberLoss {
 
 impl HuberLoss {
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute Huber loss computation and return the result tensor.

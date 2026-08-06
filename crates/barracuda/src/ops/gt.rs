@@ -24,7 +24,7 @@ impl Gt {
         Self { lhs, rhs }
     }
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute greater-than comparison on GPU.

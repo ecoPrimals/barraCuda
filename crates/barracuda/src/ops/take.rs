@@ -36,7 +36,7 @@ impl Take {
     /// Get the WGSL shader source
     fn wgsl_shader() -> &'static str {
         const S: &str = include_str!("../shaders/tensor/take_f64.wgsl");
-        &S
+        S
     }
 
     /// Execute the take operation

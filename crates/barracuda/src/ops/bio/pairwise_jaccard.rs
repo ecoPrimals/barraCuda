@@ -84,7 +84,7 @@ impl PairwiseJaccardGpu {
 
         let module = d.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("PairwiseJaccard Shader"),
-            source: wgpu::ShaderSource::Wgsl((&*WGSL_PAIRWISE_JACCARD).into()),
+            source: wgpu::ShaderSource::Wgsl(WGSL_PAIRWISE_JACCARD.into()),
         });
 
         let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {

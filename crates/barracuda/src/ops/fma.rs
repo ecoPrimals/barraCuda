@@ -78,7 +78,7 @@ impl Fma {
         let max_inv = caps.max_compute_invocations_per_workgroup;
         let max_dispatch = caps.max_compute_workgroups.0;
 
-        let default: &'static str = &SHADER_DEFAULT;
+        let default: &'static str = SHADER_DEFAULT;
         let (shader, wg) = if max_inv >= WORKGROUP_SIZE_1D {
             (default, WORKGROUP_SIZE_1D)
         } else if max_inv >= WORKGROUP_SIZE_MEDIUM {

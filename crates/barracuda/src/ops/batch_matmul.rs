@@ -35,7 +35,7 @@ impl BatchMatMul {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/math/batch_matmul_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute batched matrix multiplication on GPU.

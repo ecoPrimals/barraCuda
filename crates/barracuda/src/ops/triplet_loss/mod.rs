@@ -138,7 +138,7 @@ impl TripletLoss {
     /// WGSL shader source
     pub(super) fn shader() -> &'static str {
         const SHADER: &str = include_str!("../../shaders/loss/triplet_loss_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Get anchors tensor

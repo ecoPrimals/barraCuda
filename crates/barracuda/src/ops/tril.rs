@@ -49,7 +49,7 @@ impl Tril {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Executes the tril operation and returns the lower triangular result.

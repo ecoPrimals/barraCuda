@@ -65,7 +65,7 @@ impl PairwiseL2Gpu {
         let wg_count = n_pairs.div_ceil(WORKGROUP_SIZE_1D);
 
         ComputeDispatch::new(&self.device, "PairwiseL2")
-            .shader(&WGSL_PAIRWISE_L2, "main")
+            .shader(WGSL_PAIRWISE_L2, "main")
             .storage_read(0, input_buf)
             .storage_rw(1, output_buf)
             .uniform(2, &params_buf)

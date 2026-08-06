@@ -67,7 +67,7 @@ impl AffineGrid {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/misc/affine_grid_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute affine grid generation on GPU.

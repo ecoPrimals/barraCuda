@@ -76,7 +76,7 @@ impl WindowFunction {
 
     /// Get the WGSL shader source
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute the window function and return the output tensor.

@@ -113,7 +113,7 @@ impl SparseAttention {
 
     /// Pass 2 shader: Apply softmax with sparse mask (NEW - only shader needed!)
     pub(super) fn shader_sparse_softmax() -> &'static str {
-        &SHADER_SPARSE_SOFTMAX_F32
+        SHADER_SPARSE_SOFTMAX_F32
     }
 
     /// Pass 3 shader: Apply weights to values (REUSED from attention ✅)

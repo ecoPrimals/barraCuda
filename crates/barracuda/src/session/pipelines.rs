@@ -150,8 +150,8 @@ impl SessionPipelines {
             neg_pl: auto_pipeline(&neg_src, "Session Negate"),
             fma_pl: auto_pipeline(&fma_src, "Session FMA"),
             scale_pl: auto_pipeline(&scale_src, "Session Scale"),
-            relu_pl: auto_pipeline(&crate::ops::relu::SHADER_F32, "Session ReLU"),
-            gelu_pl: auto_pipeline(&crate::ops::gelu_wgsl::SHADER_F32, "Session GELU"),
+            relu_pl: auto_pipeline(crate::ops::relu::SHADER_F32, "Session ReLU"),
+            gelu_pl: auto_pipeline(crate::ops::gelu_wgsl::SHADER_F32, "Session GELU"),
             sfmx_pl: auto_pipeline(
                 crate::ops::softmax::SHADER_SOFTMAX_SIMPLE_F32,
                 "Session Softmax",

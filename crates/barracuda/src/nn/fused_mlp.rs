@@ -117,7 +117,7 @@ pub async fn fused_mlp(
     {
         let out_buf = &layer_buffers[i];
         let _ = batch_enc
-            .dispatch("fused_mlp_linear", &LINEAR_F32, "main")
+            .dispatch("fused_mlp_linear", LINEAR_F32, "main")
             .uniform(0, &params_buffers[i])
             .storage_read(1, prev_input)
             .storage_read(2, w.buffer())
@@ -131,7 +131,7 @@ pub async fn fused_mlp(
 
         if matches!(activation, Activation::ReLU) {
             let _ = batch_enc
-                .dispatch("fused_mlp_relu", &RELU_F32, "main")
+                .dispatch("fused_mlp_relu", RELU_F32, "main")
                 .storage_read(0, out_buf)
                 .storage_rw(1, out_buf)
                 .workgroups(

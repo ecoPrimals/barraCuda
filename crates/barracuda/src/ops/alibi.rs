@@ -98,7 +98,7 @@ impl AlibiPosition {
 
     /// WGSL shader source
     fn shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute `ALiBi` (single GPU pass)

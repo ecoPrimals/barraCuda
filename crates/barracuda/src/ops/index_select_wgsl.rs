@@ -36,7 +36,7 @@ impl IndexSelect {
     fn wgsl_shader() -> &'static str {
         {
             const S: &str = include_str!("../shaders/tensor/index_select_f64.wgsl");
-            &S
+            S
         }
     }
 

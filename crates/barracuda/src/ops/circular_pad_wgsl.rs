@@ -29,7 +29,7 @@ impl CircularPad {
     fn wgsl_shader() -> &'static str {
         {
             const S: &str = include_str!("../shaders/tensor/circular_pad_f64.wgsl");
-            &S
+            S
         }
     }
 

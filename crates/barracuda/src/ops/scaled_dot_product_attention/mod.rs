@@ -56,7 +56,7 @@ const WGSL_SDPA_SINGLE_KERNEL_F32: &str = WGSL_SDPA_SINGLE_KERNEL_F64;
 /// exposes the simplified variant for experimentation and testing.
 #[must_use]
 pub fn wgsl_sdpa_single_kernel() -> &'static str {
-    &WGSL_SDPA_SINGLE_KERNEL_F32
+    WGSL_SDPA_SINGLE_KERNEL_F32
 }
 
 /// Attention parameters for shader uniform binding.

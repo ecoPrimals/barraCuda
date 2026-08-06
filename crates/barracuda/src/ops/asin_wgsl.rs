@@ -27,7 +27,7 @@ impl Asin {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/math/asin_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute arcsin on GPU.

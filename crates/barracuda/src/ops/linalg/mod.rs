@@ -115,13 +115,13 @@ const WGSL_LAPLACIAN: &str = WGSL_LAPLACIAN_F64;
 /// WGSL kernel: symmetrize a square matrix (out[i,j] = (A[i,j] + A[j,i]) / 2).
 #[must_use]
 pub fn wgsl_symmetrize() -> &'static str {
-    &WGSL_SYMMETRIZE
+    WGSL_SYMMETRIZE
 }
 
 /// WGSL kernel: graph Laplacian (L = D - A).
 #[must_use]
 pub fn wgsl_laplacian() -> &'static str {
-    &WGSL_LAPLACIAN
+    WGSL_LAPLACIAN
 }
 
 /// GPU executor: symmetrize a square matrix at f64 precision.

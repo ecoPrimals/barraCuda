@@ -105,7 +105,7 @@ impl RbfKernel {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute RBF kernel evaluation on GPU

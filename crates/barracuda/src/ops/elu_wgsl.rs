@@ -24,7 +24,7 @@ use bytemuck::{Pod, Zeroable};
 /// Returns the simple ELU WGSL shader (single-pass, no vectorization).
 #[must_use]
 pub fn wgsl_elu_simple() -> &'static str {
-    &SHADER_ELU_SIMPLE_F32
+    SHADER_ELU_SIMPLE_F32
 }
 
 /// Default alpha for ELU (matches common framework defaults).
@@ -60,7 +60,7 @@ impl ELU {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Executes ELU activation and returns the output tensor.

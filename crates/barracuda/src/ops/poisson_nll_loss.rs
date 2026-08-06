@@ -53,7 +53,7 @@ impl PoissonNLLLoss {
     /// Get the WGSL shader source
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/loss/poisson_nll_loss_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute the Poisson NLL loss operation

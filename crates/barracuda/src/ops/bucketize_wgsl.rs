@@ -35,7 +35,7 @@ impl Bucketize {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/misc/bucketize_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute bucketize on GPU. Returns bucket indices as f32.

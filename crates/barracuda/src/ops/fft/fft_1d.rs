@@ -61,7 +61,7 @@ pub const BATCHED_SHADER_F64: &str = include_str!("fft_3d_batched_f64.wgsl");
 #[must_use]
 pub fn batched_shader_f32() -> &'static str {
     const SHADER: &str = BATCHED_SHADER_F64;
-    &SHADER
+    SHADER
 }
 
 /// Upload twiddle factors for f32 (re/im interleaved as f32 pairs).

@@ -67,7 +67,7 @@ impl NormCdf {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/special/norm_cdf_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute normal CDF or PDF on the input tensor.

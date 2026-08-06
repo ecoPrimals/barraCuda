@@ -37,7 +37,7 @@ impl GridSample {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/misc/grid_sample_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute grid sampling on GPU with bilinear interpolation.

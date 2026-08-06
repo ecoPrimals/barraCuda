@@ -27,7 +27,7 @@ impl BinaryCrossEntropy {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute binary cross-entropy on GPU. Returns scalar loss.

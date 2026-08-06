@@ -49,7 +49,7 @@ pub struct DotProduct {
 impl DotProduct {
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/misc/dotproduct_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute dot product and return partial sums (or final scalar if single workgroup).

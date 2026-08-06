@@ -63,7 +63,7 @@ impl RandomCrop {
 
     /// WGSL shader source (embedded at compile time)
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute `RandomCrop` on tensor

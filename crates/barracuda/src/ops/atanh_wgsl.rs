@@ -26,7 +26,7 @@ impl Atanh {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute atanh on GPU.

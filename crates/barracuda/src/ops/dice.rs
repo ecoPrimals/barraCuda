@@ -80,7 +80,7 @@ impl DiceLoss {
     /// WGSL shader source
     fn shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/loss/dice_loss_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute Dice loss (GPU reduction)

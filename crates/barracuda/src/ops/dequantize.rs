@@ -49,7 +49,7 @@ impl Dequantize {
     /// WGSL shader source (embedded at compile time)
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/misc/dequantize_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute dequantize on tensor

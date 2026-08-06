@@ -52,7 +52,7 @@ impl MatrixRank {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Executes rank computation and returns the matrix rank.

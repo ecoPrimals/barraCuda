@@ -119,7 +119,7 @@ impl RNNCell {
     /// Get the WGSL shader source
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/rnn/rnn_cell_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute the RNN cell and return the new hidden state.

@@ -27,7 +27,7 @@ impl Asinh {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/math/asinh_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute asinh on GPU.

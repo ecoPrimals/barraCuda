@@ -56,7 +56,7 @@ impl MatrixPower {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/math/matrix_power_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Executes matrix exponentiation and returns A^power.

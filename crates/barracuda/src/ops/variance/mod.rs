@@ -47,7 +47,7 @@ impl Variance {
 
     /// Get the WGSL shader source for dimension-wise reduction
     pub(super) fn wgsl_shader_dim() -> &'static str {
-        &WGSL_VARIANCE_DIM_F32
+        WGSL_VARIANCE_DIM_F32
     }
 
     /// Get input tensor

@@ -26,7 +26,7 @@ impl Atan {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/math/atan_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute atan on GPU.

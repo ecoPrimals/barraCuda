@@ -114,7 +114,7 @@ impl LocalAttention {
 
     /// Pass 2 shader: Apply softmax with local window mask (NEW - only shader needed!)
     pub(super) fn shader_local_softmax() -> &'static str {
-        &SHADER_LOCAL_SOFTMAX_F32
+        SHADER_LOCAL_SOFTMAX_F32
     }
 
     /// Pass 3 shader: Apply weights to values (REUSED from attention ✅)

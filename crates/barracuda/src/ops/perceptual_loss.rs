@@ -55,7 +55,7 @@ impl PerceptualLoss {
     /// Get the WGSL shader source
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/loss/perceptual_loss_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute the perceptual loss operation

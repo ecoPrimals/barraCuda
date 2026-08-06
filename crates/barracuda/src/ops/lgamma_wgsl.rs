@@ -26,7 +26,7 @@ impl Lgamma {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/math/lgamma_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute log-gamma on GPU.

@@ -40,7 +40,7 @@ impl Hardtanh {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute Hardtanh.

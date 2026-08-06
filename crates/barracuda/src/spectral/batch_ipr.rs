@@ -82,7 +82,7 @@ impl BatchIprGpu {
             immediate_size: 0,
         });
 
-        let module = device.compile_shader(&WGSL_BATCH_IPR, Some("BatchIpr Shader"));
+        let module = device.compile_shader(WGSL_BATCH_IPR, Some("BatchIpr Shader"));
 
         let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("BatchIpr Pipeline"),

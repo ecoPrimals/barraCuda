@@ -90,7 +90,7 @@ impl HingeLoss {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Executes hinge loss and returns the loss tensor.

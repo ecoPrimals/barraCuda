@@ -37,7 +37,7 @@ impl ChannelShuffle {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/tensor/channel_shuffle_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute channel shuffle on GPU.

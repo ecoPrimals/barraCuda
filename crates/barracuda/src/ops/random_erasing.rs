@@ -59,7 +59,7 @@ impl RandomErasing {
     /// WGSL shader source (embedded at compile time)
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/math/random_erasing_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute `RandomErasing` on tensor

@@ -47,7 +47,7 @@ impl GIoULoss {
     /// WGSL shader source (embedded at compile time)
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/loss/giou_loss_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute `GIoULoss` on tensor

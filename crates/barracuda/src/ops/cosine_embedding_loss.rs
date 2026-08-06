@@ -59,7 +59,7 @@ impl CosineEmbeddingLoss {
     /// WGSL shader source (embedded at compile time)
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/loss/cosine_embedding_loss_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute cosine embedding loss on tensors

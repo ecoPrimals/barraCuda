@@ -81,7 +81,7 @@ impl ChamferDistance {
     /// WGSL shader source (embedded at compile time)
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/loss/chamfer_distance_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute `ChamferDistance` on tensor

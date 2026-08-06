@@ -49,7 +49,7 @@ impl ColorJitter {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute color jitter on GPU.

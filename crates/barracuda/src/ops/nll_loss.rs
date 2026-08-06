@@ -68,7 +68,7 @@ impl NLLLoss {
     /// Get the WGSL shader source
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/loss/nll_loss_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute the NLL loss operation

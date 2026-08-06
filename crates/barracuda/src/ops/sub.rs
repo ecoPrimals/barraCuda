@@ -38,7 +38,7 @@ impl Sub {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute element-wise subtraction and return the result tensor.

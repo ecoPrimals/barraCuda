@@ -46,7 +46,7 @@ impl Mean {
     }
 
     fn wgsl_shader_dim() -> &'static str {
-        &WGSL_MEAN_DIM_F32
+        WGSL_MEAN_DIM_F32
     }
 
     /// Execute the mean operation.

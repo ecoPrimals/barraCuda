@@ -29,7 +29,7 @@ impl ReplicationPad {
     fn wgsl_shader() -> &'static str {
         {
             const S: &str = include_str!("../shaders/tensor/replication_pad_f64.wgsl");
-            &S
+            S
         }
     }
 

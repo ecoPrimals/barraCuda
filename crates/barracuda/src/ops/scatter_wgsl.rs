@@ -37,7 +37,7 @@ impl Scatter {
     fn wgsl_shader() -> &'static str {
         {
             const S: &str = include_str!("../shaders/tensor/scatter_f64.wgsl");
-            &S
+            S
         }
     }
 

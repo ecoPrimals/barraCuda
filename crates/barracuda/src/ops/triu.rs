@@ -49,7 +49,7 @@ impl Triu {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Executes the triu operation and returns the upper triangular result.

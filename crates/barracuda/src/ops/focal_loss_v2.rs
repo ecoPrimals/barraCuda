@@ -58,7 +58,7 @@ impl FocalLossV2 {
     /// Get the WGSL shader source
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/loss/focal_loss_v2_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute the focal loss v2 operation

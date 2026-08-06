@@ -34,13 +34,13 @@ impl Argmin {
     /// Get the WGSL shader source for global reduction
     fn wgsl_shader_reduce() -> &'static str {
         const SHADER_REDUCE: &str = include_str!("../shaders/math/argmin_reduce_f64.wgsl");
-        &SHADER_REDUCE
+        SHADER_REDUCE
     }
 
     /// Get the WGSL shader source for dimension-wise reduction
     fn wgsl_shader_dim() -> &'static str {
         const SHADER_DIM: &str = include_str!("../shaders/math/argmin_f64.wgsl");
-        &SHADER_DIM
+        SHADER_DIM
     }
 
     /// Execute the argmin operation

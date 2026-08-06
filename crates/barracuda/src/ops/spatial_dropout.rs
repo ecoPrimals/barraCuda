@@ -85,7 +85,7 @@ impl SpatialDropout {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Executes spatial dropout and returns the output tensor.

@@ -92,7 +92,7 @@ impl RotaryEmbedding {
 
     /// WGSL shader source
     fn shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Execute `RoPE` (single GPU pass)

@@ -54,7 +54,7 @@ impl Histc {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/misc/histc_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute histogram computation.

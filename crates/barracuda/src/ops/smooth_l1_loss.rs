@@ -97,7 +97,7 @@ impl SmoothL1Loss {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Executes the smooth L1 loss computation and returns the loss tensor.

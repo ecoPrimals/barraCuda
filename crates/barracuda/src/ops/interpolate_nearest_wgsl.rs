@@ -38,7 +38,7 @@ impl InterpolateNearest {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/misc/interpolate_nearest_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute nearest-neighbor interpolation on GPU.

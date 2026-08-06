@@ -41,7 +41,7 @@ impl Prod {
     }
 
     fn wgsl_shader_dim() -> &'static str {
-        &WGSL_PROD_DIM_F32
+        WGSL_PROD_DIM_F32
     }
 
     /// Execute the product operation.

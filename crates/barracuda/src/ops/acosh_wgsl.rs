@@ -27,7 +27,7 @@ impl Acosh {
 
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/math/acosh_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute acosh on GPU.

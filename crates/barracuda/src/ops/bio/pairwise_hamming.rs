@@ -81,7 +81,7 @@ impl PairwiseHammingGpu {
 
         let module = d.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("PairwiseHamming Shader"),
-            source: wgpu::ShaderSource::Wgsl((&*WGSL_PAIRWISE_HAMMING).into()),
+            source: wgpu::ShaderSource::Wgsl(WGSL_PAIRWISE_HAMMING.into()),
         });
 
         let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {

@@ -15,14 +15,14 @@ const SHADER_F32: &str = SHADER_F64;
 impl MultiHeadAttention {
     /// Get WGSL shader for MHA projection
     pub(super) fn wgsl_shader_projection() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Get WGSL shader for MHA output projection
     pub(super) fn wgsl_shader_output() -> &'static str {
         {
             const S: &str = include_str!("../../shaders/tensor/mha_output_f64.wgsl");
-            &S
+            S
         }
     }
 }

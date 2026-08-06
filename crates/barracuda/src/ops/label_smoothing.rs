@@ -50,7 +50,7 @@ impl LabelSmoothing {
     /// WGSL shader source (embedded at compile time)
     fn wgsl_shader() -> &'static str {
         const SHADER: &str = include_str!("../shaders/loss/label_smoothing_f64.wgsl");
-        &SHADER
+        SHADER
     }
 
     /// Execute `LabelSmoothing` on tensor

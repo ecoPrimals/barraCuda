@@ -156,7 +156,7 @@ impl SGD {
 
     /// WGSL shader source (f64 canonical, f32 via downcast)
     pub(super) fn shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Get weights tensor

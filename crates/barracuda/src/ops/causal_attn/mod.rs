@@ -100,7 +100,7 @@ impl CausalAttention {
 
     /// Pass 2 shader: Apply softmax with causal mask (NEW - only shader needed!)
     pub(super) fn shader_causal_softmax() -> &'static str {
-        &SHADER_CAUSAL_SOFTMAX_F32
+        SHADER_CAUSAL_SOFTMAX_F32
     }
 
     /// Pass 3 shader: Apply weights to values (REUSED from attention ✅)

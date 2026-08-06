@@ -45,7 +45,7 @@ impl Fill {
     }
 
     fn wgsl_shader() -> &'static str {
-        &SHADER_F32
+        SHADER_F32
     }
 
     /// Executes the fill and returns a tensor of the given shape filled with the value.

@@ -12,7 +12,7 @@
 //! ecoPrimals pattern (sourDough scaffold). Mature primals internalize
 //! their lifecycle — no runtime dependency on sourDough.
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 #![cfg_attr(
     test,
     expect(clippy::unwrap_used, reason = "test code uses unwrap for brevity")

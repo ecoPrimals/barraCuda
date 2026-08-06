@@ -178,8 +178,9 @@ base64ct = { version = "1.6", features = ["alloc"] }
 # Binary serialization (model persistence — postcard: pure Rust, no_std, serde)
 postcard = { version = "1.1", default-features = false, features = ["alloc"] }
 
-# Platform — libc is already transitively compiled; explicit dep for G65 peek
-libc = "0.2"
+# Platform — rustix provides safe Rust wrappers around Unix syscalls (no unsafe)
+# Used for G65 recv(MSG_PEEK) on Unix domain sockets
+rustix = { version = "1.1", features = ["net"] }
 
 # Dev/test
 tempfile = "3.8"

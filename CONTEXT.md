@@ -30,7 +30,7 @@ traits are fully internalized.
 - **Crate count:** 4 workspace crates
 - **Shaders:** 859 WGSL compute shaders with SPDX license headers
 - **Rust files:** 1,208 source files, 25 integration test harnesses
-- **Unsafe code:** barracuda `#![forbid(unsafe_code)]`; barracuda-core `#![deny(unsafe_code)]` with 1 targeted `#[allow]` for G65 `recv(MSG_PEEK)`
+- **Unsafe code:** barracuda `#![forbid(unsafe_code)]`; barracuda-core `#![forbid(unsafe_code)]` (G65 peek uses safe `rustix::net::recv(PEEK)`, zero `unsafe`)
 - **Clippy:** Pedantic + nursery, zero warnings, `-D warnings` enforced
 
 ## Key Capabilities

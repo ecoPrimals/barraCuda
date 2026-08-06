@@ -9,15 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **G65 Protocol Negotiation** (Wave 156p) — single-socket protocol selection per `PROTOCOL_NEGOTIATION_SPEC.md`. Clients send `PROTOCOLS: tarpc,jsonrpc\n`, server responds `PROTOCOL: tarpc\n`. Backward compatible: legacy clients that skip negotiation default to JSON-RPC. New modules: `ipc_protocol.rs` (IpcProtocol enum), `protocol_negotiation.rs` (wire types + selection + negotiate_client). `TransportStream::peek()` for non-consuming first-byte detection on Unix (MSG_PEEK) and TCP (native). `handle_tarpc_negotiated()` serves tarpc on the G65-negotiated stream. 4 integration tests (negotiate-jsonrpc, negotiate-tarpc-then-call, backward-compat-legacy, protocols.list-advertises-G65) + 17 unit tests. `protocols.list` now returns `negotiation.g65: true` with supported protocol list and endpoint.
-- **libc dependency** (Wave 156p) — Unix-only, for `recv(MSG_PEEK)` in G65 peek. Already transitively compiled.
-
 ### Fixed
 - **182-file `cargo fmt` correction** (Wave 156l) — systematic line-length and indentation drift accumulated across the barracuda crate. All formatting now clean.
 - **GPU buffer alignment panic** (Wave 156k) — `bytemuck::cast_slice` in `map_staging_buffer` and `submit_and_map` panicked with `TargetAlignmentGreaterAndInputNotAligned` when GPU mapped memory wasn't aligned to `T` (8-byte for f64). Root cause of 3 test failures across peak detection, velocity Verlet, and sparsity sampler. Fix: `aligned_copy_from_mapped<T>()` copies through byte slices into correctly-aligned `Vec<T>`.
 - **13 double-gated `#[ignore]` tests promoted to active** (Wave 156k) — tests had both `#[ignore = "requires GPU hardware"]` AND `get_test_device_if_f64_gpu_available()` early-return. The `#[ignore]` was redundant, artificially hiding tests from CI. All pass on both real GPU and llvmpipe (via early return). Affected: `max_abs_diff_f64` (7), `spin_orbit_f64` (2), `pppm_gpu` (3), `boltzmann_sampling_f64` (1), `three_springs` edge case (1). Net: +13 active tests.
 
 ### Changed
-- **`#![forbid(unsafe_code)]` → `#![deny(unsafe_code)]` in barracuda-core** (Wave 156p) — relaxed to allow targeted `#[allow(unsafe_code)]` on `unix_peek()` for G65 protocol negotiation. Single `libc::recv(MSG_PEEK)` syscall with documented safety justification. `barracuda` crate retains `#![forbid(unsafe_code)]`.
+- **G65 peek evolved from `libc` to `rustix`** (Wave 156p) — `TransportStream::peek()` for Unix sockets evolved from raw `libc::recv(MSG_PEEK)` with `#[allow(unsafe_code)]` to safe `rustix::net::recv(RecvFlags::PEEK)`. Eliminates all `unsafe` code in barracuda-core; `#![forbid(unsafe_code)]` restored (was briefly `deny` during initial G65 implementation). Aligns with nestGate's G65 reference pattern.
 - **Dead `OdeFunction` type alias removed** — `Box<dyn Fn(f64, &[f64]) -> Vec<f64>>` type alias was orphaned after `RkIntegrator` methods evolved to `&impl Fn` generics. Removed from `rk_stage.rs` and `ops/mod.rs` re-export.
 - **`mul_add` evolution** — 2 test helper functions in `rng.rs` evolved to use `mul_add` for FMA precision.
 - **100 IPC methods** — `method.describe` brings total to 100.

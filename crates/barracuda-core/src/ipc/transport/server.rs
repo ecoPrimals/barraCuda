@@ -250,9 +250,12 @@ impl IpcServer {
         Ok(())
     }
 
-    /// Serve JSON-RPC 2.0 over any transport with graceful shutdown.
+    /// Serve JSON-RPC 2.0 and tarpc over any transport with graceful shutdown.
     ///
-    /// Phase 2 evolution: unified accept loop for all transport types.
+    /// G65 evolution: single-socket protocol negotiation. Clients can send
+    /// `PROTOCOLS: tarpc,jsonrpc\n` to select the wire protocol. Legacy
+    /// clients that skip negotiation default to JSON-RPC (backward compatible).
+    ///
     /// Both [`serve_unix`](Self::serve_unix) and
     /// [`serve_tcp_listener`](Self::serve_tcp_listener) delegate here.
     pub async fn serve_listener<F>(
@@ -276,6 +279,20 @@ impl IpcServer {
                     tracing::debug!("IPC connection from {peer}");
                     let primal = Arc::clone(&self.primal);
                     tokio::spawn(async move {
+                        // ── G65 Protocol Negotiation ──────────────────────────
+                        if let Some(selected) =
+                            super::super::protocol_negotiation::try_negotiate(&mut stream).await
+                        {
+                            #[cfg(feature = "tarpc-transport")]
+                            if selected == super::super::ipc_protocol::IpcProtocol::Tarpc {
+                                Self::handle_tarpc_negotiated(primal, stream, &peer).await;
+                                return;
+                            }
+                            // JsonRpc selected — fall through to existing path
+                            tracing::debug!("G65 selected JSON-RPC for {peer}");
+                        }
+
+                        // ── BTSP guard → JSON-RPC (existing path) ─────────────
                         let outcome = super::super::btsp::guard_connection(&mut stream).await;
                         if !outcome.should_accept() {
                             tracing::warn!(
@@ -302,6 +319,39 @@ impl IpcServer {
             }
         }
         Ok(())
+    }
+
+    /// Handle a tarpc connection after G65 negotiation selected tarpc.
+    ///
+    /// Wraps the raw stream in `serde_transport` + `LengthDelimitedCodec`
+    /// and serves the tarpc service definition.
+    #[cfg(feature = "tarpc-transport")]
+    async fn handle_tarpc_negotiated(
+        primal: Arc<BarraCudaPrimal>,
+        stream: crate::ipc::transport_endpoint::TransportStream,
+        peer: &str,
+    ) {
+        use crate::rpc::{BarraCudaServer, BarraCudaService};
+        use futures::StreamExt;
+        use tarpc::server::{self, Channel};
+        use tokio_serde::formats::Json;
+
+        tracing::info!("G65 tarpc connection from {peer}");
+        let server = BarraCudaServer::new(primal);
+        let transport = tarpc::serde_transport::new(
+            tokio_util::codec::LengthDelimitedCodec::builder()
+                .max_frame_length(max_frame_bytes())
+                .new_framed(stream),
+            Json::default(),
+        );
+        let channel = server::BaseChannel::with_defaults(transport);
+        channel
+            .execute(server.serve())
+            .for_each(|response| {
+                tokio::spawn(response);
+                async {}
+            })
+            .await;
     }
 
     /// Resolve the default IPC socket path per wateringHole standards.

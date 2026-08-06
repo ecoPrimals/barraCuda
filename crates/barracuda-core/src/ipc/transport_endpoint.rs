@@ -74,6 +74,58 @@ pub enum TransportStream {
     Tcp(tokio::net::TcpStream),
 }
 
+impl TransportStream {
+    /// Peek at the first bytes without consuming them.
+    ///
+    /// Required for G65 protocol negotiation to detect the `P` byte
+    /// before deciding whether to enter the negotiation path.
+    /// TCP uses native `peek`; Unix uses `recv(MSG_PEEK)` via `try_io`.
+    pub async fn peek(&self, buf: &mut [u8]) -> std::io::Result<usize> {
+        match self {
+            #[cfg(unix)]
+            Self::Unix(s) => {
+                s.readable().await?;
+                unix_peek(s, buf)
+            }
+            Self::Tcp(s) => s.peek(buf).await,
+        }
+    }
+}
+
+/// Non-async `recv(MSG_PEEK)` on a Unix socket via `try_io`.
+///
+/// Separated from the async `peek` method so that no raw pointer is
+/// held across an `.await` point (raw pointers are `!Send`).
+///
+/// # Safety justification
+///
+/// Single `libc::recv(MSG_PEEK)` on a valid fd with a valid buffer.
+/// Required for G65 protocol negotiation: the server peeks the first
+/// byte to detect a `PROTOCOLS:` header without consuming it. No safe
+/// API exists for Unix domain socket peek in tokio.
+#[cfg(unix)]
+#[allow(unsafe_code)]
+fn unix_peek(s: &tokio::net::UnixStream, buf: &mut [u8]) -> std::io::Result<usize> {
+    use std::os::unix::io::AsRawFd;
+    s.try_io(tokio::io::Interest::READABLE, || {
+        let fd = s.as_raw_fd();
+        #[allow(unsafe_code)]
+        let n = unsafe {
+            libc::recv(
+                fd,
+                buf.as_mut_ptr().cast::<libc::c_void>(),
+                buf.len(),
+                libc::MSG_PEEK,
+            )
+        };
+        if n < 0 {
+            Err(std::io::Error::last_os_error())
+        } else {
+            Ok(n as usize)
+        }
+    })
+}
+
 impl AsyncRead for TransportStream {
     fn poll_read(
         self: Pin<&mut Self>,

@@ -21,7 +21,7 @@ traits are fully internalized.
 
 - **Language:** 100% Rust, zero C dependencies in application code
 - **Architecture:** 4-crate workspace (barracuda, barracuda-core, barracuda-spirv, barracuda-naga-exec)
-- **Communication:** JSON-RPC 2.0 + tarpc over Unix socket and TCP (C2 dual-socket: `math.sock` + `math.tarpc.sock`)
+- **Communication:** JSON-RPC 2.0 + tarpc over Unix socket and TCP. G65 single-socket protocol negotiation (`PROTOCOLS: tarpc,jsonrpc\n`) with C2 dual-socket backward compat
 - **License:** AGPL-3.0-or-later (scyBorg provenance trio)
 - **Tests:** 4,984 passing (cargo test --workspace) — barracuda 3,935 + barracuda-core 770 + naga-exec 16
 - **Wave 155u Evolution:** LazyLock→const migration (374 statics), error constructor helpers (518 sites), env_keys centralization (9 keys). Net -1,488 LOC.
@@ -30,7 +30,7 @@ traits are fully internalized.
 - **Crate count:** 4 workspace crates
 - **Shaders:** 859 WGSL compute shaders with SPDX license headers
 - **Rust files:** 1,208 source files, 25 integration test harnesses
-- **Unsafe code:** Zero — `#![forbid(unsafe_code)]` in barracuda and barracuda-core
+- **Unsafe code:** barracuda `#![forbid(unsafe_code)]`; barracuda-core `#![deny(unsafe_code)]` with 1 targeted `#[allow]` for G65 `recv(MSG_PEEK)`
 - **Clippy:** Pedantic + nursery, zero warnings, `-D warnings` enforced
 
 ## Key Capabilities

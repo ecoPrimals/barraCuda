@@ -70,17 +70,21 @@ pub(super) fn capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespon
     )
 }
 
-/// `protocols.list` — Advertise supported protocols and their endpoints.
+/// `protocols.list` — Advertise supported protocols and negotiation capability.
 ///
-/// C2 dual-socket pattern: returns both JSON-RPC and tarpc protocol info
-/// so clients can discover and choose the optimal transport.
+/// G65 single-socket: clients can send `PROTOCOLS: tarpc,jsonrpc\n` on the
+/// primary socket to negotiate the wire protocol. Returns both G65 negotiation
+/// info and C2 dual-socket endpoints for backward compatibility.
 pub(super) fn protocols_list(id: Value) -> JsonRpcResponse {
     let version = env!("CARGO_PKG_VERSION");
-    let jsonrpc_endpoint = crate::ipc::transport::discovery_socket_path();
+    let primary_endpoint = crate::ipc::transport::discovery_socket_path();
+
+    let supported = crate::ipc::IpcProtocol::supported();
+    let supported_names: Vec<&str> = supported.iter().map(|p| p.negotiation_name()).collect();
 
     let jsonrpc_proto = serde_json::json!({
         "name": "jsonrpc",
-        "endpoint": format!("unix://{jsonrpc_endpoint}"),
+        "endpoint": format!("unix://{primary_endpoint}"),
         "enabled": true,
         "priority": 2,
     });
@@ -109,6 +113,12 @@ pub(super) fn protocols_list(id: Value) -> JsonRpcResponse {
             "primal": crate::PRIMAL_NAME,
             "version": version,
             "protocols": protocols,
+            "negotiation": {
+                "g65": true,
+                "supported": supported_names,
+                "endpoint": format!("unix://{primary_endpoint}"),
+                "header": "PROTOCOLS: tarpc,jsonrpc",
+            },
             "dual_socket": cfg!(unix),
         }),
     )
@@ -216,7 +226,7 @@ fn method_descriptor(method: &str) -> Value {
             "public",
         ),
         "protocols.list" => (
-            "Supported protocols and endpoints (C2 dual-socket)",
+            "Supported protocols with G65 negotiation and C2 endpoints",
             serde_json::json!({}),
             "public",
         ),

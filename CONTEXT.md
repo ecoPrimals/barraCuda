@@ -21,7 +21,7 @@ traits are fully internalized.
 
 - **Language:** 100% Rust, zero C dependencies in application code
 - **Architecture:** 4-crate workspace (barracuda, barracuda-core, barracuda-spirv, barracuda-naga-exec)
-- **Communication:** JSON-RPC 2.0 + tarpc over Unix socket and TCP
+- **Communication:** JSON-RPC 2.0 + tarpc over Unix socket and TCP (C2 dual-socket: `math.sock` + `math.tarpc.sock`)
 - **License:** AGPL-3.0-or-later (scyBorg provenance trio)
 - **Tests:** 4,970 passing (cargo test --workspace) — barracuda 4,184 + barracuda-core 770 + naga-exec 16
 - **Wave 155u Evolution:** LazyLock→const migration (374 statics), error constructor helpers (518 sites), env_keys centralization (9 keys). Net -1,488 LOC.

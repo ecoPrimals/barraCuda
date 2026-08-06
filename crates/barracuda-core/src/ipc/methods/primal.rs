@@ -70,6 +70,50 @@ pub(super) fn capabilities(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespon
     )
 }
 
+/// `protocols.list` — Advertise supported protocols and their endpoints.
+///
+/// C2 dual-socket pattern: returns both JSON-RPC and tarpc protocol info
+/// so clients can discover and choose the optimal transport.
+pub(super) fn protocols_list(id: Value) -> JsonRpcResponse {
+    let version = env!("CARGO_PKG_VERSION");
+    let jsonrpc_endpoint = crate::ipc::transport::discovery_socket_path();
+
+    let jsonrpc_proto = serde_json::json!({
+        "name": "jsonrpc",
+        "endpoint": format!("unix://{jsonrpc_endpoint}"),
+        "enabled": true,
+        "priority": 2,
+    });
+
+    #[cfg(unix)]
+    let protocols = {
+        let tarpc_path = crate::ipc::transport::default_tarpc_socket_path();
+        vec![
+            serde_json::json!({
+                "name": "tarpc",
+                "version": "0.37",
+                "endpoint": format!("unix://{}", tarpc_path.display()),
+                "enabled": true,
+                "priority": 1,
+            }),
+            jsonrpc_proto,
+        ]
+    };
+
+    #[cfg(not(unix))]
+    let protocols = vec![jsonrpc_proto];
+
+    JsonRpcResponse::success(
+        id,
+        serde_json::json!({
+            "primal": crate::PRIMAL_NAME,
+            "version": version,
+            "protocols": protocols,
+            "dual_socket": cfg!(unix),
+        }),
+    )
+}
+
 /// `primal.announce` — Atomic self-registration payload for biomeOS composition.
 ///
 /// Returns the identity, capabilities, signal tier, cost hints, and latency
@@ -168,6 +212,11 @@ fn method_descriptor(method: &str) -> Value {
         ),
         "capabilities.list" => (
             "Full capability advertisement",
+            serde_json::json!({}),
+            "public",
+        ),
+        "protocols.list" => (
+            "Supported protocols and endpoints (C2 dual-socket)",
             serde_json::json!({}),
             "public",
         ),

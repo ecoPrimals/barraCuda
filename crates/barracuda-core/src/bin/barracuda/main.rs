@@ -61,11 +61,17 @@ enum Commands {
         #[arg(long)]
         tarpc_bind: Option<String>,
 
-        /// Unix socket path for tarpc binary RPC (default: disabled).
-        /// When set, serves tarpc over a Unix socket alongside TCP and JSON-RPC.
+        /// Unix socket path for tarpc binary RPC.
+        /// Defaults to `math.tarpc.sock` alongside the JSON-RPC socket (C2 dual-socket).
+        /// Pass `--no-tarpc` to disable.
         #[cfg(unix)]
         #[arg(long)]
         tarpc_unix: Option<String>,
+
+        /// Disable the tarpc UDS server (C2 dual-socket pattern).
+        #[cfg(unix)]
+        #[arg(long)]
+        no_tarpc: bool,
 
         /// Unix socket path override. Defaults to
         /// `$BIOMEOS_SOCKET_DIR/math.sock` (or `math-{family_id}.sock`
@@ -144,6 +150,8 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             #[cfg(unix)]
             tarpc_unix,
             #[cfg(unix)]
+            no_tarpc,
+            #[cfg(unix)]
             unix,
             bind_mode,
             no_gpu_probe,
@@ -163,11 +171,24 @@ async fn main() -> Result<(), barracuda_core::error::BarracudaCoreError> {
             #[cfg(not(unix))]
             let (effective_bind, _) = resolve_transport_override(bind, port, None);
 
+            #[cfg(unix)]
+            let effective_tarpc_unix = if no_tarpc {
+                None
+            } else {
+                tarpc_unix.map(std::path::PathBuf::from).or_else(|| {
+                    if !tcp_only {
+                        Some(barracuda_core::ipc::transport_config::default_tarpc_socket_path())
+                    } else {
+                        None
+                    }
+                })
+            };
+
             run_server(
                 effective_bind,
                 tarpc_bind,
                 #[cfg(unix)]
-                tarpc_unix,
+                effective_tarpc_unix,
                 #[cfg(unix)]
                 effective_unix,
                 #[cfg(unix)]
@@ -256,7 +277,7 @@ fn resolve_transport_override(
 async fn run_server(
     bind: Option<String>,
     tarpc_bind: Option<String>,
-    #[cfg(unix)] tarpc_unix: Option<String>,
+    #[cfg(unix)] tarpc_unix: Option<std::path::PathBuf>,
     #[cfg(unix)] unix: Option<String>,
     #[cfg(unix)] tcp_only: bool,
 ) -> Result<(), barracuda_core::error::BarracudaCoreError> {
@@ -282,10 +303,14 @@ async fn run_server(
     }
 
     #[cfg(all(unix, feature = "tarpc-transport"))]
-    if let Some(ref tarpc_sock) = tarpc_unix {
+    if let Some(ref tarpc_path) = tarpc_unix {
         if !tcp_only {
+            tracing::info!(
+                "tarpc UDS: {} (C2 dual-socket pattern)",
+                tarpc_path.display()
+            );
             let tarpc_server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
-            let tarpc_path = std::path::PathBuf::from(tarpc_sock);
+            let tarpc_path = tarpc_path.clone();
             tokio::spawn(async move {
                 if let Err(e) = tarpc_server.serve_tarpc_unix(&tarpc_path).await {
                     tracing::error!("tarpc Unix server error: {e}");
@@ -316,6 +341,7 @@ async fn run_server(
                         Some(&effective_tcp),
                         tarpc_bind.as_deref(),
                         Some(&sock_path),
+                        tarpc_unix.as_deref(),
                     );
                     let tcp_server = barracuda_core::ipc::IpcServer::new(Arc::clone(&primal));
                     tokio::spawn(async move {
@@ -328,10 +354,16 @@ async fn run_server(
                         None,
                         tarpc_bind.as_deref(),
                         Some(&sock_path),
+                        tarpc_unix.as_deref(),
                     );
                 }
             } else {
-                discovery_file::write_discovery_file(None, tarpc_bind.as_deref(), Some(&sock_path));
+                discovery_file::write_discovery_file(
+                    None,
+                    tarpc_bind.as_deref(),
+                    Some(&sock_path),
+                    tarpc_unix.as_deref(),
+                );
             }
 
             barracuda_core::ipc::IpcServer::create_legacy_symlink(&sock_path);
@@ -377,7 +409,7 @@ async fn run_server(
         barracuda_core::ipc::IpcServer::try_bind_tcp(&bind_addr).await
     {
         let effective_addr = local_addr.to_string();
-        discovery_file::write_discovery_file(Some(&effective_addr), tarpc_bind.as_deref(), None);
+        discovery_file::write_discovery_file(Some(&effective_addr), tarpc_bind.as_deref(), None, None);
         barracuda_core::discovery::register_with_discovery(&format!("tcp://{effective_addr}"))
             .await;
 
@@ -447,6 +479,7 @@ async fn run_service_mode() -> Result<(), barracuda_core::error::BarracudaCoreEr
         listener.local_tcp_addr().map(|a| a.to_string()).as_deref(),
         None,
         sock_path.as_deref(),
+        None,
     );
 
     #[cfg(unix)]

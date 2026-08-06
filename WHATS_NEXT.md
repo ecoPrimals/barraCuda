@@ -294,7 +294,7 @@ Prioritized work items, ordered by impact. Updated 2026-08-04.
 - **`.expect()` audit**: 6 ownership-invariant sites annotated with `#[expect(clippy::expect_used)]`
 - **CI evolution**: added `cargo deny`, `cargo doc -D warnings`, `cargo nextest` installation
 - **`linalg.batched_tridiag_eigh` IPC method** — groundSpring Exp 012 absorption, CPU fallback via QL with Wilkinson shifts
-- **98 registered JSON-RPC methods** (capability registry updated)
+- **99 registered JSON-RPC methods** (98 + protocols.list for C2 dual-socket)
 - **Zero files >800L** across entire codebase
 - **All 5 quality gates green**: fmt, clippy -D warnings, doc -D warnings, deny, check
 

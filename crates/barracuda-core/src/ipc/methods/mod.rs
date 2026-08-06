@@ -51,6 +51,7 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "health.check",
     "health.version",
     "capabilities.list",
+    "protocols.list",
     // ── Auth / gate introspection (JH-0) ───────────────────────────────
     "auth.check",
     "auth.mode",
@@ -238,6 +239,7 @@ pub async fn dispatch(
         "primal.capabilities" | "capabilities.list" | "capability.list" => {
             primal::capabilities(primal, id)
         }
+        "protocols.list" => primal::protocols_list(id),
         "primal.announce" => primal::announce(primal, id),
         // Device
         "device.list" => device::list(primal, id).await,

@@ -18,6 +18,7 @@ pub fn write_discovery_file(
     tcp_addr: Option<&str>,
     tarpc_addr: Option<&str>,
     unix_path: Option<&std::path::Path>,
+    tarpc_unix_path: Option<&std::path::Path>,
 ) {
     let dir = unix_path
         .and_then(|p| p.parent())
@@ -49,6 +50,18 @@ pub fn write_discovery_file(
             transports.insert(
                 "jsonrpc".into(),
                 serde_json::Value::String(format!("unix://{}", sock.display())),
+            );
+        }
+    }
+    if let Some(tarpc_sock) = tarpc_unix_path {
+        transports.insert(
+            "tarpc_unix".into(),
+            serde_json::Value::String(format!("unix://{}", tarpc_sock.display())),
+        );
+        if !transports.contains_key("tarpc") {
+            transports.insert(
+                "tarpc".into(),
+                serde_json::Value::String(format!("unix://{}", tarpc_sock.display())),
             );
         }
     }

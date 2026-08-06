@@ -59,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Duration::from_secs(60)` → `Duration::from_mins(1)` in test_pool
 
 ### Metrics
-- **98 registered JSON-RPC methods** (97 + method.describe)
+- **99 registered JSON-RPC methods** (98 + protocols.list)
 - **4,624 tests** (708 barracuda-core + 3,916 barracuda)
 - **Zero files >800L**
 - **All 5 quality gates green** (fmt, clippy, doc, deny, check)

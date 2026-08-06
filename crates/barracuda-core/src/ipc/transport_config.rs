@@ -121,6 +121,28 @@ pub fn discovery_socket_path() -> String {
     String::from("unsupported")
 }
 
+/// Return the default tarpc UDS path for the C2 dual-socket pattern.
+///
+/// Convention: `{domain}.tarpc.sock` or `{domain}-{family_id}.tarpc.sock`
+/// alongside the JSON-RPC `{domain}.sock`. This mirrors the ecosystem
+/// standard from sourDough scaffold and petalTongue C1b.
+///
+/// Override with `BARRACUDA_TARPC_SOCKET` env var.
+#[cfg(unix)]
+#[must_use]
+pub fn default_tarpc_socket_path() -> std::path::PathBuf {
+    if let Ok(explicit) = std::env::var("BARRACUDA_TARPC_SOCKET") {
+        return std::path::PathBuf::from(explicit);
+    }
+    let dir = resolve_socket_dir();
+    let domain = crate::PRIMAL_DOMAIN;
+    let sock_name = match resolve_family_id() {
+        Some(family_id) => format!("{domain}-{family_id}.tarpc.sock"),
+        None => format!("{domain}.tarpc.sock"),
+    };
+    dir.join(sock_name)
+}
+
 /// Resolve the gate name this primal is deployed on.
 ///
 /// Discovered at runtime via `GATE_NAME` env var. Returns `"unknown"` if unset.
@@ -140,6 +162,20 @@ pub fn resolve_federation_port() -> u16 {
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(DEFAULT_FEDERATION_PORT)
+}
+
+/// Discover another primal's tarpc socket path (C2 dual-socket pattern).
+///
+/// Convention: `{primal_name}.tarpc.sock` alongside `{primal_name}.sock`.
+/// Override via `{PRIMAL_NAME}_TARPC_SOCKET` env var.
+#[cfg(unix)]
+#[must_use]
+pub fn discover_primal_tarpc_socket(primal_name: &str) -> std::path::PathBuf {
+    let env_var = format!("{}_TARPC_SOCKET", primal_name.to_uppercase());
+    if let Ok(path) = std::env::var(&env_var) {
+        return std::path::PathBuf::from(path);
+    }
+    resolve_socket_dir().join(format!("{primal_name}.tarpc.sock"))
 }
 
 /// Capability-domain prefix for security-provider socket scan.

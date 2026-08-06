@@ -4,7 +4,7 @@
 #
 # biomeOS reads this file to discover barraCuda capabilities
 # without requiring the primal to be running.
-# 99 registered methods across 24 semantic namespaces.
+# 99 registered methods across 25 semantic namespaces.
 
 [primal]
 name = "barracuda"
@@ -22,6 +22,10 @@ methods = ["liveness", "readiness", "check", "version"]
 
 [domains.capabilities]
 description = "Capability discovery (canonical per wateringHole v2.1)"
+methods = ["list"]
+
+[domains.protocols]
+description = "Protocol advertisement (C2 dual-socket pattern)"
 methods = ["list"]
 
 [domains.auth]
@@ -131,7 +135,7 @@ methods = ["negotiate", "capabilities"]
 
 [access.public_prefixes]
 description = "Methods accessible without BTSP authentication"
-prefixes = ["health.", "capabilities.", "identity.", "primal.", "device.", "tolerances.", "validate.", "btsp.", "mesh.", "auth."]
+prefixes = ["health.", "capabilities.", "protocols.", "identity.", "primal.", "device.", "tolerances.", "validate.", "btsp.", "mesh.", "auth."]
 
 [access.protected_prefixes]
 description = "Methods requiring BTSP bearer token (Dark Forest Invariant 3)"

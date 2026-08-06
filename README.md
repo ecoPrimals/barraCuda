@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **859 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,208 Rust source files**, 25 integration test harnesses, 4,970 tests passing
+- **1,208 Rust source files**, 25 integration test harnesses, 4,984 tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -44,7 +44,7 @@ results.
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
 - **NagaExecutor** — CPU interpreter for naga IR, executes WGSL compute shaders without GPU (f32+f64 native, shared memory, barriers, atomics)
 - **coralReef IPC contract** — sovereign CPU compilation (`shader.compile.cpu`, `shader.execute.cpu`) and validation (`shader.validate`) via JSON-RPC
-- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 99 semantic `{domain}.{operation}` methods; Wire Standard L2 compliant, Neural API announce, BTSP Phase 3 encryption, full ML pipeline (train→save→load→infer), mesh trust validation, runtime method introspection (`method.describe`)
+- **JSON-RPC 2.0 + tarpc** — dual-protocol IPC with 100 semantic `{domain}.{operation}` methods; Wire Standard L2 compliant, Neural API announce, BTSP Phase 3 encryption, full ML pipeline (train→save→load→infer), mesh trust validation, runtime method introspection (`method.describe`)
 - **Transport self-knowledge** — local `TransportEndpoint` wire format implementation, `TRANSPORT_ENDPOINT` env var for launcher injection, zero cross-primal dependencies
 - **UniBin CLI** — single `barracuda` binary with `server --port <PORT>`, `service`, `doctor`, `validate`, `version`
 
@@ -54,23 +54,23 @@ results.
 2. **Vendor-agnostic** — same binary, identical results on any GPU
 3. **Sovereign** — zero external SDK dependency for correctness or performance
 4. **Pure Rust** — `#![forbid(unsafe_code)]` in both crates, zero `unsafe` blocks, zero external C dependencies, zero dependencies on any other primal (wire format is the contract, `TransportEndpoint` implemented locally)
-5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; split-lock GPU submission (submit and poll use separate lock acquisitions); fire-and-forget dispatch via `submit_commands` for non-readback ops; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; `GPU_TEST_GUARD` serializes device lifecycle in tests; all 4,970 tests pass at full parallelism on llvmpipe
+5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; split-lock GPU submission (submit and poll use separate lock acquisitions); fire-and-forget dispatch via `submit_commands` for non-readback ops; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; `GPU_TEST_GUARD` serializes device lifecycle in tests; all 4,984 tests pass at full parallelism on llvmpipe
 6. **AGPL-3.0** — free as in freedom
 
 ---
 
 ## Recent
 
-- **Wave 155u: Deep Idiom Evolution (Aug 4)**: LazyLock<String> Phase 2 (323 statics → const &str across 310 files). Error constructor helpers (518 call sites migrated). Env var centralization (9 keys into env_keys.rs). Total: -1,488 LOC. 12-axis deep debt scan clean. 4,970 tests.
+- **Wave 155u: Deep Idiom Evolution (Aug 4)**: LazyLock<String> Phase 2 (323 statics → const &str across 310 files). Error constructor helpers (518 call sites migrated). Env var centralization (9 keys into env_keys.rs). Total: -1,488 LOC. 12-axis deep debt scan clean. 4,984 tests.
 - **Wave 155p: PRNG Validation + Shader Evolution + Magic Numbers (Aug 3)**: CPU `state_to_f64` and GPU `prng_xoshiro_f64.wgsl` half-range bugs fixed ([0, 0.5) → [0, 1)). 11 PRNG statistical validation tests. 51 `LazyLock<String>` → `const &str` across 18 files (-182 LOC). Protocol version inconsistency unified (`PROTOCOL_ID`). `BTSP_WIRE_VERSION` + `IPC_PROBE_TIMEOUT` centralized. PRNG YELLOW → GREEN.
 - **Wave 155n: Idiom Evolution + Subgroup Fixes (Jul 31–Aug 3)**: RK4 ODE solver zero-alloc inner loop. MD force dead-code collapse. Subgroup reduce entry point fixed. Diversity self-recursion eliminated. SU(3) labels corrected.
 - **Wave 155i: RTX 3090 Profiling + Deep Debt (Jul 29)**: First real GPU compute on strandGate — RTX 3090 + RX 6950 XT both detected. 103.97 TFLOPS FP64, FHE NTT bit-perfect, cdist 65x faster than SciPy CPU. ShaderValidationBackend::CoralReef → SovereignCpu (self-knowledge). 10 batch functions #[deprecated]. Compute Trio silicon utilization AAR. MultiDevicePool wired into primal startup. device.pool IPC method (99th). Zero warnings.
 - **Wave 155f: Deep Debt Sweep + Bug Fixes (Jul 28)**: SIGSEGV in barracuda-core tests fixed (GPU_TEST_GUARD serializes wgpu device lifecycle). ESN BindGroupLayout crash fixed (TimeSeriesAnalyzer reuses caller's device). BTSP env var race conditions fixed (ENV_MUTEX in all integration test binaries). BatchError → thiserror. BTSP_STRICT_MODE env key. wgpu backend target-gating. 4,957 tests pass, zero SIGSEGV, zero failures, all quality gates green.
-- **Wave 107: Socket Cleanup + method.describe (Jun 10)**: `PRIMAL-SOCKET-CLEANUP` — state files co-locate with socket path. `method.describe` RPC for runtime introspection. All production files <800L. 99 methods. Composition-ready.
+- **Wave 107: Socket Cleanup + method.describe (Jun 10)**: `PRIMAL-SOCKET-CLEANUP` — state files co-locate with socket path. `method.describe` RPC for runtime introspection. All production files <800L. 100 methods. Composition-ready.
 - **Waves 100-101: Transport Self-Knowledge (Jun 8)**: Removed cross-primal `sourdough-core` dep. Local `TransportEndpoint` + `connect_transport()` (237L). Wire format is the contract. `TRANSPORT_ENDPOINT` env var operational.
 - **Wave 93: Build Fix (Jun 7)**: Stash conflict resolution — restored serialization submodule + serde aliases. Depot-ready.
 - **Wave 82c: Deep Debt + Refactoring (Jun 6)**: `simple_mlp.rs` → directory module. GPU test pool fix. 4,600 tests.
-- **Sprints 44-56: IPC + Deep Debt (Apr-May)**: 99 JSON-RPC methods wired, 12-axis deep debt fully clean, BTSP Phase 3, sovereign dispatch, CPU tensor fallback, binary refactoring.
+- **Sprints 44-56: IPC + Deep Debt (Apr-May)**: 100 JSON-RPC methods wired, 12-axis deep debt fully clean, BTSP Phase 3, sovereign dispatch, CPU tensor fallback, binary refactoring.
 - **Sprint 45/45b: JSON-RPC Surface Expansion + Deep Debt (Apr 26)**: 11 new method registrations (39→50) for neuralSpring parity — `linalg.svd`, `linalg.qr`, `stats.chi_squared`, `stats.anova_oneway`, `activation.softmax`, `activation.gelu`, `spectral.stft`, `ml.mlp_forward`, `ml.attention` + 2 aliases (`stats.eigh`, `stats.pearson`). New `methods/ml.rs` and `methods/spectral.rs` modules. `math.rs` smart-refactored (819→641L). Shared `params.rs` eliminates DRY violation. 36 new coverage tests. 12-axis deep debt audit clean.
 - **Sprint 44g: BTSP Wire Fix + 12-Axis Audit (Apr 24)**: `security_provider_rpc()` `writer.shutdown()` → `writer.flush()` — fixes BearDog connection loss. 12-axis deep debt audit clean bill. 4,393+ tests, all quality gates green.
 - **Sprint 44f: Smart Refactoring (Apr 20)**: `sovereign_device.rs` 924→773L, `btsp.rs` 815→678L. Zero production files >800L.
@@ -188,7 +188,7 @@ barraCuda/
 ├── crates/
 │   ├── barracuda-core/              # Primal lifecycle wrapper
 │   │   ├── src/lib.rs               # BarraCudaPrimal: start/stop/health
-│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (99 methods, Wire Standard L2)
+│   │   ├── src/ipc/                 # JSON-RPC 2.0 server + transport (100 methods, Wire Standard L2)
 │   │   ├── src/rpc.rs               # tarpc service definition (15 endpoints, parity with JSON-RPC)
 │   │   └── src/bin/barracuda/       # UniBin CLI
 │   └── barracuda/                   # Umbrella crate — all math + GPU
@@ -252,7 +252,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo nextest run --workspace --profile ci  # 4,970+ tests via nextest
+cargo nextest run --workspace --profile ci  # 4,984+ tests via nextest
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 
@@ -291,7 +291,7 @@ barraCuda exposes a dual-protocol IPC interface per wateringHole standards:
 | `fhe.*` | `fhe.ntt`, `fhe.pointwise_mul` |
 | `btsp.*` | `btsp.negotiate` — Phase 3 cipher upgrade (ChaCha20-Poly1305 / NULL fallback) |
 
-99 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
+100 methods follow the wateringHole `{domain}.{operation}` Semantic Method Naming
 Standard v2.2.0. Wire Standard L2 compliant: `capabilities.list` returns the
 `{primal, version, methods}` envelope with `provided_capabilities` grouping.
 `health.liveness`, `health.readiness`, `health.check`, and `capabilities.list`

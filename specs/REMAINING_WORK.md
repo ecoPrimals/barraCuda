@@ -48,7 +48,7 @@ barraCuda is the sovereign math engine for the ecoPrimals ecosystem. Our aim:
 - **`transport.rs` → `transport/` module** (server + connection + dispatch)
 - **`transport_tests.rs` (858L) → `transport_tests/` module** (7 files, max 225L)
 - **`linalg.batched_tridiag_eigh`** IPC method (groundSpring Exp 012 absorption)
-- **99 registered JSON-RPC methods**, capability registry updated
+- **100 registered JSON-RPC methods**, capability registry updated
 - **Zero files >800L**; all quality gates green (fmt, clippy, doc, deny)
 - **CI**: cargo deny, cargo doc -D warnings, nextest
 - **`--bind-mode` / `PRIMAL_BIND_MODE`** (Wave 109)

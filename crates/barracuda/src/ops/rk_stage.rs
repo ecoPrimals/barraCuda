@@ -65,9 +65,6 @@ pub struct RkIntegrator {
     device: Arc<WgpuDevice>,
 }
 
-/// ODE function type: f(t, y) -> dy/dt
-pub type OdeFunction = Box<dyn Fn(f64, &[f64]) -> Vec<f64> + Send + Sync>;
-
 impl RkIntegrator {
     /// Create a new RK integrator backed by the given GPU device.
     /// The device is stored for future GPU-accelerated linear combination

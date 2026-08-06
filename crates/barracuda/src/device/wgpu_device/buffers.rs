@@ -4,6 +4,21 @@
 use super::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 
+/// Alignment-safe copy from GPU-mapped memory to a `Vec<T>`.
+///
+/// GPU mapped buffers (`get_mapped_range()`) may return memory that is not
+/// aligned to `T`'s alignment (e.g. 4-byte aligned memory for `f64` which
+/// requires 8-byte alignment). `bytemuck::cast_slice` panics in this case.
+/// This helper copies byte-by-byte through a correctly-aligned `Vec<T>`.
+fn aligned_copy_from_mapped<T: bytemuck::Pod>(bytes: &[u8]) -> Vec<T> {
+    let elem_size = std::mem::size_of::<T>();
+    let count = bytes.len() / elem_size;
+    let mut result = vec![T::zeroed(); count];
+    let dst = bytemuck::cast_slice_mut::<T, u8>(&mut result);
+    dst.copy_from_slice(&bytes[..count * elem_size]);
+    result
+}
+
 impl WgpuDevice {
     /// Read typed values from a GPU buffer.
     /// Creates a staging buffer, copies data, maps it, and extracts via bytemuck.
@@ -95,7 +110,7 @@ impl WgpuDevice {
 
         self.encoding_guard();
         let data = slice.get_mapped_range();
-        let result: Vec<T> = bytemuck::cast_slice(&data).to_vec();
+        let result = aligned_copy_from_mapped::<T>(&data);
         drop(data);
         staging.unmap();
         self.encoding_complete();
@@ -145,7 +160,7 @@ impl WgpuDevice {
 
         self.encoding_guard();
         let data = slice.get_mapped_range();
-        let result: Vec<T> = bytemuck::cast_slice(&data).to_vec();
+        let result = aligned_copy_from_mapped::<T>(&data);
         drop(data);
         staging.unmap();
         self.encoding_complete();

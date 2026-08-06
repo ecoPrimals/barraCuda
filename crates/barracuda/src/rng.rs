@@ -401,7 +401,7 @@ mod tests {
         let sigma = 1.0;
         let expected_fracs: Vec<f64> = (0..n_bins)
             .map(|i| {
-                let lo = range_min + i as f64 * bin_width;
+                let lo = (i as f64).mul_add(bin_width, range_min);
                 let hi = lo + bin_width;
                 0.5 * (erf_approx(hi / (sigma * std::f64::consts::SQRT_2))
                     - erf_approx(lo / (sigma * std::f64::consts::SQRT_2)))
@@ -438,7 +438,7 @@ mod tests {
     }
 
     fn erf_approx(x: f64) -> f64 {
-        let t = 1.0 / (1.0 + 0.3275911 * x.abs());
+        let t = 1.0 / 0.3275911f64.mul_add(x.abs(), 1.0);
         let poly = t
             * (0.254829592
                 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));

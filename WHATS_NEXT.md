@@ -41,7 +41,7 @@ Prioritized work items, ordered by impact. Updated 2026-08-04.
   - Hardcoded env var literals: **0** (all centralized in `env_keys.rs`)
   - Remaining `LazyLock<String>`: **5** (all Pattern C — format! concatenation)
 - Net -1,504 LOC total (-478 shader statics + -1,026 error constructors + env_keys).
-  Zero clippy warnings. 4,970 tests pass. All quality gates green.
+  Zero clippy warnings. 4,984 tests pass. All quality gates green.
 
 ### Wave 155p — PRNG Validation + Shader Static Evolution + Magic Numbers (Aug 3, 2026)
 - **LazyLock\<String\> → const &str Phase 1** — Converted 51 shader statics across 18
@@ -59,7 +59,7 @@ Prioritized work items, ordered by impact. Updated 2026-08-04.
   SPIRV passthrough exists behind feature. BTSP relay is Unix-only by design. Discovery
   socket returns sentinel on non-Unix.
 - **12-axis deep debt scan** confirmed clean (0 critical findings).
-- Net -182 LOC. Zero clippy warnings. 4,970 tests pass.
+- Net -182 LOC. Zero clippy warnings. 4,984 tests pass.
 
 #### PRNG Fixes (same wave)
 - **CPU PRNG half-range bug FIXED** — `state_to_f64()` extracted 31 bits (>> 33)
@@ -84,7 +84,7 @@ Prioritized work items, ordered by impact. Updated 2026-08-04.
   against expected distributions. Lattice PCG uniform confirmed correct (uses
   `(v + 0.5) / 2^32` — proper [0, 1) range).
 - **12-axis deep debt scan** confirmed clean (0 critical findings).
-- Zero clippy warnings. 4,970 tests pass. All quality gates green.
+- Zero clippy warnings. 4,984 tests pass. All quality gates green.
 
 ### Wave 155n — Idiom Evolution Sweep (Aug 3, 2026)
 - **RK4 ODE solver zero-alloc inner loop** — `math.ode_solve_rk4` derivative closure
@@ -294,7 +294,7 @@ Prioritized work items, ordered by impact. Updated 2026-08-04.
 - **`.expect()` audit**: 6 ownership-invariant sites annotated with `#[expect(clippy::expect_used)]`
 - **CI evolution**: added `cargo deny`, `cargo doc -D warnings`, `cargo nextest` installation
 - **`linalg.batched_tridiag_eigh` IPC method** — groundSpring Exp 012 absorption, CPU fallback via QL with Wilkinson shifts
-- **99 registered JSON-RPC methods** (98 + protocols.list for C2 dual-socket)
+- **100 registered JSON-RPC methods** (98 + protocols.list for C2 dual-socket)
 - **Zero files >800L** across entire codebase
 - **All 5 quality gates green**: fmt, clippy -D warnings, doc -D warnings, deny, check
 
@@ -315,7 +315,7 @@ Prioritized work items, ordered by impact. Updated 2026-08-04.
   tree audited — 100% pure Rust, all patches updated. Coverage expanded: 22 new
   tests across `transport_config` (10), `btsp_negotiate` (8), `btsp_discovery` (3),
   plus tensor test `mul_add` fix. Environment-sensitive tests hardened for hosts
-  running live ecosystem services. Test count: 4,970+. 
+  running live ecosystem services. Test count: 4,984+. 
   Workspace: zero clippy warnings, zero TODO/FIXME, zero files >800L.
 
 - **Wave 113: riboCipher Signal Acceptance (Jun 14)**:
@@ -1213,7 +1213,7 @@ Earlier completions (Mar 7–10) are documented in `CHANGELOG.md` and
 - **~~Multi-GPU pool wiring~~**: `MultiDevicePool` wired into `BarraCudaPrimal::start()`
   (Wave 155i). Pool auto-discovers all GPUs, exposes `device.pool` IPC method. strandGate
   validates with RTX 3090 + RX 6950 XT. OOM migration API (`execute_with_migration`,
-  `execute_with_migration_quota`) live since Wave 119/124. **99 registered IPC methods.**
+  `execute_with_migration_quota`) live since Wave 119/124. **100 registered IPC methods.**
   DONE.
 - **Kokkos parity validation baseline**: Framework parity benchmarks added (Sprint 63,
   LAMMPS + SciPy). SciPy cdist 65x faster on strandGate RTX 3090. Remaining: document

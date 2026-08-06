@@ -25,7 +25,6 @@ fn test_ls_factor_computation() {
 }
 
 #[tokio::test]
-#[ignore = "requires GPU hardware"]
 async fn test_spin_orbit_basic() {
     let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
     else {
@@ -75,7 +74,6 @@ async fn test_spin_orbit_basic() {
 }
 
 #[tokio::test]
-#[ignore = "requires GPU hardware"]
 async fn test_spin_orbit_with_density() {
     let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
     else {

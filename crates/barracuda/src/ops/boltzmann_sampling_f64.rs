@@ -125,7 +125,6 @@ mod tests {
     use crate::device::test_pool::get_test_device_if_f64_gpu_available;
 
     #[tokio::test]
-    #[ignore = "compile_shader_f64 produces vec2<f32>/vec2<f64> type confusion on some drivers (llvmpipe); run with BARRACUDA_TEST_BACKEND=gpu on f64-capable hardware"]
     async fn test_boltzmann_construction() {
         let Some(device) = get_test_device_if_f64_gpu_available().await else {
             return;

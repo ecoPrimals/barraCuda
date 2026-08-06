@@ -5,9 +5,16 @@ All notable changes to barraCuda will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Waves 109–155n (Aug 3 2026)
+## [Unreleased] — Waves 109–156k (Aug 6 2026)
+
+### Fixed
+- **GPU buffer alignment panic** (Wave 156k) — `bytemuck::cast_slice` in `map_staging_buffer` and `submit_and_map` panicked with `TargetAlignmentGreaterAndInputNotAligned` when GPU mapped memory wasn't aligned to `T` (8-byte for f64). Root cause of 3 test failures across peak detection, velocity Verlet, and sparsity sampler. Fix: `aligned_copy_from_mapped<T>()` copies through byte slices into correctly-aligned `Vec<T>`.
+- **13 double-gated `#[ignore]` tests promoted to active** (Wave 156k) — tests had both `#[ignore = "requires GPU hardware"]` AND `get_test_device_if_f64_gpu_available()` early-return. The `#[ignore]` was redundant, artificially hiding tests from CI. All pass on both real GPU and llvmpipe (via early return). Affected: `max_abs_diff_f64` (7), `spin_orbit_f64` (2), `pppm_gpu` (3), `boltzmann_sampling_f64` (1), `three_springs` edge case (1). Net: +13 active tests.
 
 ### Changed
+- **Dead `OdeFunction` type alias removed** — `Box<dyn Fn(f64, &[f64]) -> Vec<f64>>` type alias was orphaned after `RkIntegrator` methods evolved to `&impl Fn` generics. Removed from `rk_stage.rs` and `ops/mod.rs` re-export.
+- **`mul_add` evolution** — 2 test helper functions in `rng.rs` evolved to use `mul_add` for FMA precision.
+- **100 IPC methods** — `method.describe` brings total to 100.
 - **Subgroup reduction entry point fix** (Wave 155n) — `sum_reduce_subgroup_f64.wgsl` had `fn main()` but Rust dispatches `"sum_reduce_f64"`. Pipeline creation silently failed on SM100+ (Blackwell), returning 0.0 for all scalar readbacks. Blocks hotSpring QCD production on biomeGate.
 - **Diversity shader self-recursion fix** (Wave 155n) — inline `log_f64()` in `diversity_f64.wgsl` caused infinite recursion when `compile_shader_f64` rewrites `log()` → `log_f64()`. Removed inline definition; native `log()` with auto-injected polyfill is correct.
 - **SU(3) gauge group disambiguation** (Wave 155n) — 6 docs that said "lattice QCD" without specifying gauge group now explicitly say "SU(3) lattice QCD". Code confirmed SU(3) throughout with zero SU(2) references.
@@ -59,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Duration::from_secs(60)` → `Duration::from_mins(1)` in test_pool
 
 ### Metrics
-- **99 registered JSON-RPC methods** (98 + protocols.list)
+- **100 registered JSON-RPC methods** (98 + protocols.list)
 - **4,624 tests** (708 barracuda-core + 3,916 barracuda)
 - **Zero files >800L**
 - **All 5 quality gates green** (fmt, clippy, doc, deny, check)

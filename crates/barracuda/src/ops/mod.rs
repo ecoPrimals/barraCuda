@@ -274,7 +274,7 @@ pub use hill_f64::HillFunctionF64;
 pub use kmd_grouping_f64::{KmdGroupingF64, KmdResult, repeat_units};
 pub use population_pk_f64::{PopulationPkConfig, PopulationPkF64};
 pub use rk_stage::{
-    BatchedOdeRK4F64, BatchedRk4Config, OdeFunction, RkIntegrator, wgsl_rk4_parallel,
+    BatchedOdeRK4F64, BatchedRk4Config, RkIntegrator, wgsl_rk4_parallel,
 };
 pub use wright_fisher_f32::{WrightFisherConfig, WrightFisherF32, seed_xoshiro_state};
 

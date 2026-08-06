@@ -129,7 +129,6 @@ mod chaos {
     }
 
     #[test]
-    #[ignore = "GPU memory-intensive — run explicitly with --ignored"]
     fn test_very_large_array_reduction_gpu() {
         let device = match create_device_sync() {
             Some(d) => d,

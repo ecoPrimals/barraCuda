@@ -1,5 +1,9 @@
 # Spring Absorption Tracker
 
+> **HISTORICAL** — This tracker documents the original Spring absorption era
+> (Mar–Jun 2026). All listed items have been absorbed and evolved. Retained as
+> architectural fossil record. Current state: see `CONTEXT.md` and `STATUS.md`.
+
 **Version**: 0.4.0
 **Date**: June 19, 2026
 **Source**: hotSpring v0.6.32, groundSpring V99+Exp012, neuralSpring S143, wetSpring V107, airSpring v0.7.5, healthSpring V44, ludoSpring V34, primalSpring (Passes 11-14), toadStool S249, coralReef Sprint 5

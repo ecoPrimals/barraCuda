@@ -180,7 +180,6 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[ignore = "requires GPU hardware"]
     async fn test_max_abs_diff_small() {
         let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
         else {
@@ -200,7 +199,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires GPU hardware"]
     async fn test_max_abs_diff_large() {
         let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
         else {
@@ -221,7 +219,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires GPU hardware"]
     async fn test_max_abs_diff_identical() {
         let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
         else {
@@ -239,7 +236,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires GPU hardware"]
     async fn test_max_abs_diff_empty() {
         let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
         else {
@@ -254,7 +250,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires GPU hardware"]
     async fn test_max_abs_diff_single_element() {
         let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
         else {
@@ -272,7 +267,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires GPU hardware"]
     async fn test_max_abs_diff_length_mismatch() {
         let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
         else {
@@ -287,7 +281,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires GPU hardware"]
     async fn test_max_abs_diff_negative_values() {
         let Some(device) = crate::device::test_pool::get_test_device_if_f64_gpu_available().await
         else {

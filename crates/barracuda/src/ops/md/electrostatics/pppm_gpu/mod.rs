@@ -450,7 +450,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "W-002: diagnostic - compare CPU vs GPU B-spline coeffs"]
     async fn test_pppm_gpu_bspline_vs_cpu() {
         use crate::device::test_pool::get_test_device_if_f64_gpu_available;
         use crate::linalg::sparse::SparseBuffers;
@@ -571,7 +570,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "W-002: diagnostic - erfc short-range only"]
     async fn test_pppm_gpu_erfc_only() {
         use crate::device::test_pool::get_test_device_if_f64_gpu_available;
         use crate::ops::md::electrostatics::compute_short_range;
@@ -613,7 +611,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires f64 GPU hardware"]
     async fn test_pppm_gpu_matches_cpu_reference() {
         use crate::device::test_pool::get_test_device_if_f64_gpu_available;
         use crate::ops::md::electrostatics::Pppm;

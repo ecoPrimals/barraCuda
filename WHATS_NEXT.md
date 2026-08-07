@@ -26,26 +26,25 @@ Prioritized work items, ordered by impact. Updated 2026-08-07.
 
 ## Recently Completed
 
-### Wave 157a — Error Idiom Evolution Phase 3 + Magic Number Centralization (Aug 7, 2026)
-- **Verbose error constructor cleanup** — Migrated remaining `InvalidOperation { op, reason }`
-  struct literals to `invalid_op()` helper in `snn.rs`, `esn_v2/model.rs`,
-  `esn_v2/multi_head.rs`, `ops/mha/mod.rs`. Migrated `InvalidInput { message }`
-  patterns in `cpu_executor/storage.rs`, `npu_executor.rs`. Migrated
-  `Device("...".into())` and `Gpu("...".to_string())` to `device()` / `gpu()` helpers
-  in `sovereign_device.rs`, `sovereign_dispatch_wire.rs`, `gpu_executor/storage.rs`,
-  `interpolate/cubic_spline.rs`, `fhe_poly_add.rs`, `complex/div.rs`.
-  `DeviceLost("...".into())` → `device_lost()` in 3 pharma/bio ops.
-- **`device_ctx` error helper** — Added `device_ctx()` (mirrors `gpu_ctx()`) for
-  wrapping `Display` errors with device context. Migrated 40 `Gpu(format!("ctx: {e}"))`
-  patterns in `domain_ops.rs` to `gpu_ctx()`, and `Device(format!("ctx: {e}"))` in
-  `sovereign_dispatch_wire.rs` to `device_ctx()`.
-- **Magic number centralization** — `SOFTPLUS_UPPER_THRESHOLD` (20.0) in
-  `activations.rs`. `DEFAULT_FITTS_HICK_B` (0.155) in `ipc/methods/math.rs`.
-- **Protocol negotiation zero-alloc** — Replaced `to_ascii_lowercase()` (allocates
-  per-connection) with `eq_ignore_ascii_case()` in `IpcProtocol::from_negotiation_name`.
-- **G68 Platform Substrate audit** — barraCuda confirmed CLEAN. All `#[cfg(unix)]`
-  is legitimate transport-layer gating. No silicon deism.
-- 20 files changed. 5,011 tests pass, 0 failures. Zero clippy warnings.
+### Wave 157a — Deep Debt Sweep Phase 4 (Aug 7, 2026)
+**Commit 1** — Error Idiom Evolution Phase 3 + Magic Number Centralization:
+- Verbose error constructor cleanup across 20 files. `device_ctx()` helper.
+  40 `Gpu(format!)` → `gpu_ctx()` in domain_ops. Magic numbers centralized
+  (SOFTPLUS_UPPER_THRESHOLD, DEFAULT_FITTS_HICK_B). Protocol negotiation
+  zero-alloc. G68 Platform Substrate audit: CLEAN.
+
+**Commit 2** — Deprecated Batch Unwiring + Pool2D Dedup + Env Centralization:
+- **IPC `activation.gelu` evolved** — Removed `#[expect(deprecated)]` suppression.
+  Handler now uses scalar `gelu()` directly instead of deprecated `gelu_batch()`.
+- **Pool2D dispatch dedup** — Extracted `pool2d_dispatch()` helper consolidating
+  MaxPool2D and AvgPool2D match arms (~90 LOC → single function). Both pool
+  variants share routing logic, GPU/CPU fallback, and NCHW reshape.
+- **Env var centralization Phase 2** — Added `TRANSPORT_ENDPOINT` and
+  `BARRACUDA_TARPC_SOCKET` to `env_keys.rs`. Updated `transport_endpoint.rs`,
+  `transport_config.rs`, `main.rs`, `bench_wgsize_nvk.rs`, `bench_f64_builtins.rs`.
+- **12-axis deep debt scan**: all axes clean. Zero hardcoded env vars remaining
+  (AKIDA vendor-specific keys intentionally inline). 5 `LazyLock<String>` (Pattern C).
+- 5,011 tests pass, 0 failures. Zero clippy warnings.
 
 ### Wave 156l — Fmt Drift + G65 Readiness Review (Aug 6, 2026)
 - **182-file `cargo fmt` correction** — systematic line-length and indentation drift

@@ -98,7 +98,7 @@ impl TransportEndpoint {
     /// ```
     #[must_use]
     pub fn from_env_or_default(socket_path: &str) -> Self {
-        std::env::var("TRANSPORT_ENDPOINT")
+        std::env::var(crate::env_keys::TRANSPORT_ENDPOINT)
             .ok()
             .and_then(|raw| serde_json::from_str(&raw).ok())
             .unwrap_or_else(|| Self::platform_default(socket_path))

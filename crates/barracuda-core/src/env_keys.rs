@@ -82,6 +82,12 @@ pub const NOTIFY_SOCKET: &str = "NOTIFY_SOCKET";
 /// BTSP strict mode — rejects plain JSON-RPC when set to `1`.
 pub const BTSP_STRICT_MODE: &str = "BTSP_STRICT_MODE";
 
+/// G66 transport endpoint — JSON-encoded `TransportEndpoint` injected by launchers.
+pub const TRANSPORT_ENDPOINT: &str = "TRANSPORT_ENDPOINT";
+
+/// Explicit tarpc Unix socket path override.
+pub const BARRACUDA_TARPC_SOCKET: &str = "BARRACUDA_TARPC_SOCKET";
+
 /// **Deprecated** — use [`BTSP_STRICT_MODE`]. Retained for migration grace period.
 #[deprecated(since = "0.4.1", note = "use BTSP_STRICT_MODE")]
 pub const BEARDOG_UDS_REQUIRE_BTSP: &str = "BEARDOG_UDS_REQUIRE_BTSP";

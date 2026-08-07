@@ -131,7 +131,7 @@ pub fn discovery_socket_path() -> String {
 #[cfg(unix)]
 #[must_use]
 pub fn default_tarpc_socket_path() -> std::path::PathBuf {
-    if let Ok(explicit) = std::env::var("BARRACUDA_TARPC_SOCKET") {
+    if let Ok(explicit) = std::env::var(crate::env_keys::BARRACUDA_TARPC_SOCKET) {
         return std::path::PathBuf::from(explicit);
     }
     let dir = resolve_socket_dir();

@@ -53,7 +53,8 @@ async fn main() {
     }
     println!();
 
-    let selected = std::env::var("BARRACUDA_GPU_ADAPTER").unwrap_or_else(|_| "auto".to_string());
+    let selected =
+        std::env::var(barracuda::env_keys::BARRACUDA_GPU_ADAPTER).unwrap_or_else(|_| "auto".to_string());
     println!("BARRACUDA_GPU_ADAPTER = {selected}\n");
 
     // ── Create device via env-aware selector (honours BARRACUDA_GPU_ADAPTER) ──

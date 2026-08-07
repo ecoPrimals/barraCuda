@@ -235,7 +235,7 @@ fn resolve_transport_override(
 ) -> (Option<String>, Option<String>) {
     use barracuda_core::ipc::transport::TransportEndpoint;
 
-    if let Ok(raw) = std::env::var("TRANSPORT_ENDPOINT") {
+    if let Ok(raw) = std::env::var(barracuda_core::env_keys::TRANSPORT_ENDPOINT) {
         match serde_json::from_str::<TransportEndpoint>(&raw) {
             Ok(TransportEndpoint::Uds { path }) => {
                 #[cfg(unix)]

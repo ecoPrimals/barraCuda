@@ -4,20 +4,16 @@ Prioritized work items, ordered by impact. Updated 2026-08-07.
 
 ---
 
-## Upcoming
-
-### G68 Platform Substrate Abstraction
-- **barraCuda status**: CLEAN. All `#[cfg(unix)]` is in the transport layer
-  (legacy socket symlinks, systemd notify, UDS listeners) — legitimate
-  platform gating, not silicon deism. G66 transport abstraction already
-  provides `platform_default()` / `from_env_or_default()` for agnostic
-  socket resolution. No L1/L2/L3 platform API debt.
-- **Impact**: barraCuda requires no G68 changes. Transport layer is already
-  properly abstracted via G66.
-
----
-
 ## Recently Completed
+
+### Wave 157a — G68 Platform Substrate Compliance (Aug 7, 2026)
+- New `platform_substrate` module in barracuda-core following sourDough
+  reference pattern. `platform_link()` (symlink/Unix, hard-link/Windows)
+  and `is_symlink()` helper.
+- `server.rs::create_legacy_symlink()` evolved from raw
+  `std::os::unix::fs::symlink` to `platform_link()`.
+- 4 new tests. 4,994 tests pass. Windows cross-compile clean.
+- **0 L2 violations remaining.** barraCuda is G68 compliant.
 
 ### Wave 157a — ComputeDispatch P1 Migration (Aug 7, 2026)
 **Commit 4** — ComputeDispatch P1 Migration (225 non-WGSL ops, −26,373 LOC):

@@ -91,6 +91,9 @@ pub mod rpc;
 #[cfg(feature = "tarpc-transport")]
 pub mod rpc_types;
 
+/// G68 Platform Substrate Abstraction — platform-neutral link/permission helpers.
+pub mod platform_substrate;
+
 pub use barracuda;
 
 /// Test utilities shared across all test modules in this crate.

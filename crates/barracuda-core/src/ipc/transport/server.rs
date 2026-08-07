@@ -419,10 +419,7 @@ impl IpcServer {
         if legacy_path.exists() || legacy_path.is_symlink() {
             std::fs::remove_file(&legacy_path).ok();
         }
-        #[cfg(unix)]
-        {
-            std::os::unix::fs::symlink(socket_path, &legacy_path).ok();
-        }
+        crate::platform_substrate::platform_link(socket_path, &legacy_path).ok();
     }
 
     /// Remove the legacy primal-named symlink on shutdown.

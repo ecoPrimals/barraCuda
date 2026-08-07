@@ -8,6 +8,7 @@ use super::BatchedEighGpu;
 use super::params::SingleDispatchParams;
 use crate::device::WgpuDevice;
 use crate::device::capabilities::{DeviceCapabilities, EigensolveStrategy};
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::shaders::precision::ShaderTemplate;
 use std::sync::Arc;
@@ -85,113 +86,16 @@ impl BatchedEighGpu {
             Self::single_dispatch_shader_for_device(&device),
             wave_size,
         );
-        let shader =
-            device.compile_shader_f64(&patched_shader, Some("Batched Eigh Single-Dispatch f64"));
 
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("SingleDispatch BGL"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 3,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                ],
-            });
-
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("SingleDispatch PL"),
-                    bind_group_layouts: &[&bgl],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("SingleDispatch Pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some("batched_eigh_single_dispatch"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("SingleDispatch BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: a_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: v_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: eig_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("SingleDispatch Encoder"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("SingleDispatch Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            pass.dispatch_workgroups((batch_size as u32).div_ceil(wave_size), 1, 1);
-        }
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(&device, "SingleDispatch")
+            .shader(&patched_shader, "batched_eigh_single_dispatch")
+            .f64()
+            .uniform(0, &params_buffer)
+            .storage_rw(1, &a_buffer)
+            .storage_rw(2, &v_buffer)
+            .storage_rw(3, &eig_buffer)
+            .dispatch((batch_size as u32).div_ceil(wave_size), 1, 1)
+            .submit()?;
 
         let eigenvalues = device.read_f64_buffer(&eig_buffer, batch_size * n)?;
         let eigenvectors = device.read_f64_buffer(&v_buffer, batch_size * n * n)?;
@@ -240,115 +144,16 @@ impl BatchedEighGpu {
             Self::single_dispatch_shader_for_device(device),
             wave_size,
         );
-        let shader = device.compile_shader_f64(
-            &patched_shader,
-            Some("Batched Eigh Single-Dispatch f64 (buffers)"),
-        );
 
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("SingleDispatch BGL (buffers)"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 3,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                ],
-            });
-
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("SingleDispatch PL (buffers)"),
-                    bind_group_layouts: &[&bgl],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("SingleDispatch Pipeline (buffers)"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some("batched_eigh_single_dispatch"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("SingleDispatch BG (buffers)"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: matrices_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: eigenvectors_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: eigenvalues_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("SingleDispatch Encoder (buffers)"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("SingleDispatch Pass (buffers)"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            pass.dispatch_workgroups((batch_size as u32).div_ceil(wave_size), 1, 1);
-        }
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(device, "SingleDispatch")
+            .shader(&patched_shader, "batched_eigh_single_dispatch")
+            .f64()
+            .uniform(0, &params_buffer)
+            .storage_rw(1, matrices_buffer)
+            .storage_rw(2, eigenvectors_buffer)
+            .storage_rw(3, eigenvalues_buffer)
+            .dispatch((batch_size as u32).div_ceil(wave_size), 1, 1)
+            .submit()?;
 
         Ok(())
     }

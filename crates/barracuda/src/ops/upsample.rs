@@ -8,7 +8,7 @@
 //! - Complete implementation: Production-ready, no mocks
 //! - Hardware-agnostic: Pure WGSL for universal compute
 
-use crate::device::{DeviceCapabilities, WorkloadType};
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
@@ -66,13 +66,6 @@ impl Upsample {
     }
 
     /// Get the WGSL shader source
-    fn wgsl_shader() -> &'static str {
-        {
-            const SHADER: &str = include_str!("../shaders/misc/upsample_f64.wgsl");
-            SHADER
-        }
-    }
-
     /// Execute the upsample operation
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
@@ -102,8 +95,6 @@ impl Upsample {
         let output_size = batch_size * channels * out_height * out_width;
 
         // Access input buffer directly (zero-copy)
-        let input_buffer = self.input.buffer();
-
         // Create output buffer
         let output_buffer = device.create_buffer_f32(output_size)?;
 
@@ -143,113 +134,17 @@ impl Upsample {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
 
-        // Compile shader
-        let shader_module = device.compile_shader(Self::wgsl_shader(), Some("Upsample Shader"));
+        let workgroups_x = (out_width as u32).div_ceil(8);
+        let workgroups_y = (out_height as u32).div_ceil(8);
+        let workgroups_z = (batch_size * channels) as u32;
 
-        // Create bind group layout
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("Upsample Bind Group Layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        // Create bind group
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Upsample Bind Group"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: input_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: output_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        // Create compute pipeline
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("Upsample Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let compute_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("Upsample Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: Some("main"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        // Execute compute shader
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("Upsample Encoder"),
-        });
-
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Upsample Pass"),
-                timestamp_writes: None,
-            });
-            compute_pass.set_pipeline(&compute_pipeline);
-            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
-            // Deep Debt Evolution: Capability-based dispatch
-            let caps = DeviceCapabilities::from_device(device);
-            let (wg_x, wg_y) = caps.optimal_workgroup_size_2d(WorkloadType::Convolution);
-            let workgroups_x = (out_width as u32).div_ceil(wg_x);
-            let workgroups_y = (out_height as u32).div_ceil(wg_y);
-            let workgroups_z = (batch_size * channels) as u32;
-            compute_pass.dispatch_workgroups(workgroups_x, workgroups_y, workgroups_z);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(device, "Upsample")
+            .shader(include_str!("../shaders/misc/upsample_f64.wgsl"), "main")
+            .uniform(0, &params_buffer)
+            .storage_read(1, self.input.buffer())
+            .storage_rw(2, &output_buffer)
+            .dispatch(workgroups_x, workgroups_y, workgroups_z)
+            .submit()?;
 
         // Return tensor without reading back (zero-copy)
         Ok(Tensor::from_buffer(

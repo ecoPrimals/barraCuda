@@ -18,6 +18,7 @@ use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
+use crate::device::compute_pipeline::ComputeDispatch;
 
 /// WGSL source for adaptive RK45 (f32).
 pub const WGSL_RK45_ADAPTIVE: &str = include_str!("../shaders/numerical/rk45_adaptive.wgsl");
@@ -73,8 +74,6 @@ pub struct Rk45DispatchArgs<'a> {
 
 /// Adaptive Dormand-Prince RK45 GPU kernel for regulatory network ODEs.
 pub struct Rk45AdaptiveGpu {
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
     device: Arc<WgpuDevice>,
 }
 
@@ -82,42 +81,7 @@ impl Rk45AdaptiveGpu {
     /// Create an adaptive RK45 GPU kernel for regulatory network ODEs.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
-        let d = device.device();
-
-        let bgl = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("RK45 BGL"),
-            entries: &[
-                storage_entry(0, true),  // state
-                storage_entry(1, true),  // coeffs
-                storage_entry(2, false), // new_state
-                storage_entry(3, false), // error
-                uniform_entry(4),        // params
-                storage_entry(5, false), // scratch
-            ],
-        });
-
-        let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("RK45 Layout"),
-            bind_group_layouts: &[&bgl],
-            immediate_size: 0,
-        });
-
-        let module = device.compile_shader_f64(WGSL_RK45_ADAPTIVE_F64, Some("RK45 f64"));
-
-        let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("RK45 Pipeline"),
-            layout: Some(&layout),
-            module: &module,
-            entry_point: Some("rk45_step"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
-
-        Self {
-            pipeline,
-            bgl,
-            device,
-        }
+        Self { device }
     }
 
     /// Dispatch one adaptive RK45 step (f64 pipeline).
@@ -127,9 +91,9 @@ impl Rk45AdaptiveGpu {
     /// `buffers.new_state_buf`: `[n_systems × dim]` f64 — output state (5th order)
     /// `buffers.error_buf`:     `[n_systems × dim]` f64 — per-variable absolute error
     /// `buffers.scratch_buf`:   `[n_systems × dim × 8]` f64 — k-stage + tmp workspace
+    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
     pub fn dispatch(&self, args: &Rk45DispatchArgs<'_>) {
         let d = self.device.device();
-        let q = self.device.queue();
 
         let params = Rk45Params {
             n_systems: args.params.n_systems,
@@ -145,52 +109,18 @@ impl Rk45AdaptiveGpu {
             usage: wgpu::BufferUsages::UNIFORM,
         });
 
-        let bg = d.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("RK45 BG"),
-            layout: &self.bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: args.buffers.state_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: args.buffers.coeffs_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: args.buffers.new_state_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: args.buffers.error_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: args.buffers.scratch_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("RK45"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("RK45 Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(args.params.n_systems.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
-        }
-        q.submit(std::iter::once(encoder.finish()));
+        ComputeDispatch::new(&self.device, "RK45")
+            .shader(WGSL_RK45_ADAPTIVE_F64, "rk45_step")
+            .f64()
+            .storage_read(0, args.buffers.state_buf)
+            .storage_read(1, args.buffers.coeffs_buf)
+            .storage_rw(2, args.buffers.new_state_buf)
+            .storage_rw(3, args.buffers.error_buf)
+            .uniform(4, &params_buf)
+            .storage_rw(5, args.buffers.scratch_buf)
+            .dispatch(args.params.n_systems.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()
+            .expect("RK45 dispatch");
     }
 }
 
@@ -351,28 +281,4 @@ impl BatchedOdeRK45F64 {
     }
 }
 
-fn storage_entry(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
+// ── Batched ODE RK45 integrator (wetSpring V95) ─────────────────────────────

@@ -340,7 +340,7 @@ async fn pool2d_dispatch(
     op: &MathOp,
     inputs: &[Arc<dyn TensorStorage>],
     device: &Arc<WgpuDevice>,
-    executor: &GpuExecutor,
+    _executor: &GpuExecutor,
     kernel_size: (usize, usize),
     stride: (usize, usize),
     padding: (usize, usize),

@@ -13,6 +13,7 @@
 //!
 //! Reference: "Spatial Transformer Networks" by Jaderberg et al. (2015)
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
@@ -65,11 +66,6 @@ impl AffineGrid {
         })
     }
 
-    fn wgsl_shader() -> &'static str {
-        const SHADER: &str = include_str!("../shaders/misc/affine_grid_f64.wgsl");
-        SHADER
-    }
-
     /// Execute affine grid generation on GPU.
     /// # Errors
     /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, or the device is lost.
@@ -99,108 +95,19 @@ impl AffineGrid {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device.compile_shader(Self::wgsl_shader(), Some("affine_grid_shader"));
+        let caps = DeviceCapabilities::from_device(device);
+        let (wg_x, wg_y, wg_z) = caps.optimal_workgroup_size_3d(WorkloadType::MatMul);
+        let workgroups_x = (width as u32).div_ceil(wg_x);
+        let workgroups_y = (height as u32).div_ceil(wg_y);
+        let workgroups_z = (batch_size as u32).div_ceil(wg_z);
 
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("affine_grid_bind_group_layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("affine_grid_pipeline_layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("affine_grid_pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("affine_grid_bind_group"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.theta.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("affine_grid_encoder"),
-        });
-
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("affine_grid_pass"),
-                timestamp_writes: None,
-            });
-            compute_pass.set_pipeline(&pipeline);
-            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
-
-            // Deep Debt Evolution: Capability-based dispatch
-            let caps = DeviceCapabilities::from_device(device);
-            let (wg_x, wg_y, wg_z) = caps.optimal_workgroup_size_3d(WorkloadType::MatMul);
-            let workgroups_x = (width as u32).div_ceil(wg_x);
-            let workgroups_y = (height as u32).div_ceil(wg_y);
-            let workgroups_z = (batch_size as u32).div_ceil(wg_z);
-            compute_pass.dispatch_workgroups(workgroups_x, workgroups_y, workgroups_z);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(device, "AffineGrid")
+            .shader(include_str!("../shaders/misc/affine_grid_f64.wgsl"), "main")
+            .storage_read(0, self.theta.buffer())
+            .storage_rw(1, &output_buffer)
+            .uniform(2, &params_buffer)
+            .dispatch(workgroups_x, workgroups_y, workgroups_z)
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,

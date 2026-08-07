@@ -25,12 +25,13 @@
 //! - Kogut & Susskind, PRD 11, 395 (1975)
 //! - Gattringer & Lang, "QCD on the Lattice" (2010), Ch. 5
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
-const DIRAC_WG: u32 = 64;
 const DIRAC_SHADER: &str = include_str!("../../shaders/lattice/dirac_staggered_f64.wgsl");
 
 // ─── GPU pipeline ────────────────────────────────────────────────────────────
@@ -48,8 +49,6 @@ struct DiracParams {
 pub struct StaggeredDirac {
     device: Arc<WgpuDevice>,
     volume: u32,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
 }
 
 impl StaggeredDirac {
@@ -60,47 +59,7 @@ impl StaggeredDirac {
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
-        let module = device.compile_shader_f64(DIRAC_SHADER, Some("dirac_staggered"));
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("StaggeredDirac:bgl"),
-                entries: &[
-                    uniform_bgl(0),
-                    storage_bgl(1, true),  // links
-                    storage_bgl(2, true),  // psi_in
-                    storage_bgl(3, false), // psi_out
-                    storage_bgl(4, true),  // nbr
-                    storage_bgl(5, true),  // phases
-                ],
-            });
-
-        let layout = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("StaggeredDirac:layout"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("StaggeredDirac:pipeline"),
-                layout: Some(&layout),
-                module: &module,
-                entry_point: Some("dirac"),
-                compilation_options: Default::default(),
-                cache: None,
-            });
-
-        Ok(Self {
-            device,
-            volume,
-            pipeline,
-            bgl,
-        })
+        Ok(Self { device, volume })
     }
 
     /// Dispatch `D_st` on GPU-resident buffers.
@@ -143,55 +102,18 @@ impl StaggeredDirac {
             .queue
             .write_buffer(&params, 0, bytemuck::bytes_of(&params_data));
 
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("StaggeredDirac:bg"),
-                layout: &self.bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: params.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: links_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: psi_in.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: psi_out.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 4,
-                        resource: nbr_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 5,
-                        resource: phases_buf.as_entire_binding(),
-                    },
-                ],
-            });
+        ComputeDispatch::new(&self.device, "StaggeredDirac")
+            .shader(DIRAC_SHADER, "dirac")
+            .f64()
+            .uniform(0, &params)
+            .storage_read(1, links_buf)
+            .storage_read(2, psi_in)
+            .storage_rw(3, psi_out)
+            .storage_read(4, nbr_buf)
+            .storage_read(5, phases_buf)
+            .dispatch(self.volume.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()?;
 
-        let mut enc = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("StaggeredDirac:enc"),
-            });
-        {
-            let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("StaggeredDirac:pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.volume.div_ceil(DIRAC_WG), 1, 1);
-        }
-        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 }
@@ -276,34 +198,6 @@ fn site_neighbor(coords: &[usize; 4], dims: &[usize; 4], mu: usize, forward: boo
 fn staggered_phase(coords: &[usize; 4], mu: usize) -> f64 {
     let sum: usize = coords.iter().take(mu).sum();
     if sum.is_multiple_of(2) { 1.0 } else { -1.0 }
-}
-
-// ─── BGL helpers ─────────────────────────────────────────────────────────────
-
-fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
 }
 
 #[cfg(test)]

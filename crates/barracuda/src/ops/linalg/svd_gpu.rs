@@ -31,6 +31,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::{BatchedComputeDispatch, ComputeDispatch};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use std::sync::Arc;
@@ -68,83 +69,6 @@ impl SvdGpu {
 
     fn wgsl_shader_f64() -> &'static str {
         include_str!("../../shaders/linalg/svd_f64.wgsl")
-    }
-
-    /// Build bind group layout from a list of buffer binding types.
-    fn make_bgl(device: &wgpu::Device, types: &[wgpu::BufferBindingType]) -> wgpu::BindGroupLayout {
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: None,
-            entries: &types
-                .iter()
-                .enumerate()
-                .map(|(i, ty)| wgpu::BindGroupLayoutEntry {
-                    binding: i as u32,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: *ty,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                })
-                .collect::<Vec<_>>(),
-        })
-    }
-
-    fn make_pipe(
-        device: &wgpu::Device,
-        shader: &wgpu::ShaderModule,
-        bgl: &wgpu::BindGroupLayout,
-        entry: &str,
-    ) -> wgpu::ComputePipeline {
-        let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: None,
-            bind_group_layouts: &[bgl],
-            immediate_size: 0,
-        });
-        device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some(entry),
-            layout: Some(&pl),
-            module: shader,
-            entry_point: Some(entry),
-            cache: None,
-            compilation_options: Default::default(),
-        })
-    }
-
-    fn make_bg(
-        device: &wgpu::Device,
-        layout: &wgpu::BindGroupLayout,
-        bufs: &[&wgpu::Buffer],
-    ) -> wgpu::BindGroup {
-        device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout,
-            entries: &bufs
-                .iter()
-                .enumerate()
-                .map(|(i, b)| wgpu::BindGroupEntry {
-                    binding: i as u32,
-                    resource: b.as_entire_binding(),
-                })
-                .collect::<Vec<_>>(),
-        })
-    }
-
-    fn dispatch(
-        dev: &WgpuDevice,
-        pipeline: &wgpu::ComputePipeline,
-        bg: &wgpu::BindGroup,
-        wg: (u32, u32, u32),
-    ) {
-        let mut enc = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
-        {
-            let mut p = enc.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
-            p.set_pipeline(pipeline);
-            p.set_bind_group(0, Some(bg), &[]);
-            p.dispatch_workgroups(wg.0, wg.1, wg.2);
-        }
-        dev.submit_commands(Some(enc.finish()));
     }
 
     fn create_zero_buffer(
@@ -189,23 +113,6 @@ impl SvdGpu {
         let v_buf = Self::create_zero_buffer(device, (n * n) as usize, 4);
         let sigma_buf = Self::create_zero_buffer(device, n as usize, 4);
 
-        let shader = device.compile_shader(Self::wgsl_shader_f32(), Some("SVD f32"));
-
-        use wgpu::BufferBindingType::{Storage, Uniform};
-        let bgl = Self::make_bgl(
-            &device.device,
-            &[
-                Uniform,
-                Storage { read_only: true },
-                Storage { read_only: false },
-                Storage { read_only: false },
-                Storage { read_only: false },
-            ],
-        );
-        let ata_pipe = Self::make_pipe(&device.device, &shader, &bgl, "compute_AtA");
-        let init_pipe = Self::make_pipe(&device.device, &shader, &bgl, "init_V");
-        let sigma_pipe = Self::make_pipe(&device.device, &shader, &bgl, "extract_sigma");
-
         let params_buf = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -213,21 +120,41 @@ impl SvdGpu {
                 contents: bytemuck::cast_slice(&[m, n, 0u32, 0u32]),
                 usage: wgpu::BufferUsages::UNIFORM,
             });
-        let bg = Self::make_bg(
-            &device.device,
-            &bgl,
-            &[&params_buf, &a_buf, &b_buf, &v_buf, &sigma_buf],
-        );
 
+        let shader_source = Self::wgsl_shader_f32();
         let wg2d = n.div_ceil(16);
-        Self::dispatch(device, &ata_pipe, &bg, (wg2d, wg2d, 1));
-        Self::dispatch(device, &init_pipe, &bg, (wg2d, wg2d, 1));
-        Self::dispatch(
-            device,
-            &sigma_pipe,
-            &bg,
-            (n.div_ceil(WORKGROUP_SIZE_1D), 1, 1),
-        );
+        let mut batch = BatchedComputeDispatch::new(device);
+        batch.push(
+            ComputeDispatch::new(device, "SVD compute_AtA")
+                .shader(shader_source, "compute_AtA")
+                .uniform(0, &params_buf)
+                .storage_read(1, &a_buf)
+                .storage_rw(2, &b_buf)
+                .storage_rw(3, &v_buf)
+                .storage_rw(4, &sigma_buf)
+                .dispatch(wg2d, wg2d, 1),
+        )?;
+        batch.push(
+            ComputeDispatch::new(device, "SVD init_V")
+                .shader(shader_source, "init_V")
+                .uniform(0, &params_buf)
+                .storage_read(1, &a_buf)
+                .storage_rw(2, &b_buf)
+                .storage_rw(3, &v_buf)
+                .storage_rw(4, &sigma_buf)
+                .dispatch(wg2d, wg2d, 1),
+        )?;
+        batch.push(
+            ComputeDispatch::new(device, "SVD extract_sigma")
+                .shader(shader_source, "extract_sigma")
+                .uniform(0, &params_buf)
+                .storage_read(1, &a_buf)
+                .storage_rw(2, &b_buf)
+                .storage_rw(3, &v_buf)
+                .storage_rw(4, &sigma_buf)
+                .dispatch(n.div_ceil(WORKGROUP_SIZE_1D), 1, 1),
+        )?;
+        batch.submit()?;
 
         let sigma_data = device.read_buffer_f32(&sigma_buf, n as usize)?;
         let v_data = device.read_buffer_f32(&v_buf, (n * n) as usize)?;
@@ -277,45 +204,6 @@ impl SvdGpu {
         let sigma_buf = Self::create_zero_buffer(&device, n, 8);
         let cs_buf = Self::create_zero_buffer(&device, 2, 8);
 
-        let shader = device.compile_shader_f64(Self::wgsl_shader_f64(), Some("SVD f64"));
-
-        use wgpu::BufferBindingType::{Storage, Uniform};
-        let main_bgl = Self::make_bgl(
-            &device.device,
-            &[
-                Uniform,
-                Storage { read_only: true },
-                Storage { read_only: false },
-                Storage { read_only: false },
-                Storage { read_only: false },
-            ],
-        );
-        let rot_bgl = Self::make_bgl(
-            &device.device,
-            &[
-                Uniform,
-                Storage { read_only: false },
-                Storage { read_only: true },
-            ],
-        );
-        let jac_bgl = Self::make_bgl(
-            &device.device,
-            &[
-                Uniform,
-                Storage { read_only: true },
-                Storage { read_only: false },
-            ],
-        );
-
-        let ata_pipe = Self::make_pipe(&device.device, &shader, &main_bgl, "compute_AtA");
-        let init_pipe = Self::make_pipe(&device.device, &shader, &main_bgl, "init_V");
-        let jac_pipe =
-            Self::make_pipe(&device.device, &shader, &jac_bgl, "compute_jacobi_rotation");
-        let rot_b_pipe = Self::make_pipe(&device.device, &shader, &rot_bgl, "jacobi_rotate_B");
-        let blk_pipe = Self::make_pipe(&device.device, &shader, &rot_bgl, "jacobi_update_block");
-        let rot_v_pipe = Self::make_pipe(&device.device, &shader, &rot_bgl, "jacobi_rotate_V");
-        let sigma_pipe = Self::make_pipe(&device.device, &shader, &main_bgl, "extract_sigma");
-
         let params_buf = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -323,15 +211,33 @@ impl SvdGpu {
                 contents: bytemuck::cast_slice(&[mu, nu, 0u32, 0u32]),
                 usage: wgpu::BufferUsages::UNIFORM,
             });
-        let main_bg = Self::make_bg(
-            &device.device,
-            &main_bgl,
-            &[&params_buf, &a_buf, &b_buf, &v_buf, &sigma_buf],
-        );
 
+        let shader_source = Self::wgsl_shader_f64();
         let wg2d = nu.div_ceil(16);
-        Self::dispatch(&device, &ata_pipe, &main_bg, (wg2d, wg2d, 1));
-        Self::dispatch(&device, &init_pipe, &main_bg, (wg2d, wg2d, 1));
+        let mut batch = BatchedComputeDispatch::new(&device);
+        batch.push(
+            ComputeDispatch::new(&device, "SVD f64 compute_AtA")
+                .shader(shader_source, "compute_AtA")
+                .f64()
+                .uniform(0, &params_buf)
+                .storage_read(1, &a_buf)
+                .storage_rw(2, &b_buf)
+                .storage_rw(3, &v_buf)
+                .storage_rw(4, &sigma_buf)
+                .dispatch(wg2d, wg2d, 1),
+        )?;
+        batch.push(
+            ComputeDispatch::new(&device, "SVD f64 init_V")
+                .shader(shader_source, "init_V")
+                .f64()
+                .uniform(0, &params_buf)
+                .storage_read(1, &a_buf)
+                .storage_rw(2, &b_buf)
+                .storage_rw(3, &v_buf)
+                .storage_rw(4, &sigma_buf)
+                .dispatch(wg2d, wg2d, 1),
+        )?;
+        batch.submit()?;
 
         for _sweep in 0..max_sweeps {
             for p in 0..nu.saturating_sub(1) {
@@ -344,29 +250,54 @@ impl SvdGpu {
                                 contents: bytemuck::cast_slice(&[nu, p, q, 0u32]),
                                 usage: wgpu::BufferUsages::UNIFORM,
                             });
-                    let jac_bg =
-                        Self::make_bg(&device.device, &jac_bgl, &[&rp_buf, &b_buf, &cs_buf]);
-                    Self::dispatch(&device, &jac_pipe, &jac_bg, (1, 1, 1));
+                    ComputeDispatch::new(&device, "SVD f64 jacobi")
+                        .shader(shader_source, "compute_jacobi_rotation")
+                        .f64()
+                        .uniform(0, &rp_buf)
+                        .storage_read(1, &b_buf)
+                        .storage_rw(2, &cs_buf)
+                        .dispatch(1, 1, 1)
+                        .submit()?;
 
-                    let rot_bg =
-                        Self::make_bg(&device.device, &rot_bgl, &[&rp_buf, &b_buf, &cs_buf]);
                     let wg1d = nu.div_ceil(WORKGROUP_SIZE_1D);
-                    Self::dispatch(&device, &rot_b_pipe, &rot_bg, (wg1d, 1, 1));
-                    Self::dispatch(&device, &blk_pipe, &rot_bg, (1, 1, 1));
-
-                    let rv_bg =
-                        Self::make_bg(&device.device, &rot_bgl, &[&rp_buf, &v_buf, &cs_buf]);
-                    Self::dispatch(&device, &rot_v_pipe, &rv_bg, (wg1d, 1, 1));
+                    ComputeDispatch::new(&device, "SVD f64 rotate_B")
+                        .shader(shader_source, "jacobi_rotate_B")
+                        .f64()
+                        .uniform(0, &rp_buf)
+                        .storage_rw(1, &b_buf)
+                        .storage_read(2, &cs_buf)
+                        .dispatch(wg1d, 1, 1)
+                        .submit()?;
+                    ComputeDispatch::new(&device, "SVD f64 update_block")
+                        .shader(shader_source, "jacobi_update_block")
+                        .f64()
+                        .uniform(0, &rp_buf)
+                        .storage_rw(1, &b_buf)
+                        .storage_read(2, &cs_buf)
+                        .dispatch(1, 1, 1)
+                        .submit()?;
+                    ComputeDispatch::new(&device, "SVD f64 rotate_V")
+                        .shader(shader_source, "jacobi_rotate_V")
+                        .f64()
+                        .uniform(0, &rp_buf)
+                        .storage_rw(1, &v_buf)
+                        .storage_read(2, &cs_buf)
+                        .dispatch(wg1d, 1, 1)
+                        .submit()?;
                 }
             }
         }
 
-        Self::dispatch(
-            &device,
-            &sigma_pipe,
-            &main_bg,
-            (nu.div_ceil(WORKGROUP_SIZE_1D), 1, 1),
-        );
+        ComputeDispatch::new(&device, "SVD f64 extract_sigma")
+            .shader(shader_source, "extract_sigma")
+            .f64()
+            .uniform(0, &params_buf)
+            .storage_read(1, &a_buf)
+            .storage_rw(2, &b_buf)
+            .storage_rw(3, &v_buf)
+            .storage_rw(4, &sigma_buf)
+            .dispatch(nu.div_ceil(WORKGROUP_SIZE_1D), 1, 1)
+            .submit()?;
 
         let sigma_data = device.read_f64_buffer(&sigma_buf, n)?;
         let v_data = device.read_f64_buffer(&v_buf, n * n)?;

@@ -20,6 +20,7 @@
 //! rewritten to barraCuda's `WgpuDevice` / `ReduceScalarPipeline` patterns.
 
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::BglBuilder;
 use crate::error::Result;
 use crate::pipeline::ReduceScalarPipeline;
 use std::sync::Arc;
@@ -59,49 +60,31 @@ impl ResidentObservablePipelines {
             device.compile_shader_f64(WGSL_FERMION_ACTION_SUM_F64, Some("fermion_action_sum"));
         let metro_mod = device.compile_shader_f64(WGSL_GPU_METROPOLIS_F64, Some("gpu_metropolis"));
 
-        let hamiltonian_bgl =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("hamiltonian:bgl"),
-                    entries: &[
-                        storage_bgl(0, true),  // params (beta, 6V)
-                        storage_bgl(1, true),  // plaq_sum
-                        storage_bgl(2, true),  // t_ke
-                        storage_bgl(3, true),  // s_ferm
-                        storage_bgl(4, false), // h_out
-                        storage_bgl(5, false), // diag_out
-                    ],
-                });
+        let hamiltonian_bgl = BglBuilder::new("hamiltonian:bgl")
+            .storage_read(0)
+            .storage_read(1)
+            .storage_read(2)
+            .storage_read(3)
+            .storage_rw(4)
+            .storage_rw(5)
+            .build(&device.device);
 
-        let fermion_action_bgl =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("fermion_action:bgl"),
-                    entries: &[
-                        storage_bgl(0, true),  // params (n_dots, alpha_0)
-                        storage_bgl(1, true),  // dots
-                        storage_bgl(2, true),  // alphas
-                        storage_bgl(3, false), // s_ferm
-                    ],
-                });
+        let fermion_action_bgl = BglBuilder::new("fermion_action:bgl")
+            .storage_read(0)
+            .storage_read(1)
+            .storage_read(2)
+            .storage_rw(3)
+            .build(&device.device);
 
-        let metropolis_bgl =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("metropolis:bgl"),
-                    entries: &[
-                        storage_bgl(0, true),  // params (rand, 6V)
-                        storage_bgl(1, true),  // h_old
-                        storage_bgl(2, true),  // h_new
-                        storage_bgl(3, true),  // plaq_sum
-                        storage_bgl(4, true),  // diag_old
-                        storage_bgl(5, true),  // diag_new
-                        storage_bgl(6, false), // result
-                    ],
-                });
+        let metropolis_bgl = BglBuilder::new("metropolis:bgl")
+            .storage_read(0)
+            .storage_read(1)
+            .storage_read(2)
+            .storage_read(3)
+            .storage_read(4)
+            .storage_read(5)
+            .storage_rw(6)
+            .build(&device.device);
 
         let make_pipeline = |bgl: &wgpu::BindGroupLayout,
                              module: &wgpu::ShaderModule,
@@ -232,19 +215,6 @@ impl MetropolisResult {
             s_ferm_old: data[7],
             s_ferm_new: data[8],
         }
-    }
-}
-
-fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

@@ -90,7 +90,7 @@ impl Gather {
 
         ComputeDispatch::new(device, "Gather")
             .shader(include_str!("../shaders/tensor/gather_f64.wgsl"), "main")
-            .storage_read(0, &input_buffer)
+            .storage_read(0, input_buffer)
             .storage_read(1, &indices_buffer)
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)

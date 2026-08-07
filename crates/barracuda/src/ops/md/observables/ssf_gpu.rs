@@ -21,6 +21,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::f64::consts::PI;
@@ -121,120 +122,15 @@ impl SsfGpu {
 
         let params_buffer = device.create_uniform_buffer("SSF params", &params);
 
-        // Compile shader
-        let shader = device.compile_shader_f64(Self::wgsl_shader(), Some("SSF f64"));
-
-        // Create bind group layout
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("SSF BGL"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: true },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: true },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 3,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                ],
-            });
-
-        let pl = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("SSF PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        // Choose entry point based on problem size
-        // For small n_k (< 1000), use main (one thread per k)
-        // For large n_k (>= 1000), still use main but could switch to cooperative
-        let entry_point = "main";
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("SSF Pipeline"),
-                layout: Some(&pl),
-                module: &shader,
-                entry_point: Some(entry_point),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let bg = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("SSF BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: positions_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: k_vectors_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: output_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        // Execute
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("SSF Encoder"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("SSF Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            let workgroups = (n_k_vectors as u32).div_ceil(WORKGROUP_SIZE_COMPACT);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(device.as_ref(), "SSF")
+            .shader(Self::wgsl_shader(), "main")
+            .f64()
+            .uniform(0, &params_buffer)
+            .storage_read(1, &positions_buffer)
+            .storage_read(2, &k_vectors_buffer)
+            .storage_rw(3, &output_buffer)
+            .dispatch((n_k_vectors as u32).div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()?;
 
         // Read back results
         device.read_f64_buffer(&output_buffer, n_k_vectors)

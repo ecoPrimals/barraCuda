@@ -13,7 +13,7 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 
 /// WGSL source for f32 Hill gate (paired or grid mode).
 pub const WGSL_HILL_GATE: &str = include_str!("../../shaders/bio/hill_gate.wgsl");
@@ -49,8 +49,6 @@ pub struct HillGateParams {
 
 /// Hill gate GPU kernel (f64 pipeline).
 pub struct HillGateGpu {
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
     device: Arc<WgpuDevice>,
 }
 
@@ -58,80 +56,12 @@ impl HillGateGpu {
     /// Create new Hill gate GPU kernel.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
-        let d = device.device();
-
-        let bgl = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("HillGate BGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
-        });
-
-        let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("HillGate Layout"),
-            bind_group_layouts: &[&bgl],
-            immediate_size: 0,
-        });
-
-        let module = device.compile_shader_f64(WGSL_HILL_GATE_F64, Some("HillGate f64"));
-
-        let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("HillGate Pipeline"),
-            layout: Some(&layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
-
-        Self {
-            pipeline,
-            bgl,
-            device,
-        }
+        Self { device }
     }
 
     /// Compute Hill gate. Mode 0: paired (output[i] = f(a[i], b[i])).
     /// Mode 1: grid (output[ix*`n_b` + iy] = f(a[ix], b[iy])).
+    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
     pub fn dispatch(
         &self,
         input_a: &wgpu::Buffer,
@@ -140,7 +70,6 @@ impl HillGateGpu {
         params: &HillGateParams,
     ) {
         let d = self.device.device();
-        let q = self.device.queue();
 
         let params_buf = d.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("HillGate Params"),
@@ -148,50 +77,22 @@ impl HillGateGpu {
             usage: wgpu::BufferUsages::UNIFORM,
         });
 
-        let workgroups = if params.mode == 0 {
-            params.n_a.div_ceil(WORKGROUP_SIZE_1D)
+        let element_count = if params.mode == 0 {
+            params.n_a
         } else {
-            (params.n_a * params.n_b).div_ceil(WORKGROUP_SIZE_1D)
+            params.n_a * params.n_b
         };
 
-        let bg = d.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("HillGate BG"),
-            layout: &self.bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input_a.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: input_b.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: output.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: params_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("HillGate Encoder"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("HillGate Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-        q.submit(std::iter::once(encoder.finish()));
+        ComputeDispatch::new(&self.device, "HillGate")
+            .shader(WGSL_HILL_GATE_F64, "main")
+            .f64()
+            .storage_read(0, input_a)
+            .storage_read(1, input_b)
+            .storage_rw(2, output)
+            .uniform(3, &params_buf)
+            .dispatch_1d(element_count)
+            .submit()
+            .expect("HillGate GPU dispatch failed");
     }
 }
 

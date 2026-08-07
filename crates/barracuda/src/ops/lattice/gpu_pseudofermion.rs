@@ -6,6 +6,7 @@
 //!
 //! The fermion force computes `dS_F/dU` from CG solution fields.
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::Result;
@@ -32,8 +33,7 @@ struct HeatbathParams {
 pub struct GpuPseudofermionHeatbath {
     device: Arc<WgpuDevice>,
     volume: u32,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
+    shader_src: String,
     params: wgpu::Buffer,
 }
 
@@ -42,38 +42,7 @@ impl GpuPseudofermionHeatbath {
     /// # Errors
     /// Returns [`Err`] if shader compilation fails, buffer allocation fails, or the device is lost.
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
-        let src = format!("{WGSL_COMPLEX64}\n{WGSL_LCG_F64}\n{HEATBATH_SHADER}");
-        let module = device.compile_shader_f64(&src, Some("pf_heatbath"));
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("GpuPfHeatbath:bgl"),
-                entries: &[
-                    uniform_bgl(0),
-                    storage_bgl(1, false), // eta
-                    storage_bgl(2, false), // rng_state
-                ],
-            });
-
-        let layout = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("GpuPfHeatbath:layout"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("GpuPfHeatbath:pipeline"),
-                layout: Some(&layout),
-                module: &module,
-                entry_point: Some("heatbath_noise"),
-                compilation_options: Default::default(),
-                cache: None,
-            });
+        let shader_src = format!("{WGSL_COMPLEX64}\n{WGSL_LCG_F64}\n{HEATBATH_SHADER}");
 
         let params_data = HeatbathParams {
             volume,
@@ -94,8 +63,7 @@ impl GpuPseudofermionHeatbath {
         Ok(Self {
             device,
             volume,
-            pipeline,
-            bgl,
+            shader_src,
             params,
         })
     }
@@ -106,43 +74,15 @@ impl GpuPseudofermionHeatbath {
     /// # Errors
     /// Returns [`Err`] if buffer sizes are invalid for the volume, command submission fails, or the device is lost.
     pub fn generate(&self, eta_buf: &wgpu::Buffer, rng_buf: &wgpu::Buffer) -> Result<()> {
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("GpuPfHeatbath:bg"),
-                layout: &self.bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: self.params.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: eta_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: rng_buf.as_entire_binding(),
-                    },
-                ],
-            });
+        ComputeDispatch::new(&self.device, "GpuPfHeatbath")
+            .shader(&self.shader_src, "heatbath_noise")
+            .f64()
+            .uniform(0, &self.params)
+            .storage_rw(1, eta_buf)
+            .storage_rw(2, rng_buf)
+            .dispatch(self.volume.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()?;
 
-        let mut enc = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("GpuPfHeatbath:enc"),
-            });
-        {
-            let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("GpuPfHeatbath:pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.volume.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
-        }
-        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 
@@ -172,8 +112,7 @@ struct PFForceParams {
 pub struct GpuPseudofermionForce {
     device: Arc<WgpuDevice>,
     volume: u32,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
+    shader_src: String,
     params: wgpu::Buffer,
 }
 
@@ -183,40 +122,7 @@ impl GpuPseudofermionForce {
     /// Returns [`Err`] if shader compilation fails, buffer allocation fails, or the device is lost.
     pub fn new(device: Arc<WgpuDevice>, nt: u32, nx: u32, ny: u32, nz: u32) -> Result<Self> {
         let volume = nt * nx * ny * nz;
-        let src = format!("{}{}", su3_preamble(), FORCE_SHADER);
-        let module = device.compile_shader_f64(&src, Some("pf_force"));
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("GpuPfForce:bgl"),
-                entries: &[
-                    uniform_bgl(0),
-                    storage_bgl(1, true),  // links
-                    storage_bgl(2, true),  // x_field
-                    storage_bgl(3, true),  // y_field
-                    storage_bgl(4, false), // force
-                ],
-            });
-
-        let layout = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("GpuPfForce:layout"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("GpuPfForce:pipeline"),
-                layout: Some(&layout),
-                module: &module,
-                entry_point: Some("pseudofermion_force_kernel"),
-                compilation_options: Default::default(),
-                cache: None,
-            });
+        let shader_src = format!("{}{}", su3_preamble(), FORCE_SHADER);
 
         let params_data = PFForceParams {
             nt,
@@ -241,8 +147,7 @@ impl GpuPseudofermionForce {
         Ok(Self {
             device,
             volume,
-            pipeline,
-            bgl,
+            shader_src,
             params,
         })
     }
@@ -261,51 +166,17 @@ impl GpuPseudofermionForce {
         y_field_buf: &wgpu::Buffer,
         force_buf: &wgpu::Buffer,
     ) -> Result<()> {
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("GpuPfForce:bg"),
-                layout: &self.bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: self.params.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: links_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: x_field_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: y_field_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 4,
-                        resource: force_buf.as_entire_binding(),
-                    },
-                ],
-            });
+        ComputeDispatch::new(&self.device, "GpuPfForce")
+            .shader(&self.shader_src, "pseudofermion_force_kernel")
+            .f64()
+            .uniform(0, &self.params)
+            .storage_read(1, links_buf)
+            .storage_read(2, x_field_buf)
+            .storage_read(3, y_field_buf)
+            .storage_rw(4, force_buf)
+            .dispatch(self.volume.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()?;
 
-        let mut enc = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("GpuPfForce:enc"),
-            });
-        {
-            let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("GpuPfForce:pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.volume.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
-        }
-        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 
@@ -313,32 +184,6 @@ impl GpuPseudofermionForce {
     #[must_use]
     pub fn volume(&self) -> u32 {
         self.volume
-    }
-}
-
-fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

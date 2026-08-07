@@ -63,10 +63,6 @@ pub struct FheIntt {
     barrett_mu: u64,
     inv_twiddle_factors: Vec<u64>,
     inv_n: u64,
-    pipeline_butterfly: wgpu::ComputePipeline,
-    pipeline_bit_reverse: wgpu::ComputePipeline,
-    pipeline_scale: wgpu::ComputePipeline,
-    bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl FheIntt {
@@ -116,111 +112,6 @@ impl FheIntt {
         // Precompute N^(-1) mod q for final scaling
         let inv_n = compute_modular_inverse(degree as u64, modulus);
 
-        let device = input.device();
-
-        // Load shaders
-        let shader =
-            device.compile_shader(include_str!("../fhe_intt.wgsl"), Some("FHE INTT Shader"));
-
-        // Bind group layout (same structure as NTT)
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("FHE INTT Bind Group Layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        // Pipeline layout
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("FHE INTT Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        // Butterfly pipeline
-        let pipeline_butterfly =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("FHE INTT Butterfly Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader,
-                    entry_point: Some("main"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        // Bit-reversal pipeline
-        let pipeline_bit_reverse =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("FHE INTT Bit Reverse Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader,
-                    entry_point: Some("bit_reverse"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        // Scaling pipeline (divide by N)
-        let pipeline_scale =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("FHE INTT Scale Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader,
-                    entry_point: Some("scale_by_n"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
         Ok(Self {
             input,
             degree,
@@ -229,10 +120,6 @@ impl FheIntt {
             barrett_mu,
             inv_twiddle_factors,
             inv_n,
-            pipeline_butterfly,
-            pipeline_bit_reverse,
-            pipeline_scale,
-            bind_group_layout,
         })
     }
 
@@ -269,26 +156,6 @@ impl FheIntt {
     /// Get inverse N
     pub(super) fn inv_n(&self) -> u64 {
         self.inv_n
-    }
-
-    /// Get butterfly pipeline
-    pub(super) fn pipeline_butterfly(&self) -> &wgpu::ComputePipeline {
-        &self.pipeline_butterfly
-    }
-
-    /// Get bit reverse pipeline
-    pub(super) fn pipeline_bit_reverse(&self) -> &wgpu::ComputePipeline {
-        &self.pipeline_bit_reverse
-    }
-
-    /// Get scale pipeline
-    pub(super) fn pipeline_scale(&self) -> &wgpu::ComputePipeline {
-        &self.pipeline_scale
-    }
-
-    /// Get bind group layout
-    pub(super) fn bind_group_layout(&self) -> &wgpu::BindGroupLayout {
-        &self.bind_group_layout
     }
 }
 

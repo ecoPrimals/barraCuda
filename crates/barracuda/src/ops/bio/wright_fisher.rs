@@ -17,8 +17,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 /// f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 pub const WGSL_WRIGHT_FISHER_F64: &str =
@@ -35,8 +35,6 @@ struct WfParams {
 
 /// Wright-Fisher drift + selection GPU kernel (f64 pipeline).
 pub struct WrightFisherGpu {
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
     device: Arc<WgpuDevice>,
 }
 
@@ -44,41 +42,7 @@ impl WrightFisherGpu {
     /// Creates a new Wright-Fisher drift+selection GPU kernel for the given device.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
-        let d = device.device();
-
-        let bgl = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("WrightFisher BGL"),
-            entries: &[
-                storage_entry(0, true),  // freq_in
-                storage_entry(1, true),  // selection coefficients
-                storage_entry(2, false), // freq_out
-                storage_entry(3, false), // prng_state (read-write)
-                uniform_entry(4),        // params
-            ],
-        });
-
-        let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("WrightFisher Layout"),
-            bind_group_layouts: &[&bgl],
-            immediate_size: 0,
-        });
-
-        let module = device.compile_shader_f64(WGSL_WRIGHT_FISHER_F64, Some("WrightFisher f64"));
-
-        let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("WrightFisher Pipeline"),
-            layout: Some(&layout),
-            module: &module,
-            entry_point: Some("wright_fisher"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
-
-        Self {
-            pipeline,
-            bgl,
-            device,
-        }
+        Self { device }
     }
 
     /// Dispatch one Wright-Fisher generation.
@@ -87,6 +51,7 @@ impl WrightFisherGpu {
     /// `selection_buf`:  `[n_loci]` f64 — selection coefficients
     /// `freq_out_buf`:   `[n_pops × n_loci]` f64 — output frequencies
     /// `prng_state_buf`: `[n_pops × n_loci × 4]` u32 — PRNG state
+    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
     pub fn dispatch(
         &self,
         freq_in_buf: &wgpu::Buffer,
@@ -98,7 +63,6 @@ impl WrightFisherGpu {
         two_n: u32,
     ) {
         let d = self.device.device();
-        let q = self.device.queue();
 
         let params = WfParams {
             n_pops,
@@ -113,74 +77,18 @@ impl WrightFisherGpu {
         });
 
         let total = n_pops * n_loci;
-        let bg = d.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("WrightFisher BG"),
-            layout: &self.bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: freq_in_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: selection_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: freq_out_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: prng_state_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: params_buf.as_entire_binding(),
-                },
-            ],
-        });
 
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("WrightFisher"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("WrightFisher Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(total.div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
-        q.submit(std::iter::once(encoder.finish()));
-    }
-}
-
-fn storage_entry(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
+        ComputeDispatch::new(&self.device, "WrightFisher")
+            .shader(WGSL_WRIGHT_FISHER_F64, "wright_fisher")
+            .f64()
+            .storage_read(0, freq_in_buf)
+            .storage_read(1, selection_buf)
+            .storage_rw(2, freq_out_buf)
+            .storage_rw(3, prng_state_buf)
+            .uniform(4, &params_buf)
+            .dispatch_1d(total)
+            .submit()
+            .expect("WrightFisher GPU dispatch failed");
     }
 }
 

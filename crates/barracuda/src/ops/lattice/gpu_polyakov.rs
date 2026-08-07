@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! GPU Polyakov loop (temporal Wilson line) computation.
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::Result;
@@ -26,8 +27,7 @@ struct PolyParams {
 pub struct GpuPolyakovLoop {
     device: Arc<WgpuDevice>,
     spatial_vol: u32,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
+    shader_src: String,
     params: wgpu::Buffer,
 }
 
@@ -39,38 +39,7 @@ impl GpuPolyakovLoop {
     pub fn new(device: Arc<WgpuDevice>, nt: u32, nx: u32, ny: u32, nz: u32) -> Result<Self> {
         let volume = nt * nx * ny * nz;
         let spatial_vol = nx * ny * nz;
-        let src = format!("{}{}", su3_preamble(), SHADER_BODY);
-        let module = device.compile_shader_f64(&src, Some("polyakov_loop"));
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("GpuPolyakovLoop:bgl"),
-                entries: &[
-                    uniform_bgl(0),
-                    storage_bgl(1, true),  // links
-                    storage_bgl(2, false), // poly output
-                ],
-            });
-
-        let layout = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("GpuPolyakovLoop:layout"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("GpuPolyakovLoop:pipeline"),
-                layout: Some(&layout),
-                module: &module,
-                entry_point: Some("polyakov_loop_kernel"),
-                compilation_options: Default::default(),
-                cache: None,
-            });
+        let shader_src = format!("{}{}", su3_preamble(), SHADER_BODY);
 
         let params_data = PolyParams {
             nt,
@@ -95,8 +64,7 @@ impl GpuPolyakovLoop {
         Ok(Self {
             device,
             spatial_vol,
-            pipeline,
-            bgl,
+            shader_src,
             params,
         })
     }
@@ -108,43 +76,15 @@ impl GpuPolyakovLoop {
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
     pub fn compute(&self, links_buf: &wgpu::Buffer, poly_buf: &wgpu::Buffer) -> Result<()> {
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("GpuPolyakovLoop:bg"),
-                layout: &self.bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: self.params.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: links_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: poly_buf.as_entire_binding(),
-                    },
-                ],
-            });
+        ComputeDispatch::new(&self.device, "GpuPolyakovLoop")
+            .shader(&self.shader_src, "polyakov_loop_kernel")
+            .f64()
+            .uniform(0, &self.params)
+            .storage_read(1, links_buf)
+            .storage_rw(2, poly_buf)
+            .dispatch(self.spatial_vol.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()?;
 
-        let mut enc = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("GpuPolyakovLoop:enc"),
-            });
-        {
-            let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("GpuPolyakovLoop:pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.spatial_vol.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
-        }
-        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 
@@ -152,32 +92,6 @@ impl GpuPolyakovLoop {
     #[must_use]
     pub fn spatial_vol(&self) -> u32 {
         self.spatial_vol
-    }
-}
-
-fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

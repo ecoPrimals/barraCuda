@@ -12,8 +12,8 @@
 //!
 //! Set `emax = 1.0` for the normalized Hill activation in \[0, 1\].
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -54,10 +54,6 @@ pub struct HillFunctionF64 {
 }
 
 impl HillFunctionF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/math/hill_f64.wgsl")
-    }
-
     /// Create a Hill activation with the given K (EC₅₀) and cooperativity n.
     ///
     /// Emax defaults to 1.0 (normalized Hill in \[0, 1\]).
@@ -142,105 +138,16 @@ impl HillFunctionF64 {
             mapped_at_creation: false,
         });
 
-        let bgl = dev
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("HillF64 BGL"),
-                entries: &[bgl_storage_ro(0), bgl_storage_rw(1), bgl_uniform(2)],
-            });
-
-        let bg = dev.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("HillF64 BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: output_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let shader = dev.compile_shader_f64(Self::wgsl_shader(), Some("HillF64"));
-        let pl = dev
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("HillF64 PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-        let pipeline = dev
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("HillF64 Pipeline"),
-                layout: Some(&pl),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("HillF64 Encoder"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("HillF64 Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups((n_elements as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
-        dev.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(dev, "HillF64")
+            .shader(include_str!("../shaders/math/hill_f64.wgsl"), "main")
+            .f64()
+            .storage_read(0, &input_buf)
+            .storage_rw(1, &output_buf)
+            .uniform(2, &params_buf)
+            .dispatch_1d(n_elements as u32)
+            .submit()?;
 
         crate::utils::read_buffer_f64(dev, &output_buf, n_elements)
-    }
-}
-
-fn bgl_storage_ro(idx: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding: idx,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only: true },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn bgl_storage_rw(idx: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding: idx,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only: false },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn bgl_uniform(idx: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding: idx,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

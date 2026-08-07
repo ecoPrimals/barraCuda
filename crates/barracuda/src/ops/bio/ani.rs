@@ -9,13 +9,11 @@
 //!
 //! wetSpring handoff v6, `ani_batch_f64.wgsl` — 7/7 GPU checks PASS.
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-
-const SHADER: &str = include_str!("../../shaders/bio/ani_batch_f64.wgsl");
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -27,8 +25,6 @@ struct AniParams {
 /// Batch ANI computation on GPU.
 pub struct AniBatchF64 {
     device: Arc<WgpuDevice>,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
 }
 
 impl AniBatchF64 {
@@ -39,42 +35,7 @@ impl AniBatchF64 {
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
-        let module = device.compile_shader_f64(SHADER, Some("ani_batch_f64"));
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("AniBatch:bgl"),
-                entries: &[
-                    bgl_uniform(0),
-                    bgl_storage(1, true),  // seq_a
-                    bgl_storage(2, true),  // seq_b
-                    bgl_storage(3, false), // ani_out
-                    bgl_storage(4, false), // aligned_out
-                    bgl_storage(5, false), // identical_out
-                ],
-            });
-        let layout = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("AniBatch:layout"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("AniBatch:pipeline"),
-                layout: Some(&layout),
-                module: &module,
-                entry_point: Some("main"),
-                compilation_options: Default::default(),
-                cache: None,
-            });
-        Ok(Self {
-            device,
-            pipeline,
-            bgl,
-        })
+        Ok(Self { device })
     }
 
     /// Dispatch ANI computation on GPU-resident buffers.
@@ -107,63 +68,21 @@ impl AniBatchF64 {
             .queue
             .write_buffer(&params_buf, 0, bytemuck::bytes_of(&params));
 
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("AniBatch:bg"),
-                layout: &self.bgl,
-                entries: &[
-                    bg_entry(0, &params_buf),
-                    bg_entry(1, seq_a),
-                    bg_entry(2, seq_b),
-                    bg_entry(3, ani_out),
-                    bg_entry(4, aligned_out),
-                    bg_entry(5, identical_out),
-                ],
-            });
+        ComputeDispatch::new(&self.device, "AniBatch")
+            .shader(
+                include_str!("../../shaders/bio/ani_batch_f64.wgsl"),
+                "main",
+            )
+            .f64()
+            .uniform(0, &params_buf)
+            .storage_read(1, seq_a)
+            .storage_read(2, seq_b)
+            .storage_rw(3, ani_out)
+            .storage_rw(4, aligned_out)
+            .storage_rw(5, identical_out)
+            .dispatch_1d(n_pairs)
+            .submit()?;
 
-        let mut enc = self.device.create_encoder_guarded(&Default::default());
-        {
-            let mut pass = enc.begin_compute_pass(&Default::default());
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(n_pairs.div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
-        self.device.submit_commands(Some(enc.finish()));
         Ok(())
-    }
-}
-
-fn bgl_uniform(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn bgl_storage(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn bg_entry(binding: u32, buf: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
-    wgpu::BindGroupEntry {
-        binding,
-        resource: buf.as_entire_binding(),
     }
 }

@@ -8,6 +8,7 @@
 //! and staging readback.
 
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::{storage_bgl_entry, uniform_bgl_entry};
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -16,48 +17,6 @@ pub const FD_SHADER_SOURCE: &str = include_str!("../../shaders/grid/fd_gradient_
 
 /// Standard workgroup size for FD operations
 pub const FD_WORKGROUP_SIZE: u32 = 256;
-
-/// Create a uniform buffer bind group layout entry
-pub fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-/// Create a read-only storage buffer bind group layout entry
-pub fn storage_readonly_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only: true },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-/// Create a read-write storage buffer bind group layout entry
-pub fn storage_readwrite_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only: false },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
 
 /// Create an f64 GPU buffer from a slice
 #[must_use]
@@ -128,21 +87,21 @@ impl<'a> FdPipelineBuilder<'a> {
     /// Add a uniform buffer binding
     #[must_use]
     pub fn with_uniform(mut self, binding: u32) -> Self {
-        self.entries.push(uniform_entry(binding));
+        self.entries.push(uniform_bgl_entry(binding));
         self
     }
 
     /// Add a read-only storage buffer binding (input)
     #[must_use]
     pub fn with_input(mut self, binding: u32) -> Self {
-        self.entries.push(storage_readonly_entry(binding));
+        self.entries.push(storage_bgl_entry(binding, true));
         self
     }
 
     /// Add a read-write storage buffer binding (output)
     #[must_use]
     pub fn with_output(mut self, binding: u32) -> Self {
-        self.entries.push(storage_readwrite_entry(binding));
+        self.entries.push(storage_bgl_entry(binding, false));
         self
     }
 

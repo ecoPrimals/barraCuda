@@ -15,8 +15,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 /// f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 pub const WGSL_LOCUS_VARIANCE_F64: &str = include_str!("../../shaders/bio/locus_variance_f64.wgsl");
@@ -30,8 +30,6 @@ struct VarianceParams {
 
 /// Per-locus allele frequency variance GPU kernel (f64 pipeline).
 pub struct LocusVarianceGpu {
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
     device: Arc<WgpuDevice>,
 }
 
@@ -39,72 +37,14 @@ impl LocusVarianceGpu {
     /// Creates a new per-locus allele frequency variance GPU kernel for the given device.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
-        let d = device.device();
-
-        let bgl = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("LocusVariance BGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
-        });
-
-        let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("LocusVariance Layout"),
-            bind_group_layouts: &[&bgl],
-            immediate_size: 0,
-        });
-
-        let module = device.compile_shader_f64(WGSL_LOCUS_VARIANCE_F64, Some("LocusVariance f64"));
-
-        let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("LocusVariance Pipeline"),
-            layout: Some(&layout),
-            module: &module,
-            entry_point: Some("locus_variance"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
-
-        Self {
-            pipeline,
-            bgl,
-            device,
-        }
+        Self { device }
     }
 
     /// Compute per-locus allele frequency variance across populations.
     ///
     /// `allele_freqs_buf`: `[n_pops × n_loci]` f64
     /// `output_buf`:       `[n_loci]` f64
+    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
     pub fn dispatch(
         &self,
         allele_freqs_buf: &wgpu::Buffer,
@@ -113,7 +53,6 @@ impl LocusVarianceGpu {
         n_loci: u32,
     ) {
         let d = self.device.device();
-        let q = self.device.queue();
 
         let params = VarianceParams { n_pops, n_loci };
         let params_buf = d.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -122,40 +61,15 @@ impl LocusVarianceGpu {
             usage: wgpu::BufferUsages::UNIFORM,
         });
 
-        let bg = d.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("LocusVariance BG"),
-            layout: &self.bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: allele_freqs_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: output_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("LocusVariance Encoder"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("LocusVariance Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(n_loci.div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
-        q.submit(std::iter::once(encoder.finish()));
+        ComputeDispatch::new(&self.device, "LocusVariance")
+            .shader(WGSL_LOCUS_VARIANCE_F64, "locus_variance")
+            .f64()
+            .storage_read(0, allele_freqs_buf)
+            .storage_rw(1, output_buf)
+            .uniform(2, &params_buf)
+            .dispatch_1d(n_loci)
+            .submit()
+            .expect("LocusVariance GPU dispatch failed");
     }
 }
 

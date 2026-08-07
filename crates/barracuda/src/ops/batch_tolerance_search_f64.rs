@@ -9,6 +9,7 @@
 //! reference ions = 2.59 M comparisons per batch.
 
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -42,10 +43,6 @@ pub struct BatchToleranceSearchF64 {
 }
 
 impl BatchToleranceSearchF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/bio/batch_tolerance_search_f64.wgsl")
-    }
-
     /// Create a new tolerance searcher.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>, ppm_tol: f64, da_tol: f64) -> Self {
@@ -108,88 +105,20 @@ impl BatchToleranceSearchF64 {
             mapped_at_creation: false,
         });
 
-        let bgl = dev
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("TolSearch BGL"),
-                entries: &[
-                    bgl_entry(0, wgpu::BufferBindingType::Uniform),
-                    bgl_entry(1, wgpu::BufferBindingType::Storage { read_only: true }),
-                    bgl_entry(2, wgpu::BufferBindingType::Storage { read_only: true }),
-                    bgl_entry(3, wgpu::BufferBindingType::Storage { read_only: false }),
-                ],
-            });
-
-        let bg = dev.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("TolSearch BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: cfg_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: sample_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: ref_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let shader = dev.compile_shader_f64(Self::wgsl_shader(), Some("TolSearch"));
-        let pl = dev
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("TolSearch PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-        let pipeline = dev
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("TolSearch Pipeline"),
-                layout: Some(&pl),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("TolSearch Encoder"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("TolSearch Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(s.div_ceil(16), r.div_ceil(16), 1);
-        }
-        dev.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(dev, "TolSearch")
+            .shader(
+                include_str!("../shaders/bio/batch_tolerance_search_f64.wgsl"),
+                "main",
+            )
+            .f64()
+            .uniform(0, &cfg_buf)
+            .storage_read(1, &sample_buf)
+            .storage_read(2, &ref_buf)
+            .storage_rw(3, &out_buf)
+            .dispatch(s.div_ceil(16), r.div_ceil(16), 1)
+            .submit()?;
 
         crate::utils::read_buffer(dev, &out_buf, out_n)
-    }
-}
-
-fn bgl_entry(idx: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding: idx,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

@@ -10,13 +10,11 @@
 //!
 //! wetSpring handoff v6, `snp_calling_f64.wgsl` — 5/5 GPU checks PASS.
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-
-const SHADER: &str = include_str!("../../shaders/bio/snp_calling_f64.wgsl");
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -30,27 +28,17 @@ struct SnpParams {
 /// Position-parallel SNP calling on GPU.
 pub struct SnpCallingF64 {
     device: Arc<WgpuDevice>,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
 }
 
 impl SnpCallingF64 {
-    /// Create SNP calling pipeline.
+     /// Create SNP calling pipeline.
     ///
     /// # Errors
     ///
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
-        let module = device.compile_shader_f64(SHADER, Some("snp_calling_f64"));
-        let bgl = make_bgl(&device, &[true, false, false, false, false]);
-        let layout = make_layout(&device, &bgl, "SnpCalling");
-        let pipeline = make_pipeline(&device, &layout, &module, "main", "SnpCalling");
-        Ok(Self {
-            device,
-            pipeline,
-            bgl,
-        })
+        Ok(Self { device })
     }
 
     /// Dispatch SNP calling for alignment.
@@ -77,27 +65,22 @@ impl SnpCallingF64 {
             _pad: 0,
         };
         let pbuf = upload_uniform(&self.device, &params);
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: None,
-                layout: &self.bgl,
-                entries: &[
-                    bg_entry(0, &pbuf),
-                    bg_entry(1, sequences),
-                    bg_entry(2, is_variant),
-                    bg_entry(3, ref_allele),
-                    bg_entry(4, depth_out),
-                    bg_entry(5, alt_freq_out),
-                ],
-            });
-        submit(
-            &self.device,
-            &self.pipeline,
-            &bg,
-            alignment_length.div_ceil(WORKGROUP_SIZE_1D),
-        );
+
+        ComputeDispatch::new(&self.device, "SnpCalling")
+            .shader(
+                include_str!("../../shaders/bio/snp_calling_f64.wgsl"),
+                "main",
+            )
+            .f64()
+            .uniform(0, &pbuf)
+            .storage_read(1, sequences)
+            .storage_rw(2, is_variant)
+            .storage_rw(3, ref_allele)
+            .storage_rw(4, depth_out)
+            .storage_rw(5, alt_freq_out)
+            .dispatch_1d(alignment_length)
+            .submit()?;
+
         Ok(())
     }
 }

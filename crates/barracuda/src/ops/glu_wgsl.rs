@@ -64,7 +64,7 @@ impl GLU {
 
         ComputeDispatch::new(device, "GLU")
             .shader(include_str!("../shaders/activation/glu_f64.wgsl"), "main")
-            .storage_read(0, &input_buffer)
+            .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(half_size as u32)

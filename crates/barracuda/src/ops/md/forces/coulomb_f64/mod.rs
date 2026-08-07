@@ -17,7 +17,7 @@
 //! - Long timescale simulations
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
@@ -101,25 +101,6 @@ impl CoulombBuffers {
             params,
         }
     }
-}
-
-/// Map a GPU buffer back to CPU as `Vec<f64>`.
-fn read_f64_via_staging(
-    dev: &WgpuDevice,
-    encoder: &mut wgpu::CommandEncoder,
-    src: &wgpu::Buffer,
-    count: usize,
-    label: &str,
-) -> (wgpu::Buffer, usize) {
-    let size = (count * std::mem::size_of::<f64>()) as u64;
-    let staging = dev.device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some(label),
-        size,
-        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-    });
-    encoder.copy_buffer_to_buffer(src, 0, &staging, 0, size);
-    (staging, count)
 }
 
 /// f64 Coulomb force calculation operation
@@ -220,75 +201,17 @@ impl CoulombForceF64 {
         let dev = &self.device;
         let bufs = CoulombBuffers::new(dev, positions, charges, k, cutoff, eps);
 
-        let bgl = dev
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Coulomb f64 BGL"),
-                entries: &(0..4u32)
-                    .map(|i| wgpu::BindGroupLayoutEntry {
-                        binding: i,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: match i {
-                                3 => wgpu::BufferBindingType::Uniform,
-                                2 => wgpu::BufferBindingType::Storage { read_only: false },
-                                _ => wgpu::BufferBindingType::Storage { read_only: true },
-                            },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    })
-                    .collect::<Vec<_>>(),
-            });
+        ComputeDispatch::new(dev, "Coulomb f64")
+            .shader(Self::wgsl_shader(), entry_point)
+            .f64()
+            .storage_read(0, &bufs.pos)
+            .storage_read(1, &bufs.charges)
+            .storage_rw(2, &bufs.forces)
+            .uniform(3, &bufs.params)
+            .dispatch_1d(n as u32)
+            .submit()?;
 
-        let bind_bufs: [&wgpu::Buffer; 4] = [&bufs.pos, &bufs.charges, &bufs.forces, &bufs.params];
-        let bind_group = dev.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Coulomb f64 Bind Group"),
-            layout: &bgl,
-            entries: &bind_bufs
-                .iter()
-                .enumerate()
-                .map(|(i, b)| wgpu::BindGroupEntry {
-                    binding: i as u32,
-                    resource: b.as_entire_binding(),
-                })
-                .collect::<Vec<_>>(),
-        });
-
-        let shader = dev.compile_shader_f64(Self::wgsl_shader(), Some("Coulomb f64"));
-        let pl = dev
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: None,
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-        let pipeline = dev
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("Coulomb f64 Pipeline"),
-                layout: Some(&pl),
-                module: &shader,
-                entry_point: Some(entry_point),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("Coulomb f64 Encoder"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            pass.dispatch_workgroups((n as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
-
-        let (staging, count) =
-            read_f64_via_staging(dev, &mut encoder, &bufs.forces, n * 3, "Coulomb Staging");
-        dev.submit_commands(Some(encoder.finish()));
-        dev.map_staging_buffer::<f64>(&staging, count)
+        dev.read_buffer_f64(&bufs.forces, n * 3)
     }
 
     fn compute_gpu_with_energy(
@@ -310,90 +233,19 @@ impl CoulombForceF64 {
             mapped_at_creation: false,
         });
 
-        let bgl = dev
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Coulomb f64 Energy BGL"),
-                entries: &(0..5u32)
-                    .map(|i| wgpu::BindGroupLayoutEntry {
-                        binding: i,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: match i {
-                                3 => wgpu::BufferBindingType::Uniform,
-                                0 | 1 => wgpu::BufferBindingType::Storage { read_only: true },
-                                _ => wgpu::BufferBindingType::Storage { read_only: false },
-                            },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    })
-                    .collect::<Vec<_>>(),
-            });
+        ComputeDispatch::new(dev, "Coulomb f64 Energy")
+            .shader(Self::wgsl_shader(), "coulomb_with_energy_f64")
+            .f64()
+            .storage_read(0, &bufs.pos)
+            .storage_read(1, &bufs.charges)
+            .storage_rw(2, &bufs.forces)
+            .uniform(3, &bufs.params)
+            .storage_rw(4, &energy_buf)
+            .dispatch_1d(n as u32)
+            .submit()?;
 
-        let bind_bufs: [&wgpu::Buffer; 5] = [
-            &bufs.pos,
-            &bufs.charges,
-            &bufs.forces,
-            &bufs.params,
-            &energy_buf,
-        ];
-        let bind_group = dev.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Coulomb f64 Energy Bind Group"),
-            layout: &bgl,
-            entries: &bind_bufs
-                .iter()
-                .enumerate()
-                .map(|(i, b)| wgpu::BindGroupEntry {
-                    binding: i as u32,
-                    resource: b.as_entire_binding(),
-                })
-                .collect::<Vec<_>>(),
-        });
-
-        let shader = dev.compile_shader_f64(Self::wgsl_shader(), Some("Coulomb f64 Energy"));
-        let pl = dev
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: None,
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-        let pipeline = dev
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("Coulomb f64 Energy Pipeline"),
-                layout: Some(&pl),
-                module: &shader,
-                entry_point: Some("coulomb_with_energy_f64"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("Coulomb f64 Energy Encoder"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            pass.dispatch_workgroups((n as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
-
-        let (forces_stg, forces_count) = read_f64_via_staging(
-            dev,
-            &mut encoder,
-            &bufs.forces,
-            n * 3,
-            "Coulomb Forces Staging",
-        );
-        let (energy_stg, energy_count) =
-            read_f64_via_staging(dev, &mut encoder, &energy_buf, n, "Coulomb Energy Staging");
-        dev.submit_commands(Some(encoder.finish()));
-
-        let forces = dev.map_staging_buffer::<f64>(&forces_stg, forces_count)?;
-        let energies = dev.map_staging_buffer::<f64>(&energy_stg, energy_count)?;
+        let forces = dev.read_buffer_f64(&bufs.forces, n * 3)?;
+        let energies = dev.read_buffer_f64(&energy_buf, n)?;
         Ok((forces, energies))
     }
 }

@@ -39,7 +39,7 @@ impl Beta {
                 include_str!("../shaders/special/beta.wgsl"),
                 "main",
             )
-            .storage_read(0, &input_buffer)
+            .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(output_size as u32)

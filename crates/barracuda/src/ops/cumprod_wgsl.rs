@@ -66,7 +66,7 @@ impl Cumprod {
 
         ComputeDispatch::new(device, "Cumprod")
             .shader(include_str!("../shaders/reduce/cumprod.wgsl"), "main")
-            .storage_read(0, &input_buffer)
+            .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d((outer_size * inner_size) as u32)

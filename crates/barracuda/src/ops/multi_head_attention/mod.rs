@@ -29,6 +29,7 @@ mod compute;
 #[cfg(test)]
 mod tests;
 
+use crate::device::compute_pipeline::{BatchedComputeDispatch, ComputeDispatch};
 use crate::error::Result;
 use crate::ops::scaled_dot_product_attention::ScaledDotProductAttention;
 use crate::tensor::Tensor;
@@ -188,23 +189,49 @@ impl MultiHeadAttention {
     pub fn execute(self) -> Result<Tensor> {
         let device = self.query.device();
 
-        // Create command encoder for all passes
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("MultiHeadAttention Encoder"),
-        });
-
         // ═══════════════════════════════════════════════════════════════
         // PASS 1-3: Project Q, K, V through weight matrices
         // ═══════════════════════════════════════════════════════════════
-        let q_proj_buffer =
-            compute::execute_projection(&self, device, &self.query, &self.w_q, &mut encoder)?;
-        let k_proj_buffer =
-            compute::execute_projection(&self, device, &self.key, &self.w_k, &mut encoder)?;
-        let v_proj_buffer =
-            compute::execute_projection(&self, device, &self.value, &self.w_v, &mut encoder)?;
+        let proj_size = self.batch_size * self.num_heads * self.seq_len * self.head_dim;
+        let q_proj_buffer = device.create_buffer_f32(proj_size)?;
+        let k_proj_buffer = device.create_buffer_f32(proj_size)?;
+        let v_proj_buffer = device.create_buffer_f32(proj_size)?;
+        let projection_params = compute::create_projection_params_buffer(device, &self);
 
-        // Submit projection passes
-        device.submit_commands(Some(encoder.finish()));
+        const TILE_SIZE: u32 = 16;
+        let workgroups_x = (self.batch_size as u32).div_ceil(TILE_SIZE).max(1);
+        let workgroups_y = (self.num_heads as u32).div_ceil(TILE_SIZE).max(1);
+        let workgroups_z = self.seq_len as u32;
+
+        let mut projection_batch = BatchedComputeDispatch::new(device);
+        projection_batch.push(
+            ComputeDispatch::new(device, "MHA Q Projection")
+                .shader(compute::PROJECTION_SHADER, "main")
+                .storage_read(0, self.query.buffer())
+                .storage_read(1, self.w_q.buffer())
+                .storage_rw(2, &q_proj_buffer)
+                .uniform(3, &projection_params)
+                .dispatch(workgroups_x, workgroups_y, workgroups_z),
+        )?;
+        projection_batch.push(
+            ComputeDispatch::new(device, "MHA K Projection")
+                .shader(compute::PROJECTION_SHADER, "main")
+                .storage_read(0, self.key.buffer())
+                .storage_read(1, self.w_k.buffer())
+                .storage_rw(2, &k_proj_buffer)
+                .uniform(3, &projection_params)
+                .dispatch(workgroups_x, workgroups_y, workgroups_z),
+        )?;
+        projection_batch.push(
+            ComputeDispatch::new(device, "MHA V Projection")
+                .shader(compute::PROJECTION_SHADER, "main")
+                .storage_read(0, self.value.buffer())
+                .storage_read(1, self.w_v.buffer())
+                .storage_rw(2, &v_proj_buffer)
+                .uniform(3, &projection_params)
+                .dispatch(workgroups_x, workgroups_y, workgroups_z),
+        )?;
+        projection_batch.submit()?;
 
         // ═══════════════════════════════════════════════════════════════
         // PASS 4: Apply scaled dot-product attention
@@ -232,19 +259,25 @@ impl MultiHeadAttention {
         // ═══════════════════════════════════════════════════════════════
         // PASS 5: Project concatenated heads through output matrix
         // ═══════════════════════════════════════════════════════════════
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("MultiHeadAttention Output Encoder"),
-        });
+        let output_size = self.batch_size * self.seq_len * self.d_model;
+        let output_buffer = device.create_buffer_f32(output_size)?;
+        let output_params = compute::create_projection_params_buffer(device, &self);
 
-        let output_buffer = compute::execute_output_projection(
-            &self,
-            device,
-            attention_output.buffer(),
-            &mut encoder,
+        let out_workgroups_x = (self.batch_size as u32).div_ceil(TILE_SIZE).max(1);
+        let out_workgroups_y = (self.seq_len as u32).div_ceil(TILE_SIZE).max(1);
+        let out_workgroups_z = self.d_model as u32;
+
+        let mut output_batch = BatchedComputeDispatch::new(device);
+        output_batch.push(
+            ComputeDispatch::new(device, "MHA Output")
+                .shader(Self::wgsl_shader_output(), "main")
+                .storage_read(0, attention_output.buffer())
+                .storage_read(1, self.w_o().buffer())
+                .storage_rw(2, &output_buffer)
+                .uniform(3, &output_params)
+                .dispatch(out_workgroups_x, out_workgroups_y, out_workgroups_z),
         )?;
-
-        // Submit output projection pass
-        device.submit_commands(Some(encoder.finish()));
+        output_batch.submit()?;
 
         // Return output tensor
         Ok(Tensor::from_buffer(

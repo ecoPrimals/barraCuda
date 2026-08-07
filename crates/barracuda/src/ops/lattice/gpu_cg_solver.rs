@@ -23,14 +23,14 @@
 //!    i. p = r + β·p  (xpay)
 //!    j. Check convergence: `new_rr` < tol² × `b_norm²`
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::Result;
 use crate::pipeline::ReduceScalarPipeline;
 use std::sync::Arc;
 
 use super::dirac::StaggeredDirac;
-
-const CG_WG: u32 = 64;
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -146,12 +146,6 @@ pub struct GpuCgSolver {
     n_f64: u32,
     n_pairs: u32,
     dirac: StaggeredDirac,
-    dot_pipeline: wgpu::ComputePipeline,
-    dot_bgl: wgpu::BindGroupLayout,
-    axpy_pipeline: wgpu::ComputePipeline,
-    axpy_bgl: wgpu::BindGroupLayout,
-    xpay_pipeline: wgpu::ComputePipeline,
-    xpay_bgl: wgpu::BindGroupLayout,
     reducer: ReduceScalarPipeline,
 }
 
@@ -162,63 +156,8 @@ impl GpuCgSolver {
     /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
         let dirac = StaggeredDirac::new(device.clone(), volume)?;
-        let n_f64 = volume * 6; // 3 color × 2 (re/im)
-        let n_pairs = volume * 3; // 3 color components (each 2 f64 = 1 complex)
-
-        let dot_module =
-            device.compile_shader_f64(super::cg::WGSL_COMPLEX_DOT_RE_F64, Some("cg_dot"));
-        let axpy_module = device.compile_shader_f64(super::cg::WGSL_AXPY_F64, Some("cg_axpy"));
-        let xpay_module = device.compile_shader_f64(super::cg::WGSL_XPAY_F64, Some("cg_xpay"));
-
-        let dot_bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("cg_dot:bgl"),
-                entries: &[
-                    uniform_bgl(0),
-                    storage_bgl(1, true),
-                    storage_bgl(2, true),
-                    storage_bgl(3, false),
-                ],
-            });
-        let axpy_bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("cg_axpy:bgl"),
-                entries: &[uniform_bgl(0), storage_bgl(1, true), storage_bgl(2, false)],
-            });
-        let xpay_bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("cg_xpay:bgl"),
-                entries: &[uniform_bgl(0), storage_bgl(1, true), storage_bgl(2, false)],
-            });
-
-        let make_pipeline = |bgl: &wgpu::BindGroupLayout,
-                             module: &wgpu::ShaderModule,
-                             label: &str| {
-            let layout = device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some(&format!("{label}:layout")),
-                    bind_group_layouts: &[bgl],
-                    immediate_size: 0,
-                });
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some(label),
-                    layout: Some(&layout),
-                    module,
-                    entry_point: Some("main"),
-                    compilation_options: Default::default(),
-                    cache: None,
-                })
-        };
-
-        let dot_pipeline = make_pipeline(&dot_bgl, &dot_module, "cg_dot");
-        let axpy_pipeline = make_pipeline(&axpy_bgl, &axpy_module, "cg_axpy");
-        let xpay_pipeline = make_pipeline(&xpay_bgl, &xpay_module, "cg_xpay");
+        let n_f64 = volume * 6;
+        let n_pairs = volume * 3;
 
         let reducer = ReduceScalarPipeline::new(device.clone(), n_pairs as usize)?;
 
@@ -228,12 +167,6 @@ impl GpuCgSolver {
             n_f64,
             n_pairs,
             dirac,
-            dot_pipeline,
-            dot_bgl,
-            axpy_pipeline,
-            axpy_bgl,
-            xpay_pipeline,
-            xpay_bgl,
             reducer,
         })
     }
@@ -253,18 +186,13 @@ impl GpuCgSolver {
         let n = self.n_f64 as usize;
         let n_bytes = (n * std::mem::size_of::<f64>()) as u64;
 
-        // Zero x
         self.device
             .queue
             .write_buffer(&bufs.x, 0, &vec![0u8; n_bytes as usize]);
 
-        // r = b (copy)
         self.copy_buffer(b_buf, &bufs.r, n_bytes);
-
-        // p = r (copy)
         self.copy_buffer(&bufs.r, &bufs.p, n_bytes);
 
-        // b_norm_sq = Re<b|b>
         let b_norm_sq = self.complex_dot_re(b_buf, b_buf, &bufs.dot_out)?;
         if b_norm_sq < 1e-30 {
             return Ok(GpuCgResult {
@@ -278,7 +206,6 @@ impl GpuCgSolver {
         let mut rr = b_norm_sq;
 
         for iter in 0..config.max_iter {
-            // Ap = D†D·p: first D·p → tmp, then D†·tmp → ap
             self.dirac.dispatch(
                 config.mass,
                 1.0,
@@ -298,7 +225,6 @@ impl GpuCgSolver {
                 lattice.phases,
             )?;
 
-            // pAp = Re<p|Ap>
             let p_ap = self.complex_dot_re(&bufs.p, &bufs.ap, &bufs.dot_out)?;
 
             if p_ap.abs() < 1e-30 {
@@ -310,13 +236,9 @@ impl GpuCgSolver {
             }
             let alpha = rr / p_ap;
 
-            // x += α·p
             self.axpy(alpha, &bufs.p, &bufs.x)?;
-
-            // r -= α·Ap  (axpy with -α)
             self.axpy(-alpha, &bufs.ap, &bufs.r)?;
 
-            // new_rr = Re<r|r>
             let new_rr = self.complex_dot_re(&bufs.r, &bufs.r, &bufs.dot_out)?;
 
             if new_rr < tol_sq {
@@ -330,7 +252,6 @@ impl GpuCgSolver {
             let beta = new_rr / rr;
             rr = new_rr;
 
-            // p = r + β·p
             self.xpay(&bufs.r, beta, &bufs.p)?;
         }
 
@@ -369,47 +290,15 @@ impl GpuCgSolver {
             .queue
             .write_buffer(&params, 0, bytemuck::bytes_of(&params_data));
 
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("cg_dot:bg"),
-                layout: &self.dot_bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: params.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: a.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: b.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: out.as_entire_binding(),
-                    },
-                ],
-            });
-
-        let mut enc = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("cg_dot:enc"),
-            });
-        {
-            let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("cg_dot:pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.dot_pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.n_pairs.div_ceil(CG_WG), 1, 1);
-        }
-        self.device.submit_commands(Some(enc.finish()));
+        ComputeDispatch::new(&self.device, "cg_dot")
+            .shader(super::cg::WGSL_COMPLEX_DOT_RE_F64, "main")
+            .f64()
+            .uniform(0, &params)
+            .storage_read(1, a)
+            .storage_read(2, b)
+            .storage_rw(3, out)
+            .dispatch(self.n_pairs.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()?;
 
         self.reducer.sum_f64(out)
     }
@@ -430,43 +319,15 @@ impl GpuCgSolver {
             .queue
             .write_buffer(&params, 0, bytemuck::bytes_of(&params_data));
 
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("cg_axpy:bg"),
-                layout: &self.axpy_bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: params.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: x.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: y.as_entire_binding(),
-                    },
-                ],
-            });
+        ComputeDispatch::new(&self.device, "cg_axpy")
+            .shader(super::cg::WGSL_AXPY_F64, "main")
+            .f64()
+            .uniform(0, &params)
+            .storage_read(1, x)
+            .storage_rw(2, y)
+            .dispatch(self.n_f64.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()?;
 
-        let mut enc = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("cg_axpy:enc"),
-            });
-        {
-            let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("cg_axpy:pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.axpy_pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.n_f64.div_ceil(CG_WG), 1, 1);
-        }
-        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 
@@ -486,43 +347,15 @@ impl GpuCgSolver {
             .queue
             .write_buffer(&params, 0, bytemuck::bytes_of(&params_data));
 
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("cg_xpay:bg"),
-                layout: &self.xpay_bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: params.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: x.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: p.as_entire_binding(),
-                    },
-                ],
-            });
+        ComputeDispatch::new(&self.device, "cg_xpay")
+            .shader(super::cg::WGSL_XPAY_F64, "main")
+            .f64()
+            .uniform(0, &params)
+            .storage_read(1, x)
+            .storage_rw(2, p)
+            .dispatch(self.n_f64.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()?;
 
-        let mut enc = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("cg_xpay:enc"),
-            });
-        {
-            let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("cg_xpay:pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.xpay_pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.n_f64.div_ceil(CG_WG), 1, 1);
-        }
-        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 
@@ -530,32 +363,6 @@ impl GpuCgSolver {
     #[must_use]
     pub fn volume(&self) -> u32 {
         self.volume
-    }
-}
-
-fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

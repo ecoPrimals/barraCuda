@@ -13,8 +13,8 @@
 //! Absorbed from neuralSpring `metalForge/shaders/wright_fisher_step.wgsl`
 //! (Papers 024/025 — pangenome selection, meta-population dynamics).
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -49,10 +49,6 @@ pub struct WrightFisherF32 {
 }
 
 impl WrightFisherF32 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/science/wright_fisher_step_f32.wgsl")
-    }
-
     /// Create a new Wright-Fisher simulation.
     ///
     /// # Errors
@@ -158,85 +154,15 @@ impl WrightFisherF32 {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let bgl = dev
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("WF BGL"),
-                entries: &[
-                    bgl_storage_ro(0),
-                    bgl_storage_ro(1),
-                    bgl_storage_rw(2),
-                    bgl_storage_rw(3),
-                    bgl_uniform(4),
-                ],
-            });
-
-        let bg = dev.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("WF BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: freq_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: sel_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: out_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: prng_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: param_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let shader = dev
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("WF Shader"),
-                source: wgpu::ShaderSource::Wgsl(Self::wgsl_shader().into()),
-            });
-
-        let pl = dev
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("WF PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-        let pipeline = dev
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("WF Pipeline"),
-                layout: Some(&pl),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let wg = (total as u32).div_ceil(WORKGROUP_SIZE_1D);
-        let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("WF Encoder"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("WF Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(wg, 1, 1);
-        }
-        dev.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(dev, "WrightFisher")
+            .shader(include_str!("../shaders/science/wright_fisher_step_f32.wgsl"), "main")
+            .storage_read(0, &freq_buf)
+            .storage_read(1, &sel_buf)
+            .storage_rw(2, &out_buf)
+            .storage_rw(3, &prng_buf)
+            .uniform(4, &param_buf)
+            .dispatch_1d(total as u32)
+            .submit()?;
 
         let freq_out = crate::utils::read_buffer(dev, &out_buf, total)?;
         let new_prng = crate::utils::read_buffer_u32(dev, &prng_buf, expected_prng)?;
@@ -269,44 +195,6 @@ fn splitmix32(mut z: u32) -> u32 {
     z ^ (z >> 16)
 }
 
-fn bgl_storage_ro(idx: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding: idx,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only: true },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn bgl_storage_rw(idx: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding: idx,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only: false },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn bgl_uniform(idx: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding: idx,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
 
 #[cfg(test)]
 mod tests {

@@ -15,8 +15,7 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
-use crate::device::compute_pipeline::{storage_bgl_entry, uniform_bgl_entry};
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 
 /// WGSL shader for FOCE per-subject gradient computation.
@@ -42,8 +41,6 @@ pub struct FoceGradientResult {
 
 /// GPU kernel for FOCE per-subject gradient computation.
 pub struct FoceGradientGpu {
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
     device: Arc<WgpuDevice>,
 }
 
@@ -51,43 +48,7 @@ impl FoceGradientGpu {
     /// Create the FOCE gradient kernel.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
-        let d = device.device();
-
-        let bgl = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("FoceGradient BGL"),
-            entries: &[
-                uniform_bgl_entry(0),
-                storage_bgl_entry(1, true),
-                storage_bgl_entry(2, true),
-                storage_bgl_entry(3, true),
-                storage_bgl_entry(4, true),
-                storage_bgl_entry(5, false),
-                storage_bgl_entry(6, false),
-            ],
-        });
-
-        let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("FoceGradient Layout"),
-            bind_group_layouts: &[&bgl],
-            immediate_size: 0,
-        });
-
-        let module = device.compile_shader_f64(WGSL_FOCE_GRADIENT, Some("foce_gradient"));
-
-        let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("FoceGradient Pipeline"),
-            layout: Some(&layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: device.pipeline_cache(),
-        });
-
-        Self {
-            pipeline,
-            bgl,
-            device,
-        }
+        Self { device }
     }
 
     /// Compute FOCE per-subject gradients.
@@ -162,47 +123,18 @@ impl FoceGradientGpu {
             mapped_at_creation: false,
         });
 
-        let bg = d.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("foce_bg"),
-            layout: &self.bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: config_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: residuals_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: variances_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: jacobian_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: obs_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: grad_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 6,
-                    resource: obj_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let wg_count = n_subjects.div_ceil(WORKGROUP_SIZE_1D);
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("foce_encode"),
-            });
+        ComputeDispatch::new(&self.device, "FoceGradient")
+            .shader(WGSL_FOCE_GRADIENT, "main")
+            .f64()
+            .uniform(0, &config_buf)
+            .storage_read(1, &residuals_buf)
+            .storage_read(2, &variances_buf)
+            .storage_read(3, &jacobian_buf)
+            .storage_read(4, &obs_buf)
+            .storage_rw(5, &grad_buf)
+            .storage_rw(6, &obj_buf)
+            .dispatch_1d(n_subjects)
+            .submit()?;
 
         let grad_staging = d.create_buffer(&wgpu::BufferDescriptor {
             label: Some("foce_grad_staging"),
@@ -217,15 +149,11 @@ impl FoceGradientGpu {
             mapped_at_creation: false,
         });
 
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("foce_pass"),
-                timestamp_writes: None,
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("foce_readback"),
             });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(wg_count, 1, 1);
-        }
         encoder.copy_buffer_to_buffer(&grad_buf, 0, &grad_staging, 0, grad_size);
         encoder.copy_buffer_to_buffer(&obj_buf, 0, &obj_staging, 0, obj_size);
         self.device

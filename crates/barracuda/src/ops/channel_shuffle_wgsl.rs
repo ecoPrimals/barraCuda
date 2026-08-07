@@ -85,7 +85,7 @@ impl ChannelShuffle {
 
         ComputeDispatch::new(device, "ChannelShuffle")
             .shader(include_str!("../shaders/tensor/channel_shuffle_f64.wgsl"), "main")
-            .storage_read(0, &input_buffer)
+            .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(total_size as u32)

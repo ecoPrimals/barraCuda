@@ -62,6 +62,7 @@
 //! # }
 //! ```
 
+use crate::device::compute_pipeline::{BatchedComputeDispatch, ComputeDispatch};
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
@@ -73,11 +74,8 @@ pub struct FheKeySwitch {
     input: Tensor,
     degree: u32,
     modulus: u64,
-    decomp_base: u32,   // Base for digit decomposition (e.g., 2^16)
-    decomp_levels: u32, // Number of decomposition levels
-    pipeline_decompose: wgpu::ComputePipeline,
-    pipeline_accumulate: wgpu::ComputePipeline,
-    bind_group_layout: wgpu::BindGroupLayout,
+    decomp_base: u32,
+    decomp_levels: u32,
 }
 
 impl FheKeySwitch {
@@ -139,97 +137,12 @@ impl FheKeySwitch {
             )));
         }
 
-        let device = input.device();
-
-        let shader_source = include_str!("fhe_key_switch.wgsl");
-        let shader_module = device.compile_shader(shader_source, Some("FHE Key Switch Shader"));
-
-        // Create bind group layout
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("FHE Key Switch Bind Group Layout"),
-                    entries: &[
-                        // Input buffer
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // Output buffer
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // Parameters buffer
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        // Create pipelines
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("FHE Key Switch Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let pipeline_decompose =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("FHE Key Switch Decompose Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: Some("decompose_base_b"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        let pipeline_accumulate =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("FHE Key Switch Accumulate Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: Some("accumulate_switched"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
         Ok(Self {
             input,
             degree,
             modulus,
             decomp_base,
             decomp_levels,
-            pipeline_decompose,
-            pipeline_accumulate,
-            bind_group_layout,
         })
     }
 
@@ -282,56 +195,29 @@ impl FheKeySwitch {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        // Create bind group
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("FHE Key Switch Bind Group"),
-            layout: &self.bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.input.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        // ✅ GPU EXECUTION: Decompose ciphertext component
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("FHE Key Switch Encoder"),
-        });
-
         let caps = DeviceCapabilities::from_device(device);
         let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::FHE);
         let num_workgroups = self.degree.div_ceil(optimal_wg_size);
 
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("FHE Key Switch Decompose Pass"),
-                timestamp_writes: None,
-            });
-            compute_pass.set_pipeline(&self.pipeline_decompose);
-            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
-            compute_pass.dispatch_workgroups(num_workgroups, 1, 1);
-        }
-
-        {
-            let mut accumulate_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("FHE Key Switch Accumulate Pass"),
-                timestamp_writes: None,
-            });
-            accumulate_pass.set_pipeline(&self.pipeline_accumulate);
-            accumulate_pass.set_bind_group(0, Some(&bind_group), &[]);
-            accumulate_pass.dispatch_workgroups(num_workgroups, 1, 1);
-        }
-
-        device.submit_commands(std::iter::once(encoder.finish()));
+        let shader_source = include_str!("fhe_key_switch.wgsl");
+        let mut batch = BatchedComputeDispatch::new(device);
+        batch.push(
+            ComputeDispatch::new(device, "FHE Key Switch Decompose")
+                .shader(shader_source, "decompose_base_b")
+                .storage_read(0, self.input.buffer())
+                .storage_rw(1, &output_buffer)
+                .uniform(2, &params_buffer)
+                .dispatch(num_workgroups, 1, 1),
+        )?;
+        batch.push(
+            ComputeDispatch::new(device, "FHE Key Switch Accumulate")
+                .shader(shader_source, "accumulate_switched")
+                .storage_read(0, self.input.buffer())
+                .storage_rw(1, &output_buffer)
+                .uniform(2, &params_buffer)
+                .dispatch(num_workgroups, 1, 1),
+        )?;
+        batch.submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,

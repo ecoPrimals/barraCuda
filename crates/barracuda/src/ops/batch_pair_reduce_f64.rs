@@ -11,6 +11,7 @@
 //! spectral pairwise matching.
 
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -57,10 +58,6 @@ pub struct BatchPairReduceF64 {
 }
 
 impl BatchPairReduceF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/math/batch_pair_reduce_f64.wgsl")
-    }
-
     /// Create a new pairwise reducer with the specified operation.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>, op: PairReduceOp) -> Self {
@@ -135,88 +132,20 @@ impl BatchPairReduceF64 {
             mapped_at_creation: false,
         });
 
-        let bgl = dev
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("PairReduce BGL"),
-                entries: &[
-                    bgl_entry(0, wgpu::BufferBindingType::Uniform),
-                    bgl_entry(1, wgpu::BufferBindingType::Storage { read_only: true }),
-                    bgl_entry(2, wgpu::BufferBindingType::Storage { read_only: true }),
-                    bgl_entry(3, wgpu::BufferBindingType::Storage { read_only: false }),
-                ],
-            });
-
-        let bg = dev.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("PairReduce BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: cfg_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: a_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: b_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let shader = dev.compile_shader_f64(Self::wgsl_shader(), Some("PairReduce"));
-        let pl = dev
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("PairReduce PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-        let pipeline = dev
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("PairReduce Pipeline"),
-                layout: Some(&pl),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("PairReduce Encoder"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("PairReduce Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(n_a.div_ceil(16), n_b.div_ceil(16), 1);
-        }
-        dev.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(dev, "PairReduce")
+            .shader(
+                include_str!("../shaders/math/batch_pair_reduce_f64.wgsl"),
+                "main",
+            )
+            .f64()
+            .uniform(0, &cfg_buf)
+            .storage_read(1, &a_buf)
+            .storage_read(2, &b_buf)
+            .storage_rw(3, &out_buf)
+            .dispatch(n_a.div_ceil(16), n_b.div_ceil(16), 1)
+            .submit()?;
 
         crate::utils::read_buffer_f64(dev, &out_buf, out_n)
-    }
-}
-
-fn bgl_entry(idx: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding: idx,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

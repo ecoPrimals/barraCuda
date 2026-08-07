@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
@@ -113,81 +113,15 @@ impl Conv2dGpu {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device.compile_shader(include_str!("conv2d.wgsl"), Some("conv2d_gpu"));
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("conv2d_gpu BGL"),
-                entries: &[
-                    storage_entry(0, true),
-                    storage_entry(1, true),
-                    storage_entry(2, true),
-                    storage_entry(3, false),
-                    uniform_entry(4),
-                ],
-            });
-
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("conv2d_gpu BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.input.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.kernel.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: bias_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("conv2d_gpu PL"),
-                    bind_group_layouts: &[&bgl],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("conv2d_gpu"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("conv2d_gpu"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("conv2d_gpu"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            pass.dispatch_workgroups((output_size as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(device, "conv2d_gpu")
+            .shader(include_str!("conv2d.wgsl"), "main")
+            .storage_read(0, self.input.buffer())
+            .storage_read(1, self.kernel.buffer())
+            .storage_read(2, bias_buffer)
+            .storage_rw(3, &output_buffer)
+            .uniform(4, &params_buffer)
+            .dispatch_1d(output_size as u32)
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -205,32 +139,6 @@ impl Conv2dGpu {
                 contents: bytemuck::cast_slice(&zeros),
                 usage: wgpu::BufferUsages::STORAGE,
             })
-    }
-}
-
-fn storage_entry(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

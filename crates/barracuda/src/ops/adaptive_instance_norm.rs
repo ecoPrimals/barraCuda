@@ -11,12 +11,9 @@
 //! - Runtime device discovery
 //! - Zero CPU fallbacks in execution
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
-
-/// f64 is the canonical source — math is universal, precision is silicon.
-const SHADER_F64: &str = include_str!("../shaders/norm/adaptive_instance_norm_f64.wgsl");
-const SHADER_F32: &str = SHADER_F64;
 
 /// `AdaptiveInstanceNorm` operation
 pub struct AdaptiveInstanceNorm {
@@ -63,11 +60,6 @@ impl AdaptiveInstanceNorm {
         })
     }
 
-    /// Get the WGSL shader source
-    fn wgsl_shader() -> &'static str {
-        SHADER_F32
-    }
-
     /// Execute the adaptive instance norm operation
     /// # Errors
     /// Returns [`Err`] if buffer allocation fails, GPU dispatch fails, buffer readback fails,
@@ -83,19 +75,8 @@ impl AdaptiveInstanceNorm {
         let spatial_size = height * width;
         let output_size = batch * channels * spatial_size;
 
-        // Create buffers
-        let content_buffer = self.content.buffer();
-        let style_mean_buffer = self.style_mean.buffer();
-        let style_std_buffer = self.style_std.buffer();
+        let output_buffer = device.create_buffer_f32(output_size)?;
 
-        let output_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("AdaptiveInstanceNorm Output"),
-            size: (output_size * std::mem::size_of::<f32>()) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        // Create uniform buffer for parameters
         #[repr(C)]
         #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
         struct Params {
@@ -122,143 +103,19 @@ impl AdaptiveInstanceNorm {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
 
-        // Create bind group layout
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("AdaptiveInstanceNorm Bind Group Layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 4,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
+        ComputeDispatch::new(device, "AdaptiveInstanceNorm")
+            .shader(
+                include_str!("../shaders/norm/adaptive_instance_norm_f64.wgsl"),
+                "main",
+            )
+            .storage_read(0, self.content.buffer())
+            .storage_read(1, self.style_mean.buffer())
+            .storage_read(2, self.style_std.buffer())
+            .storage_rw(3, &output_buffer)
+            .uniform(4, &params_buffer)
+            .dispatch_1d(output_size as u32)
+            .submit()?;
 
-        // Create bind group
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("AdaptiveInstanceNorm Bind Group"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: content_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: style_mean_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: style_std_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        // Create compute pipeline
-        let shader_module =
-            device.compile_shader(Self::wgsl_shader(), Some("AdaptiveInstanceNorm Shader"));
-
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("AdaptiveInstanceNorm Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let compute_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("AdaptiveInstanceNorm Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: Some("main"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        // Execute compute shader
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("AdaptiveInstanceNorm Encoder"),
-        });
-
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("AdaptiveInstanceNorm Pass"),
-                timestamp_writes: None,
-            });
-            compute_pass.set_pipeline(&compute_pipeline);
-            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
-
-            // Deep Debt Evolution: Capability-based dispatch
-            use crate::device::{DeviceCapabilities, WorkloadType};
-            let caps = DeviceCapabilities::from_device(device);
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::ElementWise);
-            let workgroups = (output_size as u32).div_ceil(optimal_wg_size);
-            compute_pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
-
-        // Read back results
         let output_data = crate::utils::read_buffer(device, &output_buffer, output_size)?;
 
         Ok(Tensor::new(

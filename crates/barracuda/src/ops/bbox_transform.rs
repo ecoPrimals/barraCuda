@@ -10,7 +10,7 @@
 //! - Runtime device discovery
 //! - Zero CPU fallbacks in execution
 
-use crate::device::{DeviceCapabilities, WorkloadType};
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
@@ -45,14 +45,6 @@ impl BBoxTransform {
         Ok(Self { anchors, deltas })
     }
 
-    /// Get the WGSL shader source
-    fn wgsl_shader() -> &'static str {
-        {
-            const SHADER: &str = include_str!("../shaders/detection/bbox_transform_f64.wgsl");
-            SHADER
-        }
-    }
-
     /// Execute the bbox transform operation
     ///
     /// # Errors
@@ -66,10 +58,6 @@ impl BBoxTransform {
         let num_boxes = shape[0];
         let output_size = num_boxes * 4;
 
-        // Create buffers
-        let anchors_buffer = self.anchors.buffer();
-        let deltas_buffer = self.deltas.buffer();
-
         let transformed_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("BBoxTransform Output"),
             size: (output_size * std::mem::size_of::<f32>()) as u64,
@@ -77,7 +65,6 @@ impl BBoxTransform {
             mapped_at_creation: false,
         });
 
-        // Create uniform buffer for parameters
         #[repr(C)]
         #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
         struct Params {
@@ -96,128 +83,18 @@ impl BBoxTransform {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
 
-        // Create bind group layout
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("BBoxTransform Bind Group Layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
+        ComputeDispatch::new(device, "BBoxTransform")
+            .shader(
+                include_str!("../shaders/detection/bbox_transform_f64.wgsl"),
+                "main",
+            )
+            .storage_read(0, self.anchors.buffer())
+            .storage_read(1, self.deltas.buffer())
+            .storage_rw(2, &transformed_buffer)
+            .uniform(3, &params_buffer)
+            .dispatch_1d(num_boxes as u32)
+            .submit()?;
 
-        // Create bind group
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("BBoxTransform Bind Group"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: anchors_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: deltas_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: transformed_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        // Create compute pipeline
-        let shader_module =
-            device.compile_shader(Self::wgsl_shader(), Some("BBoxTransform Shader"));
-
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("BBoxTransform Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let compute_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("BBoxTransform Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: Some("main"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        // Execute compute shader
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("BBoxTransform Encoder"),
-        });
-
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("BBoxTransform Pass"),
-                timestamp_writes: None,
-            });
-            compute_pass.set_pipeline(&compute_pipeline);
-            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
-
-            // Deep Debt Evolution: Capability-based dispatch
-            let caps = DeviceCapabilities::from_device(device);
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::ElementWise);
-            let workgroups = (num_boxes as u32).div_ceil(optimal_wg_size);
-            compute_pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
-
-        // Read back results
         let output_data = crate::utils::read_buffer(device, &transformed_buffer, output_size)?;
 
         Ok(Tensor::new(output_data, vec![num_boxes, 4], device.clone()))

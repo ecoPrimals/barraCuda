@@ -4,112 +4,73 @@
 //! Extracted from `pppm_layouts` for `pppm_gpu` modularity.
 //! Contains all bind group layout definitions and compute pipeline creation.
 
+use crate::device::compute_pipeline::BglBuilder;
+
 /// PPPM bind group layout helpers for creating individual bind group layouts.
 pub struct PppmLayouts;
 
 impl PppmLayouts {
-    fn storage_ro(binding: u32) -> wgpu::BindGroupLayoutEntry {
-        wgpu::BindGroupLayoutEntry {
-            binding,
-            visibility: wgpu::ShaderStages::COMPUTE,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-            count: None,
-        }
-    }
-
-    fn storage_rw(binding: u32) -> wgpu::BindGroupLayoutEntry {
-        wgpu::BindGroupLayoutEntry {
-            binding,
-            visibility: wgpu::ShaderStages::COMPUTE,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-            count: None,
-        }
-    }
-
     /// B-spline charge assignment bind group layout.
     #[must_use]
     pub fn bspline(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("pppm_bspline_bgl"),
-            entries: &[
-                Self::storage_ro(0),
-                Self::storage_rw(1),
-                Self::storage_rw(2),
-                Self::storage_rw(3),
-                Self::storage_ro(4),
-            ],
-        })
+        BglBuilder::new("pppm_bspline_bgl")
+            .storage_read(0)
+            .storage_rw(1)
+            .storage_rw(2)
+            .storage_rw(3)
+            .storage_read(4)
+            .build(device)
     }
 
     /// Charge spreading to grid bind group layout.
     #[must_use]
     pub fn charge_spread(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("pppm_charge_spread_bgl"),
-            entries: &[
-                Self::storage_ro(0),
-                Self::storage_ro(1),
-                Self::storage_ro(2),
-                Self::storage_rw(3),
-                Self::storage_ro(4),
-            ],
-        })
+        BglBuilder::new("pppm_charge_spread_bgl")
+            .storage_read(0)
+            .storage_read(1)
+            .storage_read(2)
+            .storage_rw(3)
+            .storage_read(4)
+            .build(device)
     }
 
     /// Greens function application bind group layout.
     #[must_use]
     pub fn greens_apply(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("pppm_greens_apply_bgl"),
-            entries: &[
-                Self::storage_ro(0),
-                Self::storage_ro(1),
-                Self::storage_rw(2),
-                Self::storage_rw(3),
-                Self::storage_ro(4),
-                Self::storage_ro(5),
-            ],
-        })
+        BglBuilder::new("pppm_greens_apply_bgl")
+            .storage_read(0)
+            .storage_read(1)
+            .storage_rw(2)
+            .storage_rw(3)
+            .storage_read(4)
+            .storage_read(5)
+            .build(device)
     }
 
     /// Force interpolation from grid bind group layout.
     #[must_use]
     pub fn force_interp(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("pppm_force_interp_bgl"),
-            entries: &[
-                Self::storage_ro(0),
-                Self::storage_ro(1),
-                Self::storage_ro(2),
-                Self::storage_ro(3),
-                Self::storage_ro(4),
-                Self::storage_rw(5),
-                Self::storage_ro(6),
-            ],
-        })
+        BglBuilder::new("pppm_force_interp_bgl")
+            .storage_read(0)
+            .storage_read(1)
+            .storage_read(2)
+            .storage_read(3)
+            .storage_read(4)
+            .storage_rw(5)
+            .storage_read(6)
+            .build(device)
     }
 
     /// Real-space erfc forces bind group layout.
     #[must_use]
     pub fn erfc_forces(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("pppm_erfc_forces_bgl"),
-            entries: &[
-                Self::storage_ro(0),
-                Self::storage_ro(1),
-                Self::storage_rw(2),
-                Self::storage_rw(3),
-                Self::storage_ro(4),
-            ],
-        })
+        BglBuilder::new("pppm_erfc_forces_bgl")
+            .storage_read(0)
+            .storage_read(1)
+            .storage_rw(2)
+            .storage_rw(3)
+            .storage_read(4)
+            .build(device)
     }
 }
 

@@ -28,6 +28,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
+use crate::device::compute_pipeline::ComputeDispatch;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
@@ -53,51 +54,13 @@ struct VacfBatchParams {
 /// over all valid time origins inside the shader.
 pub struct VacfBatchGpu {
     device: Arc<WgpuDevice>,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
 }
 
 impl VacfBatchGpu {
     /// Create a batched VACF GPU pipeline.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
-        let module = device.compile_shader_f64(VACF_BATCH_SHADER, Some("vacf_batch_f64"));
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("VacfBatch BGL"),
-                entries: &[
-                    storage_bgl_entry(0, true),
-                    storage_bgl_entry(1, false),
-                    uniform_bgl_entry(2),
-                ],
-            });
-
-        let layout = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("VacfBatch Layout"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("VacfBatch Pipeline"),
-                layout: Some(&layout),
-                module: &module,
-                entry_point: Some("main"),
-                compilation_options: Default::default(),
-                cache: None,
-            });
-
-        Self {
-            device,
-            pipeline,
-            bgl,
-        }
+        Self { device }
     }
 
     /// Compute the per-particle VACF contribution for a single `lag` value.
@@ -105,6 +68,7 @@ impl VacfBatchGpu {
     /// `vel_ring_buf` must hold `[n_frames × n_particles × 3]` f64 values.
     /// Returns a buffer of `[n_particles]` f64 values (per-particle C(lag)),
     /// ready for reduction via `ReduceScalarPipeline`.
+    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
     pub fn dispatch(
         &self,
         vel_ring_buf: &wgpu::Buffer,
@@ -129,40 +93,15 @@ impl VacfBatchGpu {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("VacfBatch BG"),
-                layout: &self.bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: vel_ring_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: out_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: params_buf.as_entire_binding(),
-                    },
-                ],
-            });
-
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("VacfBatch"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(n_particles.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
-        }
-        self.device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(&self.device, "VacfBatch")
+            .shader(VACF_BATCH_SHADER, "main")
+            .f64()
+            .storage_read(0, vel_ring_buf)
+            .storage_rw(1, out_buf)
+            .uniform(2, &params_buf)
+            .dispatch(n_particles.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()
+            .expect("VacfBatch dispatch");
     }
 }
 
@@ -174,52 +113,13 @@ impl VacfBatchGpu {
 /// Output is `[N]` f64 values, reduced via `ReduceScalarPipeline`.
 pub struct StressVirialGpu {
     device: Arc<WgpuDevice>,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
 }
 
 impl StressVirialGpu {
     /// Create a stress-virial GPU pipeline.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
-        let module = device.compile_shader_f64(STRESS_VIRIAL_SHADER, Some("stress_virial_f64"));
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("StressVirial BGL"),
-                entries: &[
-                    storage_bgl_entry(0, true),  // positions
-                    storage_bgl_entry(1, true),  // velocities
-                    storage_bgl_entry(2, false), // out
-                    storage_bgl_entry(3, true),  // params
-                ],
-            });
-
-        let layout = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("StressVirial Layout"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("StressVirial Pipeline"),
-                layout: Some(&layout),
-                module: &module,
-                entry_point: Some("main"),
-                compilation_options: Default::default(),
-                cache: None,
-            });
-
-        Self {
-            device,
-            pipeline,
-            bgl,
-        }
+        Self { device }
     }
 
     /// Dispatch the stress-virial kernel.
@@ -228,6 +128,7 @@ impl StressVirialGpu {
     /// `vel_buf`:  `[N×3]` f64 — particle velocities
     /// `out_buf`:  `[N]`   f64 — per-particle `σ_xy` contribution
     /// `params`:   simulation parameters packed as `[8]` f64
+    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
     pub fn dispatch(
         &self,
         pos_buf: &wgpu::Buffer,
@@ -236,44 +137,16 @@ impl StressVirialGpu {
         params_buf: &wgpu::Buffer,
         n_particles: u32,
     ) {
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("StressVirial BG"),
-                layout: &self.bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: pos_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: vel_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: out_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: params_buf.as_entire_binding(),
-                    },
-                ],
-            });
-
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("StressVirial"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(n_particles.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
-        }
-        self.device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(&self.device, "StressVirial")
+            .shader(STRESS_VIRIAL_SHADER, "main")
+            .f64()
+            .storage_read(0, pos_buf)
+            .storage_read(1, vel_buf)
+            .storage_rw(2, out_buf)
+            .storage_read(3, params_buf)
+            .dispatch(n_particles.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()
+            .expect("StressVirial dispatch");
     }
 }
 
@@ -346,34 +219,6 @@ impl GpuVelocityRing {
     #[must_use]
     pub fn stored(&self) -> usize {
         self.total_stored
-    }
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-fn storage_bgl_entry(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_bgl_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

@@ -5,7 +5,7 @@
 //! **Complexity**: O(1) - trivial (native vec2 subtraction)
 //! **Performance**: 1 SIMD operation
 
-use crate::device::{DeviceCapabilities, WorkloadType};
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
@@ -13,8 +13,6 @@ use crate::tensor::Tensor;
 pub struct ComplexSub {
     input_a: Tensor,
     input_b: Tensor,
-    pipeline: wgpu::ComputePipeline,
-    bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl ComplexSub {
@@ -42,84 +40,7 @@ impl ComplexSub {
             ));
         }
 
-        let device = input_a.device();
-        let shader = device.compile_shader(include_str!("sub.wgsl"), Some("Complex Sub Shader"));
-
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("Complex Sub Bind Group Layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("Complex Sub Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("Complex Sub Pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        Ok(Self {
-            input_a,
-            input_b,
-            pipeline,
-            bind_group_layout,
-        })
+        Ok(Self { input_a, input_b })
     }
 
     /// Executes complex subtraction and returns the result.
@@ -146,51 +67,14 @@ impl ComplexSub {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Complex Sub Bind Group"),
-            layout: &self.bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.input_a.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.input_b.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("Complex Sub Encoder"),
-        });
-
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Complex Sub Compute Pass"),
-                timestamp_writes: None,
-            });
-
-            compute_pass.set_pipeline(&self.pipeline);
-            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
-
-            let caps = DeviceCapabilities::from_device(device);
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::ElementWise);
-            let num_complex = num_elements / 2;
-            let workgroups = (num_complex as u32).div_ceil(optimal_wg_size);
-
-            compute_pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(device, "Complex Sub")
+            .shader(include_str!("sub.wgsl"), "main")
+            .storage_read(0, self.input_a.buffer())
+            .storage_read(1, self.input_b.buffer())
+            .storage_rw(2, &output_buffer)
+            .uniform(3, &params_buffer)
+            .dispatch_1d((num_elements / 2) as u32)
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -208,7 +92,6 @@ mod tests {
     async fn test_complex_sub_simple() {
         let device = crate::device::test_pool::get_test_device().await;
 
-        // (5+7i) - (2+3i) = 3+4i
         let data_a = vec![5.0f32, 7.0];
         let data_b = vec![2.0f32, 3.0];
 
@@ -226,8 +109,6 @@ mod tests {
     #[tokio::test]
     async fn test_euler_identity_via_add_sub() {
         let device = crate::device::test_pool::get_test_device().await;
-        // Test components for Euler's identity validation
-        // conj(a+bi) + (a+bi) = 2a (imag cancels)
         let data = vec![3.0f32, 4.0];
         let tensor = Tensor::from_data(&data, vec![1, 2], device).unwrap();
         let op = ComplexSub::new(tensor.clone(), tensor).unwrap();

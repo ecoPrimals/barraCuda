@@ -7,7 +7,7 @@
 use std::sync::Arc;
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 
 /// A detected peak with its properties.
@@ -168,75 +168,20 @@ impl<'a> PeakDetectF64<'a> {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("PeakDetect BGL"),
-                entries: &[
-                    storage_entry(0, true),
-                    storage_entry(1, false),
-                    storage_entry(2, false),
-                    uniform_entry(3),
-                ],
-            });
-
-        let bg = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("PeakDetect BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: signal_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: is_peak_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: prominence_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: params_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let shader = device.compile_shader_f64(shader_src, Some("PeakDetect"));
-        let pl = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("PeakDetect PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("PeakDetect Pipeline"),
-                layout: Some(&pl),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let workgroups = (n as u32).div_ceil(WORKGROUP_SIZE_1D);
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("PeakDetect Encoder"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("PeakDetect Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
+        ComputeDispatch::new(device, "PeakDetect")
+            .shader(shader_src, "main")
+            .f64()
+            .storage_read(0, &signal_buf)
+            .storage_rw(1, &is_peak_buf)
+            .storage_rw(2, &prominence_buf)
+            .uniform(3, &params_buf)
+            .dispatch_1d(n as u32)
+            .submit()?;
 
         // Readback buffers
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("PeakDetect Readback"),
+        });
         let is_peak_staging = device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("PeakDetect is_peak staging"),
             size: (n * 4) as u64,
@@ -335,32 +280,6 @@ pub fn find_peaks_cpu(
     }
 
     peaks
-}
-
-fn storage_entry(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
 }
 
 #[cfg(test)]

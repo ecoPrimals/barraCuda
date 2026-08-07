@@ -10,7 +10,7 @@
 use std::sync::Arc;
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::linalg::sparse::CsrMatrix;
 
@@ -89,94 +89,29 @@ impl SparseGemmF64<'_> {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device.compile_shader_f64(
-            include_str!("../shaders/sparse/spmm_f64.wgsl"),
-            Some("spmm_f64"),
-        );
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("spmm BGL"),
-                entries: &[
-                    storage_entry(0, true),
-                    storage_entry(1, true),
-                    storage_entry(2, true),
-                    storage_entry(3, true),
-                    storage_entry(4, false),
-                    uniform_entry(5),
-                ],
-            });
-
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("spmm BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: values_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: col_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: row_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: b_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: c_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: params_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("spmm PL"),
-                    bind_group_layouts: &[&bgl],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("spmm_f64"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("spmm"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("spmm"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            pass.dispatch_workgroups((output_size as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
+        ComputeDispatch::new(device, "spmm_f64")
+            .shader(
+                include_str!("../shaders/sparse/spmm_f64.wgsl"),
+                "main",
+            )
+            .f64()
+            .storage_read(0, &values_buf)
+            .storage_read(1, &col_buf)
+            .storage_read(2, &row_buf)
+            .storage_read(3, &b_buf)
+            .storage_rw(4, &c_buf)
+            .uniform(5, &params_buf)
+            .dispatch_1d(output_size as u32)
+            .submit()?;
 
         let staging = device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("spmm:staging"),
             size: (output_size * std::mem::size_of::<f64>()) as u64,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
+        });
+        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+            label: Some("spmm readback"),
         });
         encoder.copy_buffer_to_buffer(
             &c_buf,
@@ -211,32 +146,6 @@ impl SparseGemmF64<'_> {
                 contents: bytemuck::cast_slice(data),
                 usage: wgpu::BufferUsages::STORAGE,
             })
-    }
-}
-
-fn storage_entry(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

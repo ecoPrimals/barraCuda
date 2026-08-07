@@ -68,7 +68,7 @@ impl InstanceNorm {
 
         ComputeDispatch::new(device, "InstanceNorm")
             .shader(include_str!("../shaders/norm/instance_norm_f64.wgsl"), "main")
-            .storage_read(0, &input_buffer)
+            .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d((batch * channels) as u32)

@@ -15,7 +15,7 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 
 /// WGSL source for batch fitness evaluation (f32).
 pub const WGSL_BATCH_FITNESS_EVAL: &str = include_str!("../../shaders/ml/batch_fitness_eval.wgsl");
@@ -33,8 +33,6 @@ struct FitnessParams {
 
 /// Batch fitness evaluation GPU kernel (f64 pipeline).
 pub struct BatchFitnessGpu {
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
     device: Arc<WgpuDevice>,
 }
 
@@ -42,77 +40,7 @@ impl BatchFitnessGpu {
     /// Create batch fitness GPU kernel.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
-        let d = device.device();
-
-        let bgl = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("BatchFitness BGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
-        });
-
-        let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("BatchFitness Layout"),
-            bind_group_layouts: &[&bgl],
-            immediate_size: 0,
-        });
-
-        let module =
-            device.compile_shader_f64(WGSL_BATCH_FITNESS_EVAL_F64, Some("BatchFitness f64"));
-
-        let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("BatchFitness Pipeline"),
-            layout: Some(&layout),
-            module: &module,
-            entry_point: Some("batch_fitness_linear"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
-
-        Self {
-            pipeline,
-            bgl,
-            device,
-        }
+        Self { device }
     }
 
     /// Evaluate linear fitness for `pop_size` individuals, each with `genome_len` traits.
@@ -120,6 +48,7 @@ impl BatchFitnessGpu {
     /// `population_buf`: `[pop_size × genome_len]` f64 (row-major genotypes)
     /// `weights_buf`:    `[genome_len]` f64
     /// `fitness_buf`:    `[pop_size]` f64 (output)
+    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
     pub fn dispatch(
         &self,
         population_buf: &wgpu::Buffer,
@@ -129,7 +58,6 @@ impl BatchFitnessGpu {
         genome_len: u32,
     ) {
         let d = self.device.device();
-        let q = self.device.queue();
 
         let params = FitnessParams {
             pop_size,
@@ -141,44 +69,16 @@ impl BatchFitnessGpu {
             usage: wgpu::BufferUsages::UNIFORM,
         });
 
-        let bg = d.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("BatchFitness BG"),
-            layout: &self.bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: population_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: weights_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: fitness_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: params_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("BatchFitness Encoder"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("BatchFitness Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(pop_size.div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
-        q.submit(std::iter::once(encoder.finish()));
+        ComputeDispatch::new(&self.device, "BatchFitness")
+            .shader(WGSL_BATCH_FITNESS_EVAL_F64, "batch_fitness_linear")
+            .f64()
+            .storage_read(0, population_buf)
+            .storage_read(1, weights_buf)
+            .storage_rw(2, fitness_buf)
+            .uniform(3, &params_buf)
+            .dispatch_1d(pop_size)
+            .submit()
+            .expect("BatchFitness GPU dispatch failed");
     }
 }
 

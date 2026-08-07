@@ -18,8 +18,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 const WGSL_SPATIAL_PAYOFF: &str = include_str!("../../shaders/math/spatial_payoff_f64.wgsl");
 
@@ -34,8 +34,6 @@ struct PayoffParams {
 
 /// GPU spatial payoff (evolutionary game) computation.
 pub struct SpatialPayoffGpu {
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
     device: Arc<WgpuDevice>,
 }
 
@@ -43,69 +41,7 @@ impl SpatialPayoffGpu {
     /// Create spatial payoff calculator.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
-        let d = device.device();
-
-        let bgl = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("SpatialPayoff BGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
-        });
-
-        let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("SpatialPayoff Layout"),
-            bind_group_layouts: &[&bgl],
-            immediate_size: 0,
-        });
-
-        let module = d.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("SpatialPayoff Shader"),
-            source: wgpu::ShaderSource::Wgsl(WGSL_SPATIAL_PAYOFF.into()),
-        });
-
-        let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("SpatialPayoff Pipeline"),
-            layout: Some(&layout),
-            module: &module,
-            entry_point: Some("spatial_payoff"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
-
-        Self {
-            pipeline,
-            bgl,
-            device,
-        }
+        Self { device }
     }
 
     /// Compute spatial PD payoffs for a `grid_size × grid_size` grid.
@@ -113,6 +49,7 @@ impl SpatialPayoffGpu {
     /// `grid_buf`: `[grid_size²]` u32 (0 = defector, 1 = cooperator)
     /// `fitness_buf`: `[grid_size²]` f32 (cumulative payoff)
     /// `benefit` / `cost`: PD parameters (encoded as x1000 integers internally)
+    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
     pub fn dispatch(
         &self,
         grid_buf: &wgpu::Buffer,
@@ -122,7 +59,6 @@ impl SpatialPayoffGpu {
         cost: f32,
     ) {
         let d = self.device.device();
-        let q = self.device.queue();
 
         let params = PayoffParams {
             grid_size,
@@ -138,39 +74,13 @@ impl SpatialPayoffGpu {
 
         let total = grid_size * grid_size;
 
-        let bg = d.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("SpatialPayoff BG"),
-            layout: &self.bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: grid_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: fitness_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("SpatialPayoff Encoder"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("SpatialPayoff Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(total.div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
-        q.submit(std::iter::once(encoder.finish()));
+        ComputeDispatch::new(&self.device, "SpatialPayoff")
+            .shader(WGSL_SPATIAL_PAYOFF, "spatial_payoff")
+            .storage_read(0, grid_buf)
+            .storage_rw(1, fitness_buf)
+            .uniform(2, &params_buf)
+            .dispatch_1d(total)
+            .submit()
+            .expect("SpatialPayoff GPU dispatch failed");
     }
 }

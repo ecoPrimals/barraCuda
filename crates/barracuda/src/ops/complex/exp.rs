@@ -5,15 +5,13 @@
 //! **Complexity**: O(1) - 1 exp + 2 trig functions
 //! **CRITICAL**: This is THE operation for FFT twiddle factors `W_N^k` = exp(-2πik/N)
 
-use crate::device::{DeviceCapabilities, WorkloadType};
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
 /// Complex exponential: exp(z) = exp(re)·[cos(im) + i·sin(im)] (Euler's formula).
 pub struct ComplexExp {
     input: Tensor,
-    pipeline: wgpu::ComputePipeline,
-    bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl ComplexExp {
@@ -31,73 +29,7 @@ impl ComplexExp {
             ));
         }
 
-        let device = input.device();
-        let shader = device.compile_shader(include_str!("exp.wgsl"), Some("Complex Exp Shader"));
-
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("Complex Exp Bind Group Layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("Complex Exp Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("Complex Exp Pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        Ok(Self {
-            input,
-            pipeline,
-            bind_group_layout,
-        })
+        Ok(Self { input })
     }
 
     /// Execute complex exponential on GPU.
@@ -109,6 +41,7 @@ impl ComplexExp {
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let num_elements = self.input.len();
+        let num_complex = num_elements / 2;
 
         let output_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Complex Exp Output"),
@@ -117,7 +50,7 @@ impl ComplexExp {
             mapped_at_creation: false,
         });
 
-        let params = [num_elements as u32 / 2];
+        let params = [num_complex as u32];
         let params_buffer = device
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -126,47 +59,13 @@ impl ComplexExp {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Complex Exp Bind Group"),
-            layout: &self.bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.input.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("Complex Exp Encoder"),
-        });
-
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Complex Exp Compute Pass"),
-                timestamp_writes: None,
-            });
-
-            compute_pass.set_pipeline(&self.pipeline);
-            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
-
-            let caps = DeviceCapabilities::from_device(device);
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::ElementWise);
-            let num_complex = num_elements / 2;
-            let workgroups = (num_complex as u32).div_ceil(optimal_wg_size);
-
-            compute_pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(device, "ComplexExp")
+            .shader(include_str!("exp.wgsl"), "main")
+            .storage_read(0, self.input.buffer())
+            .storage_rw(1, &output_buffer)
+            .uniform(2, &params_buffer)
+            .dispatch_1d(num_complex as u32)
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,

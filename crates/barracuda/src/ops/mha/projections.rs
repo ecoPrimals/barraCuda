@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use super::{MhaParams, MultiHeadAttention};
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
@@ -108,57 +108,13 @@ impl MultiHeadAttention {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device.compile_shader(
-            crate::session::pipelines::HEAD_SPLIT_F32,
-            Some("head_split"),
-        );
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("head_split BGL"),
-                entries: &[
-                    Self::storage_entry(0, true),
-                    Self::storage_entry(1, false),
-                    Self::uniform_entry(2),
-                ],
-            });
-
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("head_split BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let pipeline = Self::make_pipeline(device, &shader, &bgl, "head_split");
-        let workgroups = (total as u32).div_ceil(WORKGROUP_SIZE_1D);
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("head_split"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("head_split"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(device, "head_split")
+            .shader(crate::session::pipelines::HEAD_SPLIT_F32, "main")
+            .storage_read(0, input.buffer())
+            .storage_rw(1, &output_buffer)
+            .uniform(2, &params_buffer)
+            .dispatch_1d(total as u32)
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
@@ -193,113 +149,18 @@ impl MultiHeadAttention {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device.compile_shader(
-            crate::session::pipelines::HEAD_CONCAT_F32,
-            Some("head_concat"),
-        );
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("head_concat BGL"),
-                entries: &[
-                    Self::storage_entry(0, true),
-                    Self::storage_entry(1, false),
-                    Self::uniform_entry(2),
-                ],
-            });
-
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("head_concat BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let pipeline = Self::make_pipeline(device, &shader, &bgl, "head_concat");
-        let workgroups = (total as u32).div_ceil(WORKGROUP_SIZE_1D);
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("head_concat"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("head_concat"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(device, "head_concat")
+            .shader(crate::session::pipelines::HEAD_CONCAT_F32, "main")
+            .storage_read(0, input.buffer())
+            .storage_rw(1, &output_buffer)
+            .uniform(2, &params_buffer)
+            .dispatch_1d(total as u32)
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,
             vec![batch_size, seq_len, d_model],
             device.clone(),
         ))
-    }
-
-    fn storage_entry(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-        wgpu::BindGroupLayoutEntry {
-            binding,
-            visibility: wgpu::ShaderStages::COMPUTE,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Storage { read_only },
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-            count: None,
-        }
-    }
-
-    fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-        wgpu::BindGroupLayoutEntry {
-            binding,
-            visibility: wgpu::ShaderStages::COMPUTE,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-            count: None,
-        }
-    }
-
-    fn make_pipeline(
-        device: &WgpuDevice,
-        shader: &wgpu::ShaderModule,
-        bgl: &wgpu::BindGroupLayout,
-        label: &str,
-    ) -> wgpu::ComputePipeline {
-        let layout = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some(label),
-                bind_group_layouts: &[bgl],
-                immediate_size: 0,
-            });
-        device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some(label),
-                layout: Some(&layout),
-                module: shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            })
     }
 }

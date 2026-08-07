@@ -20,7 +20,7 @@
 //!   k_bio, K_bio, n_bio, d_bio]`
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -90,10 +90,6 @@ impl BatchedOdeRK4F64 {
     pub const N_VARS: usize = 5;
     /// Number of parameters per trajectory.
     pub const N_PARAMS: usize = 17;
-
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/numerical/batched_qs_ode_rk4_f64.wgsl")
-    }
 
     /// Create a new batched integrator.
     #[must_use]
@@ -174,87 +170,19 @@ impl BatchedOdeRK4F64 {
             mapped_at_creation: false,
         });
 
-        let bgl = dev
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("BatchedOdeRK4 BGL"),
-                entries: &[
-                    bgl_entry(0, wgpu::BufferBindingType::Uniform),
-                    bgl_entry(1, wgpu::BufferBindingType::Storage { read_only: true }),
-                    bgl_entry(2, wgpu::BufferBindingType::Storage { read_only: true }),
-                    bgl_entry(3, wgpu::BufferBindingType::Storage { read_only: false }),
-                ],
-            });
-
-        let bg = dev.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("BatchedOdeRK4 BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: cfg_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: init_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: param_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: out_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let shader = dev.compile_shader_f64(Self::wgsl_shader(), Some("BatchedOdeRK4"));
-        let pl = dev
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("BatchedOdeRK4 PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-        let pipeline = dev
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("BatchedOdeRK4 Pipeline"),
-                layout: Some(&pl),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("BatchedOdeRK4 Encoder"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("BatchedOdeRK4 Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups((b as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
-        dev.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(dev, "BatchedOdeRK4")
+            .shader(
+                include_str!("../shaders/numerical/batched_qs_ode_rk4_f64.wgsl"),
+                "main",
+            )
+            .f64()
+            .uniform(0, &cfg_buf)
+            .storage_read(1, &init_buf)
+            .storage_read(2, &param_buf)
+            .storage_rw(3, &out_buf)
+            .dispatch_1d(b as u32)
+            .submit()?;
 
         crate::utils::read_buffer_f64(dev, &out_buf, b * Self::N_VARS)
-    }
-}
-
-fn bgl_entry(idx: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding: idx,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }

@@ -75,9 +75,6 @@ pub struct FheNtt {
     root_of_unity: u64,
     barrett_mu: u64,
     twiddle_factors: Vec<u64>,
-    pipeline_butterfly: wgpu::ComputePipeline,
-    pipeline_bit_reverse: wgpu::ComputePipeline,
-    bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl FheNtt {
@@ -132,101 +129,6 @@ impl FheNtt {
         // Precompute twiddle factors: ω^0, ω^1, ..., ω^(N-1)
         let twiddle_factors = compute_twiddle_factors(degree, modulus, root_of_unity);
 
-        let device = input.device();
-
-        // Load shaders
-        let shader = device.compile_shader(include_str!("../fhe_ntt.wgsl"), Some("FHE NTT Shader"));
-
-        // Bind group layout (will be used for both pipelines)
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("FHE NTT Bind Group Layout"),
-                    entries: &[
-                        // Input buffer
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // Output buffer
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // Twiddle factors
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // Parameters
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        // Pipeline layout
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("FHE NTT Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        // Butterfly pipeline
-        let pipeline_butterfly =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("FHE NTT Butterfly Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader,
-                    entry_point: Some("main"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        // Bit-reversal pipeline
-        let pipeline_bit_reverse =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("FHE NTT Bit Reverse Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader,
-                    entry_point: Some("bit_reverse"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
         Ok(Self {
             input,
             degree,
@@ -234,9 +136,6 @@ impl FheNtt {
             root_of_unity,
             barrett_mu,
             twiddle_factors,
-            pipeline_butterfly,
-            pipeline_bit_reverse,
-            bind_group_layout,
         })
     }
 
@@ -268,21 +167,6 @@ impl FheNtt {
     /// Get twiddle factors
     pub(super) fn twiddle_factors(&self) -> &[u64] {
         &self.twiddle_factors
-    }
-
-    /// Get butterfly pipeline
-    pub(super) fn pipeline_butterfly(&self) -> &wgpu::ComputePipeline {
-        &self.pipeline_butterfly
-    }
-
-    /// Get bit reverse pipeline
-    pub(super) fn pipeline_bit_reverse(&self) -> &wgpu::ComputePipeline {
-        &self.pipeline_bit_reverse
-    }
-
-    /// Get bind group layout
-    pub(super) fn bind_group_layout(&self) -> &wgpu::BindGroupLayout {
-        &self.bind_group_layout
     }
 }
 

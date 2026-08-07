@@ -9,7 +9,7 @@
 //! - Hardware-agnostic via WebGPU
 //! - Complete implementation (production-ready)
 
-use crate::device::{DeviceCapabilities, WorkloadType};
+use crate::device::compute_pipeline::{BatchedComputeDispatch, ComputeDispatch};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
@@ -88,13 +88,6 @@ impl SageConv {
         })
     }
 
-    fn wgsl_shader() -> &'static str {
-        {
-            const SHADER: &str = include_str!("../shaders/gnn/sage_conv_f64.wgsl");
-            SHADER
-        }
-    }
-
     /// Execute the `GraphSAGE` convolution and return the output node features.
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
@@ -167,224 +160,47 @@ impl SageConv {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
 
-        // Compile shader
-        let shader_module = device.compile_shader(Self::wgsl_shader(), Some("SAGEConv Shader"));
-
-        // Create bind group layout
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("SAGEConv Bind Group Layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 4,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 5,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 6,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        // Create bind group
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("SAGEConv Bind Group"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.node_features.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: edge_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: self.weights.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: degrees_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: aggregated_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 6,
-                    resource: output_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        // Create pipeline layout
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("SAGEConv Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        // Create encoder
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("SAGEConv Encoder"),
-        });
-
-        // Step 1: Aggregate neighbors
-        let aggregate_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("SAGEConv Aggregate Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: Some("aggregate"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("SAGEConv Aggregate Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&aggregate_pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            // Deep Debt Evolution: Capability-based dispatch
-            let caps = DeviceCapabilities::from_device(device);
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);
-            let workgroups = (self.num_edges as u32).div_ceil(optimal_wg_size);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        // Step 2: Apply transformation
-        let transform_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("SAGEConv Transform Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: Some("apply_transform"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("SAGEConv Transform Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&transform_pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            // Deep Debt Evolution: Capability-based dispatch
-            let caps = DeviceCapabilities::from_device(device);
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);
-            let workgroups = (self.num_nodes as u32).div_ceil(optimal_wg_size);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        // Step 3: Normalize output (if enabled)
+        let shader_source = include_str!("../shaders/gnn/sage_conv_f64.wgsl");
+        let mut batch = BatchedComputeDispatch::new(device);
+        batch.push(
+            ComputeDispatch::new(device, "SAGEConv Aggregate")
+                .shader(shader_source, "aggregate")
+                .uniform(0, &params_buffer)
+                .storage_read(1, self.node_features.buffer())
+                .storage_read(2, &edge_buffer)
+                .storage_read(3, self.weights.buffer())
+                .storage_read(4, &degrees_buffer)
+                .storage_rw(5, &aggregated_buffer)
+                .storage_rw(6, &output_buffer)
+                .dispatch_1d(self.num_edges as u32),
+        )?;
+        batch.push(
+            ComputeDispatch::new(device, "SAGEConv Transform")
+                .shader(shader_source, "apply_transform")
+                .uniform(0, &params_buffer)
+                .storage_read(1, self.node_features.buffer())
+                .storage_read(2, &edge_buffer)
+                .storage_read(3, self.weights.buffer())
+                .storage_read(4, &degrees_buffer)
+                .storage_rw(5, &aggregated_buffer)
+                .storage_rw(6, &output_buffer)
+                .dispatch_1d(self.num_nodes as u32),
+        )?;
         if self.normalize {
-            let normalize_pipeline =
-                device
-                    .device
-                    .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                        label: Some("SAGEConv Normalize Pipeline"),
-                        layout: Some(&pipeline_layout),
-                        module: &shader_module,
-                        entry_point: Some("normalize_output"),
-                        cache: None,
-                        compilation_options: Default::default(),
-                    });
-
-            {
-                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("SAGEConv Normalize Pass"),
-                    timestamp_writes: None,
-                });
-                pass.set_pipeline(&normalize_pipeline);
-                pass.set_bind_group(0, Some(&bind_group), &[]);
-                // Deep Debt Evolution: Capability-based dispatch
-                let caps = DeviceCapabilities::from_device(device);
-                let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);
-                let workgroups = (self.num_nodes as u32).div_ceil(optimal_wg_size);
-                pass.dispatch_workgroups(workgroups, 1, 1);
-            }
+            batch.push(
+                ComputeDispatch::new(device, "SAGEConv Normalize")
+                    .shader(shader_source, "normalize_output")
+                    .uniform(0, &params_buffer)
+                    .storage_read(1, self.node_features.buffer())
+                    .storage_read(2, &edge_buffer)
+                    .storage_read(3, self.weights.buffer())
+                    .storage_read(4, &degrees_buffer)
+                    .storage_rw(5, &aggregated_buffer)
+                    .storage_rw(6, &output_buffer)
+                    .dispatch_1d(self.num_nodes as u32),
+            )?;
         }
-
-        device.submit_commands(Some(encoder.finish()));
+        batch.submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,

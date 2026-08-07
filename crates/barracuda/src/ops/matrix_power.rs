@@ -7,7 +7,7 @@
 //! - Self-knowledge: Validates square matrix
 //! - Modern idiomatic Rust: Result<T, E>
 
-use crate::device::DeviceCapabilities;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::ops::matmul::MatMul;
 use crate::tensor::Tensor;
@@ -101,100 +101,12 @@ impl MatrixPower {
                         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                     });
 
-            // Compile shader
-            let shader_module =
-                device.compile_shader(Self::wgsl_shader(), Some("MatrixPower Shader"));
-
-            // Create bind group layout
-            let bind_group_layout =
-                device
-                    .device
-                    .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                        label: Some("MatrixPower Identity Bind Group Layout"),
-                        entries: &[
-                            wgpu::BindGroupLayoutEntry {
-                                binding: 0,
-                                visibility: wgpu::ShaderStages::COMPUTE,
-                                ty: wgpu::BindingType::Buffer {
-                                    ty: wgpu::BufferBindingType::Uniform,
-                                    has_dynamic_offset: false,
-                                    min_binding_size: None,
-                                },
-                                count: None,
-                            },
-                            wgpu::BindGroupLayoutEntry {
-                                binding: 3,
-                                visibility: wgpu::ShaderStages::COMPUTE,
-                                ty: wgpu::BindingType::Buffer {
-                                    ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                    has_dynamic_offset: false,
-                                    min_binding_size: None,
-                                },
-                                count: None,
-                            },
-                        ],
-                    });
-
-            // Create bind group
-            let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("MatrixPower Identity Bind Group"),
-                layout: &bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: params_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: identity_buffer.as_entire_binding(),
-                    },
-                ],
-            });
-
-            // Create pipeline layout
-            let pipeline_layout =
-                device
-                    .device
-                    .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                        label: Some("MatrixPower Identity Pipeline Layout"),
-                        bind_group_layouts: &[&bind_group_layout],
-                        immediate_size: 0,
-                    });
-
-            // Create pipeline
-            let pipeline =
-                device
-                    .device
-                    .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                        label: Some("MatrixPower Identity Pipeline"),
-                        layout: Some(&pipeline_layout),
-                        module: &shader_module,
-                        entry_point: Some("init_identity"),
-                        cache: None,
-                        compilation_options: Default::default(),
-                    });
-
-            // Encode and execute
-            let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("MatrixPower Identity Encoder"),
-            });
-
-            {
-                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("MatrixPower Identity Pass"),
-                    timestamp_writes: None,
-                });
-
-                pass.set_pipeline(&pipeline);
-                pass.set_bind_group(0, Some(&bind_group), &[]);
-
-                // Dispatch using standard 2D shader workgroup size (16, 16)
-                let caps = DeviceCapabilities::from_device(device);
-                let (workgroups_x, workgroups_y) = caps.dispatch_2d(size as u32, size as u32);
-                pass.dispatch_workgroups(workgroups_x, workgroups_y, 1);
-            }
-
-            device.submit_commands(Some(encoder.finish()));
+            ComputeDispatch::new(device, "MatrixPower Identity")
+                .shader(Self::wgsl_shader(), "init_identity")
+                .uniform(0, &params_buffer)
+                .storage_rw(3, &identity_buffer)
+                .dispatch(size as u32, size as u32, 1)
+                .submit()?;
 
             let output_shape = shape.to_vec();
             let output_elem_count = output_shape.iter().product::<usize>();

@@ -16,8 +16,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 
 /// WGSL source for stencil cooperation (f32).
 pub const WGSL_STENCIL_COOPERATION: &str =
@@ -40,8 +40,6 @@ struct StencilParams {
 ///
 /// Updates strategy grid based on fitness comparison with Moore neighbors.
 pub struct StencilCooperationGpu {
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
     device: Arc<WgpuDevice>,
 }
 
@@ -49,41 +47,7 @@ impl StencilCooperationGpu {
     /// Create stencil cooperation kernel.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
-        let d = device.device();
-
-        let bgl = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("StencilCoop BGL"),
-            entries: &[
-                storage_entry(0, true),  // strategies
-                storage_entry(1, true),  // fitness
-                storage_entry(2, false), // new_strategies
-                uniform_entry(3),        // params
-            ],
-        });
-
-        let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("StencilCoop Layout"),
-            bind_group_layouts: &[&bgl],
-            immediate_size: 0,
-        });
-
-        let module =
-            device.compile_shader_f64(WGSL_STENCIL_COOPERATION_F64, Some("StencilCoop f64"));
-
-        let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("StencilCoop Pipeline"),
-            layout: Some(&layout),
-            module: &module,
-            entry_point: Some("stencil_update"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
-
-        Self {
-            pipeline,
-            bgl,
-            device,
-        }
+        Self { device }
     }
 
     /// Dispatch one imitation dynamics step.
@@ -93,6 +57,7 @@ impl StencilCooperationGpu {
     /// `new_strategies_buf`: `[grid_size²]` u32 — output strategies
     /// `kappa`:              selection intensity (temperature)
     /// `step`:               current generation (for neighbor rotation)
+    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
     pub fn dispatch(
         &self,
         strategies_buf: &wgpu::Buffer,
@@ -103,7 +68,6 @@ impl StencilCooperationGpu {
         step: u32,
     ) {
         let d = self.device.device();
-        let q = self.device.queue();
 
         let params = StencilParams {
             grid_size,
@@ -118,70 +82,17 @@ impl StencilCooperationGpu {
         });
 
         let total = grid_size * grid_size;
-        let bg = d.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("StencilCoop BG"),
-            layout: &self.bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: strategies_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: fitness_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: new_strategies_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: params_buf.as_entire_binding(),
-                },
-            ],
-        });
 
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("StencilCoop"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("StencilCoop Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(total.div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
-        q.submit(std::iter::once(encoder.finish()));
-    }
-}
-
-fn storage_entry(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
+        ComputeDispatch::new(&self.device, "StencilCoop")
+            .shader(WGSL_STENCIL_COOPERATION_F64, "stencil_update")
+            .f64()
+            .storage_read(0, strategies_buf)
+            .storage_read(1, fitness_buf)
+            .storage_rw(2, new_strategies_buf)
+            .uniform(3, &params_buf)
+            .dispatch_1d(total)
+            .submit()
+            .expect("StencilCoop GPU dispatch failed");
     }
 }
 

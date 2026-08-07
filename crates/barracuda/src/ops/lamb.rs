@@ -10,7 +10,7 @@
 //! - Hardware-agnostic via WebGPU
 //! - Complete implementation (production-ready)
 
-use crate::device::{DeviceCapabilities, WorkloadType};
+use crate::device::compute_pipeline::{BatchedComputeDispatch, ComputeDispatch};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
@@ -116,10 +116,6 @@ impl Lamb {
         })
     }
 
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/optimizer/lamb_f64.wgsl")
-    }
-
     /// Execute LAMB optimizer step.
     ///
     /// # Errors
@@ -206,197 +202,33 @@ impl Lamb {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
 
-        // Compile shader
-        let shader_module = device.compile_shader(Self::wgsl_shader(), Some("LAMB Shader"));
-
-        // Create bind group layout
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("LAMB Bind Group Layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 4,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 5,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 6,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        // Create bind group
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("LAMB Bind Group"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: parameters_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: self.gradients.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: m_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: v_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: adam_step_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 6,
-                    resource: output_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        // Create pipeline layout
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("LAMB Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        // Create encoder
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("LAMB Encoder"),
-        });
-
-        // Step 1: Compute Adam step
-        let adam_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("LAMB Adam Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: Some("compute_adam_step"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("LAMB Adam Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&adam_pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            // Deep Debt Evolution: Capability-based dispatch
-            let caps = DeviceCapabilities::from_device(device);
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::ElementWise);
-            let workgroups = (size as u32).div_ceil(optimal_wg_size);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        // Step 2: Apply trust ratio
-        let trust_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("LAMB Trust Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: Some("apply_trust_ratio"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("LAMB Trust Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&trust_pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            // Deep Debt Evolution: Capability-based dispatch
-            // Trust ratio computation is a reduction over parameters
-            let caps = DeviceCapabilities::from_device(device);
-            let param_size = self.parameters.shape().iter().product::<usize>();
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::Reduction);
-            let workgroups = (param_size as u32).div_ceil(optimal_wg_size);
-            pass.dispatch_workgroups(workgroups.max(1), 1, 1);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
+        let shader_source = include_str!("../shaders/optimizer/lamb_f64.wgsl");
+        let mut batch = BatchedComputeDispatch::new(device);
+        batch.push(
+            ComputeDispatch::new(device, "LAMB Adam")
+                .shader(shader_source, "compute_adam_step")
+                .uniform(0, &params_buffer)
+                .storage_read(1, &parameters_buffer)
+                .storage_read(2, self.gradients.buffer())
+                .storage_rw(3, &m_buffer)
+                .storage_rw(4, &v_buffer)
+                .storage_rw(5, &adam_step_buffer)
+                .storage_rw(6, &output_buffer)
+                .dispatch_1d(size as u32),
+        )?;
+        batch.push(
+            ComputeDispatch::new(device, "LAMB Trust")
+                .shader(shader_source, "apply_trust_ratio")
+                .uniform(0, &params_buffer)
+                .storage_read(1, &parameters_buffer)
+                .storage_read(2, self.gradients.buffer())
+                .storage_rw(3, &m_buffer)
+                .storage_rw(4, &v_buffer)
+                .storage_rw(5, &adam_step_buffer)
+                .storage_rw(6, &output_buffer)
+                .dispatch(1, 1, 1),
+        )?;
+        batch.submit()?;
 
         let updated_params = Tensor::from_buffer(
             output_buffer,

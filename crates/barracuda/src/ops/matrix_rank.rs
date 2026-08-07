@@ -7,7 +7,7 @@
 //! - Self-knowledge: Validates matrix dimensions
 //! - Modern idiomatic Rust: Result<T, E>
 
-use crate::device::{DeviceCapabilities, WorkloadType};
+use crate::device::compute_pipeline::{BatchedComputeDispatch, ComputeDispatch};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
@@ -89,186 +89,41 @@ impl MatrixRank {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
 
-        // Unified bind group layout with all 4 bindings (required by WGSL module)
-        let unified_bgl =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("MatrixRank Unified BGL"),
-                    entries: &[
-                        // binding 0: uniform params
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // binding 1: storage read (input matrix)
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // binding 2: storage read-write (work matrix)
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // binding 3: storage read-write (rank output)
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        // Unified bind group with all 4 buffers
-        let unified_bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("MatrixRank Unified BG"),
-            layout: &unified_bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.input.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: work_matrix_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: rank_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let shader = device.compile_shader(Self::wgsl_shader(), Some("MatrixRank"));
-        let unified_pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("MatrixRank Pipeline Layout"),
-                    bind_group_layouts: &[&unified_bgl],
-                    immediate_size: 0,
-                });
-
-        let copy_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("MatrixRank Copy Pipeline"),
-                    layout: Some(&unified_pipeline_layout),
-                    module: &shader,
-                    entry_point: Some("copy_matrix"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("MatrixRank Encoder"),
-        });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("MatrixRank Copy Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&copy_pipeline);
-            pass.set_bind_group(0, Some(&unified_bind_group), &[]);
-            // Deep Debt Evolution: Capability-based dispatch
-            let caps = DeviceCapabilities::from_device(device);
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);
-            let workgroups = (total_elements as u32).div_ceil(optimal_wg_size);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        // Step 2: Gaussian elimination (sequential passes for each pivot)
+        let shader_src = Self::wgsl_shader();
         let min_dim = rows.min(cols);
+        let mut batch = BatchedComputeDispatch::new(device);
 
-        let gaussian_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("MatrixRank Gaussian Pipeline"),
-                    layout: Some(&unified_pipeline_layout),
-                    module: &shader,
-                    entry_point: Some("gaussian_elimination"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
+        batch.push(
+            ComputeDispatch::new(device, "MatrixRank Copy")
+                .shader(shader_src, "copy_matrix")
+                .uniform(0, &params_buffer)
+                .storage_read(1, self.input.buffer())
+                .storage_rw(2, &work_matrix_buffer)
+                .storage_rw(3, &rank_buffer)
+                .dispatch_1d(total_elements as u32),
+        )?;
 
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("MatrixRank Gaussian Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&gaussian_pipeline);
-            pass.set_bind_group(0, Some(&unified_bind_group), &[]);
-            // Deep Debt Evolution: Capability-based dispatch
-            // Dispatch one workgroup per pivot row (algorithm-specific pattern)
-            // For Gaussian elimination, we dispatch one workgroup per row
-            // The workgroup size is determined by the shader, but we ensure capability awareness
-            let caps = DeviceCapabilities::from_device(device);
-            let _optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);
-            // Algorithm requires one workgroup per row for Gaussian elimination
-            // This is algorithm-specific, but we ensure capability awareness is present
-            pass.dispatch_workgroups(min_dim as u32, 1, 1);
-        }
+        batch.push(
+            ComputeDispatch::new(device, "MatrixRank Gaussian")
+                .shader(shader_src, "gaussian_elimination")
+                .uniform(0, &params_buffer)
+                .storage_read(1, self.input.buffer())
+                .storage_rw(2, &work_matrix_buffer)
+                .storage_rw(3, &rank_buffer)
+                .dispatch(min_dim as u32, 1, 1),
+        )?;
 
-        // Step 3: Count rank
-        let count_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("MatrixRank Count Pipeline"),
-                    layout: Some(&unified_pipeline_layout),
-                    module: &shader,
-                    entry_point: Some("count_rank"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
+        batch.push(
+            ComputeDispatch::new(device, "MatrixRank Count")
+                .shader(shader_src, "count_rank")
+                .uniform(0, &params_buffer)
+                .storage_read(1, self.input.buffer())
+                .storage_rw(2, &work_matrix_buffer)
+                .storage_rw(3, &rank_buffer)
+                .dispatch_1d(rows as u32),
+        )?;
 
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("MatrixRank Count Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&count_pipeline);
-            pass.set_bind_group(0, Some(&unified_bind_group), &[]);
-            // Deep Debt Evolution: Capability-based dispatch
-            // Count rank scans through rows to count non-zero rows (reduction)
-            let caps = DeviceCapabilities::from_device(device);
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::Reduction);
-            let workgroups = (rows as u32).div_ceil(optimal_wg_size);
-            pass.dispatch_workgroups(workgroups.max(1), 1, 1);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
+        batch.submit()?;
 
         // Read rank result
         let staging_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {

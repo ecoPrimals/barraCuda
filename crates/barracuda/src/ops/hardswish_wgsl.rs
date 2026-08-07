@@ -56,7 +56,7 @@ impl Hardswish {
                 include_str!("../shaders/activation/hardswish_f64.wgsl"),
                 "main",
             )
-            .storage_read(0, &input_buffer)
+            .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(size as u32)

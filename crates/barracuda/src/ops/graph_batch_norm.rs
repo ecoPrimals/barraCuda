@@ -10,7 +10,7 @@
 //! - Hardware-agnostic via WebGPU
 //! - Complete implementation (production-ready)
 
-use crate::device::{DeviceCapabilities, WorkloadType};
+use crate::device::compute_pipeline::{BatchedComputeDispatch, ComputeDispatch};
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
@@ -78,13 +78,6 @@ impl GraphBatchNorm {
         })
     }
 
-    fn wgsl_shader() -> &'static str {
-        {
-            const SHADER: &str = include_str!("../shaders/norm/graph_batch_norm_f64.wgsl");
-            SHADER
-        }
-    }
-
     /// Execute graph batch normalization.
     ///
     /// # Errors
@@ -127,222 +120,45 @@ impl GraphBatchNorm {
             });
 
         // Compile shader
-        let shader_module =
-            device.compile_shader(Self::wgsl_shader(), Some("GraphBatchNorm Shader"));
-
-        // Create bind group layout
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("GraphBatchNorm Bind Group Layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 4,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 5,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 6,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        // Create bind group
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("GraphBatchNorm Bind Group"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.input.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: self.gamma.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: self.beta.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: mean_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 6,
-                    resource: variance_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        // Create pipeline layout
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("GraphBatchNorm Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        // Create encoder
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("GraphBatchNorm Encoder"),
-        });
-
-        // Step 1: Compute mean
-        let mean_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("GraphBatchNorm Mean Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: Some("compute_mean"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("GraphBatchNorm Mean Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&mean_pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            // Deep Debt Evolution: Capability-based dispatch
-            let caps = DeviceCapabilities::from_device(device);
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::Reduction);
-            let workgroups = (self.num_features as u32).div_ceil(optimal_wg_size);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        // Step 2: Compute variance
-        let variance_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("GraphBatchNorm Variance Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: Some("compute_variance"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("GraphBatchNorm Variance Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&variance_pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            // Deep Debt Evolution: Capability-based dispatch
-            let caps = DeviceCapabilities::from_device(device);
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::Reduction);
-            let workgroups = (self.num_features as u32).div_ceil(optimal_wg_size);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        // Step 3: Normalize, scale, and shift
-        let normalize_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("GraphBatchNorm Normalize Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: Some("normalize"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("GraphBatchNorm Normalize Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&normalize_pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            // Deep Debt Evolution: Capability-based dispatch
-            let caps = DeviceCapabilities::from_device(device);
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::Reduction);
-            let workgroups = (output_size as u32).div_ceil(optimal_wg_size);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
+        let shader_source = include_str!("../shaders/norm/graph_batch_norm_f64.wgsl");
+        let mut batch = BatchedComputeDispatch::new(device);
+        batch.push(
+            ComputeDispatch::new(device, "GraphBatchNorm Mean")
+                .shader(shader_source, "compute_mean")
+                .uniform(0, &params_buffer)
+                .storage_read(1, self.input.buffer())
+                .storage_read(2, self.gamma.buffer())
+                .storage_read(3, self.beta.buffer())
+                .storage_rw(4, &output_buffer)
+                .storage_rw(5, &mean_buffer)
+                .storage_rw(6, &variance_buffer)
+                .dispatch_1d(self.num_features as u32),
+        )?;
+        batch.push(
+            ComputeDispatch::new(device, "GraphBatchNorm Variance")
+                .shader(shader_source, "compute_variance")
+                .uniform(0, &params_buffer)
+                .storage_read(1, self.input.buffer())
+                .storage_read(2, self.gamma.buffer())
+                .storage_read(3, self.beta.buffer())
+                .storage_rw(4, &output_buffer)
+                .storage_rw(5, &mean_buffer)
+                .storage_rw(6, &variance_buffer)
+                .dispatch_1d(self.num_features as u32),
+        )?;
+        batch.push(
+            ComputeDispatch::new(device, "GraphBatchNorm Normalize")
+                .shader(shader_source, "normalize")
+                .uniform(0, &params_buffer)
+                .storage_read(1, self.input.buffer())
+                .storage_read(2, self.gamma.buffer())
+                .storage_read(3, self.beta.buffer())
+                .storage_rw(4, &output_buffer)
+                .storage_rw(5, &mean_buffer)
+                .storage_rw(6, &variance_buffer)
+                .dispatch_1d(output_size as u32),
+        )?;
+        batch.submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,

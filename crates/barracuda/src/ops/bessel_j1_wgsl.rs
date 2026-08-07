@@ -50,7 +50,7 @@ impl BesselJ1 {
                 include_str!("../shaders/special/bessel_j1.wgsl"),
                 "main",
             )
-            .storage_read(0, &input_buffer)
+            .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &metadata_buffer)
             .dispatch_1d(size as u32)

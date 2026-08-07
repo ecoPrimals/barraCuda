@@ -52,7 +52,7 @@ impl Lgamma {
                 include_str!("../shaders/math/lgamma_f64.wgsl"),
                 "main",
             )
-            .storage_read(0, &input_buffer)
+            .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &metadata_buffer)
             .dispatch_1d(size as u32)

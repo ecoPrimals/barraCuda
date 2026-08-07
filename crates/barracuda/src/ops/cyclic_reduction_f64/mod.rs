@@ -16,6 +16,7 @@
 //! - Safe Rust wrapper (no unsafe code)
 
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -129,11 +130,6 @@ impl CyclicReductionF64 {
     fn solve_gpu_serial(&self, a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Result<Vec<f64>> {
         let n = b.len();
 
-        let shader = self
-            .device
-            .compile_shader_f64(Self::wgsl_shader(), Some("Cyclic Serial f64"));
-
-        // Create GPU buffers
         let a_buf = self
             .device
             .device
@@ -172,87 +168,6 @@ impl CyclicReductionF64 {
                     | wgpu::BufferUsages::COPY_SRC,
             });
 
-        // Create bind group layout
-        let bgl = self
-            .device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Serial BGL"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 3,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 4,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                ],
-            });
-
-        let pl = self
-            .device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Serial PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let serial_pipeline =
-            self.device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("Serial Pipeline"),
-                    layout: Some(&pl),
-                    module: &shader,
-                    entry_point: Some("solve_serial_f64"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
         let params = CyclicParams {
             n: n as u32,
             step: 0,
@@ -269,51 +184,16 @@ impl CyclicReductionF64 {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Serial BG"),
-                layout: &bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: params_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: a_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: b_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: c_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 4,
-                        resource: d_buf.as_entire_binding(),
-                    },
-                ],
-            });
-
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("Serial Encoder"),
-            });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Serial Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&serial_pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(1, 1, 1);
-        }
+        ComputeDispatch::new(self.device.as_ref(), "Cyclic Serial f64")
+            .shader(Self::wgsl_shader(), "solve_serial_f64")
+            .f64()
+            .uniform(0, &params_buf)
+            .storage_rw(1, &a_buf)
+            .storage_rw(2, &b_buf)
+            .storage_rw(3, &c_buf)
+            .storage_rw(4, &d_buf)
+            .dispatch(1, 1, 1)
+            .submit()?;
 
         // Read back solution
         let staging = self.device.device.create_buffer(&wgpu::BufferDescriptor {
@@ -323,6 +203,11 @@ impl CyclicReductionF64 {
             mapped_at_creation: false,
         });
 
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("Serial Copy Encoder"),
+            });
         encoder.copy_buffer_to_buffer(&d_buf, 0, &staging, 0, (n * 8) as u64);
         self.device.submit_commands(Some(encoder.finish()));
 
@@ -349,11 +234,6 @@ impl CyclicReductionF64 {
         c_data.resize(n_padded, 0.0);
         d_data.resize(n_padded, 0.0);
 
-        let shader = self
-            .device
-            .compile_shader_f64(Self::wgsl_shader(), Some("Cyclic Reduction f64"));
-
-        // Create mutable GPU buffers
         let a_buf = self
             .device
             .device
@@ -392,104 +272,9 @@ impl CyclicReductionF64 {
                     | wgpu::BufferUsages::COPY_SRC,
             });
 
-        // Create bind group layout
-        let bgl = self
-            .device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Cyclic Reduction BGL"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 3,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 4,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                ],
-            });
+        let shader_source = Self::wgsl_shader();
+        let workgroup_size = 256u32;
 
-        let pl = self
-            .device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Cyclic Reduction PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        // Create pipelines for reduction and substitution
-        let reduction_pipeline =
-            self.device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("Reduction Pipeline"),
-                    layout: Some(&pl),
-                    module: &shader,
-                    entry_point: Some("reduction_f64"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        let substitution_pipeline =
-            self.device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("Substitution Pipeline"),
-                    layout: Some(&pl),
-                    module: &shader,
-                    entry_point: Some("substitution_f64"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        // Multi-pass cyclic reduction
-        let workgroup_size = 256;
-
-        // Reduction phase: O(log n) passes
         for step in 0..num_steps {
             let params = CyclicParams {
                 n: n_padded as u32,
@@ -497,69 +282,27 @@ impl CyclicReductionF64 {
                 phase: 0,
                 _pad: 0,
             };
-
-            let params_buf =
-                self.device
-                    .device
-                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Params"),
-                        contents: bytemuck::bytes_of(&params),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    });
-
-            let bg = self
-                .device
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("Reduction BG"),
-                    layout: &bgl,
-                    entries: &[
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: params_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: a_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 2,
-                            resource: b_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 3,
-                            resource: c_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 4,
-                            resource: d_buf.as_entire_binding(),
-                        },
-                    ],
-                });
-
+            let params_buf = self.device.device.create_buffer_init(
+                &wgpu::util::BufferInitDescriptor {
+                    label: Some("Params"),
+                    contents: bytemuck::bytes_of(&params),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                },
+            );
             let n_threads = n_padded >> (step + 1);
-            let n_workgroups = n_threads.div_ceil(workgroup_size);
-
-            let mut encoder = self
-                .device
-                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Reduction Encoder"),
-                });
-
-            {
-                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("Reduction Pass"),
-                    timestamp_writes: None,
-                });
-                pass.set_pipeline(&reduction_pipeline);
-                pass.set_bind_group(0, Some(&bg), &[]);
-                pass.dispatch_workgroups(n_workgroups.max(1) as u32, 1, 1);
-            }
-
-            self.device.submit_commands(Some(encoder.finish()));
+            let n_workgroups = n_threads.div_ceil(workgroup_size as usize);
+            ComputeDispatch::new(self.device.as_ref(), "Cyclic Reduction")
+                .shader(shader_source, "reduction_f64")
+                .f64()
+                .uniform(0, &params_buf)
+                .storage_rw(1, &a_buf)
+                .storage_rw(2, &b_buf)
+                .storage_rw(3, &c_buf)
+                .storage_rw(4, &d_buf)
+                .dispatch(n_workgroups.max(1) as u32, 1, 1)
+                .submit()?;
         }
 
-        // Substitution phase: O(log n) passes in reverse
         for step in (0..num_steps).rev() {
             let params = CyclicParams {
                 n: n_padded as u32,
@@ -567,66 +310,25 @@ impl CyclicReductionF64 {
                 phase: 1,
                 _pad: 0,
             };
-
-            let params_buf =
-                self.device
-                    .device
-                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Params"),
-                        contents: bytemuck::bytes_of(&params),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    });
-
-            let bg = self
-                .device
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("Substitution BG"),
-                    layout: &bgl,
-                    entries: &[
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: params_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: a_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 2,
-                            resource: b_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 3,
-                            resource: c_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 4,
-                            resource: d_buf.as_entire_binding(),
-                        },
-                    ],
-                });
-
+            let params_buf = self.device.device.create_buffer_init(
+                &wgpu::util::BufferInitDescriptor {
+                    label: Some("Params"),
+                    contents: bytemuck::bytes_of(&params),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                },
+            );
             let n_threads = n_padded >> (step + 1);
-            let n_workgroups = n_threads.div_ceil(workgroup_size);
-
-            let mut encoder = self
-                .device
-                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Substitution Encoder"),
-                });
-
-            {
-                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("Substitution Pass"),
-                    timestamp_writes: None,
-                });
-                pass.set_pipeline(&substitution_pipeline);
-                pass.set_bind_group(0, Some(&bg), &[]);
-                pass.dispatch_workgroups(n_workgroups.max(1) as u32, 1, 1);
-            }
-
-            self.device.submit_commands(Some(encoder.finish()));
+            let n_workgroups = n_threads.div_ceil(workgroup_size as usize);
+            ComputeDispatch::new(self.device.as_ref(), "Cyclic Substitution")
+                .shader(shader_source, "substitution_f64")
+                .f64()
+                .uniform(0, &params_buf)
+                .storage_rw(1, &a_buf)
+                .storage_rw(2, &b_buf)
+                .storage_rw(3, &c_buf)
+                .storage_rw(4, &d_buf)
+                .dispatch(n_workgroups.max(1) as u32, 1, 1)
+                .submit()?;
         }
 
         // Read back solution (stored in d_buf)

@@ -7,7 +7,7 @@
 //! Positions must be PBC-unwrapped before calling.
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -26,8 +26,6 @@ struct MsdParams {
 /// GPU MSD calculator.
 pub struct MsdGpu {
     device: Arc<WgpuDevice>,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
 }
 
 impl MsdGpu {
@@ -38,43 +36,7 @@ impl MsdGpu {
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
     /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
-        let module = device.compile_shader_f64(SHADER, Some("msd_f64"));
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("MSD:bgl"),
-                entries: &[
-                    storage_bgl(0, true),  // positions
-                    storage_bgl(1, false), // output
-                    uniform_bgl(2),        // params
-                ],
-            });
-
-        let layout = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("MSD:layout"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("MSD:pipeline"),
-                layout: Some(&layout),
-                module: &module,
-                entry_point: Some("main"),
-                compilation_options: Default::default(),
-                cache: None,
-            });
-
-        Ok(Self {
-            device,
-            pipeline,
-            bgl,
-        })
+        Ok(Self { device })
     }
 
     /// Compute MSD for a range of lags.
@@ -136,24 +98,14 @@ impl MsdGpu {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-            let bg = d.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("MSD:bg"),
-                layout: &self.bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: pos_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: out_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: params_buf.as_entire_binding(),
-                    },
-                ],
-            });
+            ComputeDispatch::new(&self.device, "MSD")
+                .shader(SHADER, "main")
+                .f64()
+                .storage_read(0, &pos_buf)
+                .storage_rw(1, &out_buf)
+                .uniform(2, &params_buf)
+                .dispatch_1d(total as u32)
+                .submit()?;
 
             let rb = d.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("MSD:rb"),
@@ -163,12 +115,6 @@ impl MsdGpu {
             });
 
             let mut enc = self.device.create_encoder_guarded(&Default::default());
-            {
-                let mut pass = enc.begin_compute_pass(&Default::default());
-                pass.set_pipeline(&self.pipeline);
-                pass.set_bind_group(0, Some(&bg), &[]);
-                pass.dispatch_workgroups((total as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-            }
             enc.copy_buffer_to_buffer(&out_buf, 0, &rb, 0, out_size.max(8));
             q.submit(Some(enc.finish()));
 
@@ -180,32 +126,6 @@ impl MsdGpu {
         }
 
         Ok((t_values, msd_values))
-    }
-}
-
-fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

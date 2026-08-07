@@ -69,7 +69,7 @@ impl Roll {
 
         ComputeDispatch::new(device, "Roll")
             .shader(include_str!("../shaders/tensor/roll_f64.wgsl"), "main")
-            .storage_read(0, &input_buffer)
+            .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(size as u32)

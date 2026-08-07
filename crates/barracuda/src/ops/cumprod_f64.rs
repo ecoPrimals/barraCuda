@@ -16,6 +16,7 @@
 //! - Zero unsafe code
 //! - Self-contained (no external dependencies)
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
@@ -95,11 +96,6 @@ impl CumprodF64 {
         }
     }
 
-    /// WGSL shader source for f64 cumprod
-    fn shader() -> &'static str {
-        include_str!("../shaders/reduce/cumprod_f64.wgsl")
-    }
-
     fn entry_point(&self) -> &'static str {
         match self.variant {
             CumprodVariant::Inclusive => "cumprod_f64",
@@ -168,111 +164,17 @@ impl CumprodF64 {
 
         let params_buffer = device.create_uniform_buffer("CumprodF64 Params", &params);
 
-        // Compile shader
-        let shader = device.compile_shader_f64(Self::shader(), Some("CumprodF64"));
-
-        // Create bind group layout
-        let bind_group_layout =
-            device
-                .device()
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("CumprodF64 Bind Group Layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        // Create bind group
-        let bind_group = device
-            .device()
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("CumprodF64 Bind Group"),
-                layout: &bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: self.input.buffer().as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: output_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: params_buffer.as_entire_binding(),
-                    },
-                ],
-            });
-
-        // Create pipeline
-        let pipeline_layout =
-            device
-                .device()
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("CumprodF64 Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device()
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("CumprodF64 Pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some(self.entry_point()),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        // Dispatch
         let total_pairs = (outer_size * inner_size) as u32;
         let workgroups = total_pairs.div_ceil(WORKGROUP_SIZE_1D);
 
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("CumprodF64 Encoder"),
-        });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("CumprodF64 Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        device.submit_commands(std::iter::once(encoder.finish()));
+        ComputeDispatch::new(device, "CumprodF64")
+            .shader(include_str!("../shaders/reduce/cumprod_f64.wgsl"), self.entry_point())
+            .f64()
+            .storage_read(0, self.input.buffer())
+            .storage_rw(1, &output_buffer)
+            .uniform(2, &params_buffer)
+            .dispatch(workgroups, 1, 1)
+            .submit()?;
 
         // Create output tensor
         Ok(Tensor::from_buffer(

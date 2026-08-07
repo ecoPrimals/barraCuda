@@ -14,7 +14,7 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 
 /// WGSL source for swarm NN forward pass (f32).
 pub const WGSL_SWARM_NN_FORWARD: &str = include_str!("../../shaders/bio/swarm_nn_forward.wgsl");
@@ -53,8 +53,6 @@ pub struct SwarmNnParams {
 
 /// Swarm NN forward GPU kernel (f64 pipeline).
 pub struct SwarmNnGpu {
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
     device: Arc<WgpuDevice>,
 }
 
@@ -62,76 +60,7 @@ impl SwarmNnGpu {
     /// Create a new swarm NN GPU kernel.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
-        let d = device.device();
-
-        let bgl = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("SwarmNn BGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
-        });
-
-        let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("SwarmNn Layout"),
-            bind_group_layouts: &[&bgl],
-            immediate_size: 0,
-        });
-
-        let module = device.compile_shader_f64(WGSL_SWARM_NN_FORWARD_F64, Some("SwarmNn f64"));
-
-        let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("SwarmNn Pipeline"),
-            layout: Some(&layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
-
-        Self {
-            pipeline,
-            bgl,
-            device,
-        }
+        Self { device }
     }
 
     /// Run forward pass for swarm of neural network controllers.
@@ -139,6 +68,7 @@ impl SwarmNnGpu {
     /// `weights_buf`: `[n_controllers × weights_per_ctrl]` f64
     /// `inputs_buf`: `[n_controllers × n_evals × input_dim]` f64
     /// `actions_buf`: `[n_controllers × n_evals]` u32
+    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
     pub fn dispatch(
         &self,
         weights_buf: &wgpu::Buffer,
@@ -147,7 +77,6 @@ impl SwarmNnGpu {
         params: &SwarmNnParams,
     ) {
         let d = self.device.device();
-        let q = self.device.queue();
 
         let params_buf = d.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("SwarmNn Params"),
@@ -157,44 +86,16 @@ impl SwarmNnGpu {
 
         let total = params.n_controllers * params.n_evals;
 
-        let bg = d.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("SwarmNn BG"),
-            layout: &self.bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: weights_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: inputs_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: actions_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: params_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("SwarmNn Encoder"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("SwarmNn Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(total.div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
-        q.submit(std::iter::once(encoder.finish()));
+        ComputeDispatch::new(&self.device, "SwarmNn")
+            .shader(WGSL_SWARM_NN_FORWARD_F64, "main")
+            .f64()
+            .storage_read(0, weights_buf)
+            .storage_read(1, inputs_buf)
+            .storage_rw(2, actions_buf)
+            .uniform(3, &params_buf)
+            .dispatch_1d(total)
+            .submit()
+            .expect("SwarmNn GPU dispatch failed");
     }
 }
 

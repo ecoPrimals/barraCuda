@@ -26,6 +26,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -36,8 +37,7 @@ const HIGGS_SHADER_BODY: &str = include_str!("../../shaders/lattice/higgs_u1_hmc
 pub struct HiggsU1HmcForce {
     device: Arc<WgpuDevice>,
     volume: u32,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
+    shader_src: String,
     params: wgpu::Buffer,
 }
 
@@ -75,41 +75,7 @@ impl HiggsU1HmcForce {
         dt: f64,
     ) -> Result<Self> {
         let volume = nt * ns;
-        let src = format!("{WGSL_COMPLEX64}\n{HIGGS_SHADER_BODY}");
-        // compile_shader_f64 handles exp/log patching + ILP optimizer internally
-        let module = device.compile_shader_f64(&src, Some("higgs_u1_hmc"));
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("HiggsU1:bgl"),
-                entries: &[
-                    uniform_bgl(0),        // params
-                    storage_bgl(1, true),  // link_angles (read)
-                    storage_bgl(2, true),  // higgs        (read)
-                    storage_bgl(3, false), // pi_links     (read-write)
-                    storage_bgl(4, false), // pi_higgs     (read-write)
-                ],
-            });
-
-        let layout = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("HiggsU1:layout"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("HiggsU1:pipeline"),
-                layout: Some(&layout),
-                module: &module,
-                entry_point: Some("hmc_half_kick"),
-                compilation_options: Default::default(),
-                cache: None,
-            });
+        let shader_src = format!("{WGSL_COMPLEX64}\n{HIGGS_SHADER_BODY}");
 
         let params_data = HiggsParams {
             nt,
@@ -138,8 +104,7 @@ impl HiggsU1HmcForce {
         Ok(Self {
             device,
             volume,
-            pipeline,
-            bgl,
+            shader_src,
             params,
         })
     }
@@ -171,51 +136,17 @@ impl HiggsU1HmcForce {
         pi_links: &wgpu::Buffer,
         pi_higgs: &wgpu::Buffer,
     ) -> Result<()> {
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("HiggsU1:bg"),
-                layout: &self.bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: self.params.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: link_angles.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: higgs.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: pi_links.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 4,
-                        resource: pi_higgs.as_entire_binding(),
-                    },
-                ],
-            });
+        ComputeDispatch::new(&self.device, "HiggsU1:half_kick")
+            .shader(&self.shader_src, "hmc_half_kick")
+            .f64()
+            .uniform(0, &self.params)
+            .storage_read(1, link_angles)
+            .storage_read(2, higgs)
+            .storage_rw(3, pi_links)
+            .storage_rw(4, pi_higgs)
+            .dispatch(self.volume.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()?;
 
-        let mut enc = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("HiggsU1:enc"),
-            });
-        {
-            let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("HiggsU1:half_kick"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.volume.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
-        }
-        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 
@@ -223,34 +154,6 @@ impl HiggsU1HmcForce {
     #[must_use]
     pub fn volume(&self) -> u32 {
         self.volume
-    }
-}
-
-// ── BGL helpers ───────────────────────────────────────────────────────────────
-
-fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

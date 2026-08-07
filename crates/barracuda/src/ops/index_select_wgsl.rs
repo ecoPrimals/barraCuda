@@ -114,7 +114,7 @@ impl IndexSelect {
         ComputeDispatch::new(device, "IndexSelect")
             .shader(include_str!("../shaders/tensor/index_select_f64.wgsl"), "main")
             .uniform(0, &params_buffer)
-            .storage_read(1, &input_buffer)
+            .storage_read(1, input_buffer)
             .storage_read(2, &indices_buffer)
             .storage_rw(3, &output_buffer)
             .dispatch_1d(total_size as u32)

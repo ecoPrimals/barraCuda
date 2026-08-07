@@ -20,6 +20,7 @@
 //! - Chains with `cyclic_reduction` for the tridiagonal solve
 //! - Safe Rust wrapper (no unsafe code)
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
@@ -50,10 +51,6 @@ pub struct CrankNicolson {
 }
 
 impl CrankNicolson {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/pde/crank_nicolson.wgsl")
-    }
-
     /// Create a new Crank-Nicolson solver
     /// # Errors
     /// This function does not return errors; the [`Result`] type is for API consistency.
@@ -283,10 +280,6 @@ impl CrankNicolson {
     ) -> Result<Vec<f32>> {
         let n = u0.len();
 
-        let shader = self
-            .device
-            .compile_shader(Self::wgsl_shader(), Some("Crank-Nicolson"));
-
         // Create buffers
         let u_buf = self
             .device
@@ -322,89 +315,6 @@ impl CrankNicolson {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        // Create bind group layout for RHS computation
-        let bgl = self
-            .device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("CN RHS BGL"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: true },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                ],
-            });
-
-        let pl = self
-            .device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("CN PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let rhs_pipeline =
-            self.device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("CN RHS Pipeline"),
-                    layout: Some(&pl),
-                    module: &shader,
-                    entry_point: Some("compute_rhs"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("CN BG"),
-                layout: &bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: params_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: u_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: rhs_buf.as_entire_binding(),
-                    },
-                ],
-            });
-
         let workgroup_size = crate::device::capabilities::WORKGROUP_SIZE_1D as usize;
         let n_workgroups = n.div_ceil(workgroup_size);
 
@@ -418,28 +328,20 @@ impl CrankNicolson {
 
         for _step in 0..n_steps {
             // Compute RHS on GPU
-            let mut encoder = self
-                .device
-                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                    label: Some("CN RHS Encoder"),
-                });
-
-            // Upload current u
             self.device
                 .queue
                 .write_buffer(&u_buf, 0, bytemuck::cast_slice(&u));
 
-            {
-                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("CN RHS Pass"),
-                    timestamp_writes: None,
-                });
-                pass.set_pipeline(&rhs_pipeline);
-                pass.set_bind_group(0, Some(&bg), &[]);
-                pass.dispatch_workgroups(n_workgroups as u32, 1, 1);
-            }
-
-            self.device.submit_commands(Some(encoder.finish()));
+            ComputeDispatch::new(&self.device, "CrankNicolson RHS")
+                .shader(
+                    include_str!("../shaders/pde/crank_nicolson.wgsl"),
+                    "compute_rhs",
+                )
+                .uniform(0, &params_buf)
+                .storage_read(1, &u_buf)
+                .storage_rw(2, &rhs_buf)
+                .dispatch(n_workgroups as u32, 1, 1)
+                .submit()?;
 
             // Read back RHS
             let staging = self.device.device.create_buffer(&wgpu::BufferDescriptor {

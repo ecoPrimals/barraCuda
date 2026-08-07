@@ -10,12 +10,10 @@
 //!
 //! Provenance: wetSpring handoff v5 → `ToadStool` absorption.
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
-
-const SHADER: &str = include_str!("../../shaders/ml/rf_batch_inference.wgsl");
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -32,54 +30,13 @@ struct RfParams {
 /// CPU performs majority-vote reduction over tree predictions.
 pub struct RfBatchInferenceGpu {
     device: Arc<WgpuDevice>,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
 }
 
 impl RfBatchInferenceGpu {
     /// Creates a new batch Random Forest inference GPU kernel for the given device.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
-        let shader = device.compile_shader(SHADER, Some("RfBatchInference"));
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("RfBatch BGL"),
-                entries: &[
-                    uniform_entry(0),
-                    storage_entry(1, true),  // node_features
-                    storage_entry(2, true),  // node_thresh
-                    storage_entry(3, true),  // node_children
-                    storage_entry(4, true),  // features
-                    storage_entry(5, false), // predictions
-                ],
-            });
-
-        let pl = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("RfBatch PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("RfBatch Pipeline"),
-                layout: Some(&pl),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        Self {
-            device,
-            pipeline,
-            bgl,
-        }
+        Self { device }
     }
 
     /// Run inference on GPU. Returns per-tree predictions `[n_samples × n_trees]`.
@@ -90,6 +47,7 @@ impl RfBatchInferenceGpu {
     /// * `node_children_buf` — `[n_trees × n_nodes_max × 2]` i32 (left/right or leaf class)
     /// * `features_buf`      — `[n_samples × n_features]` f64 (input features)
     /// * `predictions_buf`   — `[n_samples × n_trees]` u32 (output, written by kernel)
+    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
     pub fn dispatch(
         &self,
         node_features_buf: &wgpu::Buffer,
@@ -118,74 +76,21 @@ impl RfBatchInferenceGpu {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("RfBatch BG"),
-                layout: &self.bgl,
-                entries: &[
-                    bg_entry(0, &params_buf),
-                    bg_entry(1, node_features_buf),
-                    bg_entry(2, node_thresh_buf),
-                    bg_entry(3, node_children_buf),
-                    bg_entry(4, features_buf),
-                    bg_entry(5, predictions_buf),
-                ],
-            });
-
         let total = n_samples * n_trees;
-        let workgroups = total.div_ceil(WORKGROUP_SIZE_1D);
 
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("RfBatch Encoder"),
-            });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("RfBatch Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        self.device.submit_commands(Some(encoder.finish()));
-    }
-}
-
-fn storage_entry(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn bg_entry(binding: u32, buffer: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
-    wgpu::BindGroupEntry {
-        binding,
-        resource: buffer.as_entire_binding(),
+        ComputeDispatch::new(&self.device, "RfBatch")
+            .shader(
+                include_str!("../../shaders/ml/rf_batch_inference.wgsl"),
+                "main",
+            )
+            .uniform(0, &params_buf)
+            .storage_read(1, node_features_buf)
+            .storage_read(2, node_thresh_buf)
+            .storage_read(3, node_children_buf)
+            .storage_read(4, features_buf)
+            .storage_rw(5, predictions_buf)
+            .dispatch_1d(total)
+            .submit()
+            .expect("RfBatch GPU dispatch failed");
     }
 }

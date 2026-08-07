@@ -8,7 +8,7 @@
 //! - Complete implementation: Production-ready, no mocks
 //! - Hardware-agnostic: Pure WGSL for universal compute
 
-use crate::device::{DeviceCapabilities, WorkloadType};
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
@@ -69,12 +69,6 @@ impl MessagePassing {
         })
     }
 
-    /// Get the WGSL shader source
-    fn wgsl_shader() -> &'static str {
-        const SHADER: &str = include_str!("../shaders/math/message_passing_f64.wgsl");
-        SHADER
-    }
-
     /// Execute the message passing operation
     ///
     /// # Errors
@@ -117,189 +111,27 @@ impl MessagePassing {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
 
-        // Compile shader
-        let shader_module =
-            device.compile_shader(Self::wgsl_shader(), Some("MessagePassing Shader"));
-
-        // Create bind group layout (simplified - edge_features optional)
-        let mut entries = vec![
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-        ];
-
-        // Add optional edge_features binding
-        if self.edge_features.is_some() {
-            entries.push(wgpu::BindGroupLayoutEntry {
-                binding: 2,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            });
-        }
-
-        entries.extend([
-            wgpu::BindGroupLayoutEntry {
-                binding: 3,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 4,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 5,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: false },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 6,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-        ]);
-
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("MessagePassing Bind Group Layout"),
-                    entries: &entries,
-                });
-
-        // Create bind group entries
-        let mut bind_entries = vec![
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: self.node_features.buffer().as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: self.edge_index.buffer().as_entire_binding(),
-            },
-        ];
+        let placeholder = device.placeholder_buffer();
+        let mut dispatch = ComputeDispatch::new(device, "MessagePassing")
+            .shader(
+                include_str!("../shaders/math/message_passing_f64.wgsl"),
+                "main",
+            )
+            .storage_read(0, self.node_features.buffer())
+            .storage_read(1, self.edge_index.buffer());
 
         if let Some(ref ef) = self.edge_features {
-            bind_entries.push(wgpu::BindGroupEntry {
-                binding: 2,
-                resource: ef.buffer().as_entire_binding(),
-            });
+            dispatch = dispatch.storage_read(2, ef.buffer());
         }
 
-        let placeholder = device.placeholder_buffer();
-        bind_entries.extend([
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: placeholder.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
-                resource: placeholder.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 5,
-                resource: output_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 6,
-                resource: params_buffer.as_entire_binding(),
-            },
-        ]);
+        dispatch
+            .storage_read(3, placeholder)
+            .storage_read(4, placeholder)
+            .storage_rw(5, &output_buffer)
+            .uniform(6, &params_buffer)
+            .dispatch_1d(self.num_nodes as u32)
+            .submit()?;
 
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("MessagePassing Bind Group"),
-            layout: &bind_group_layout,
-            entries: &bind_entries,
-        });
-
-        // Create pipeline
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("MessagePassing Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("MessagePassing Pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader_module,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        // Encode and execute
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("MessagePassing Encoder"),
-        });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("MessagePassing Pass"),
-                timestamp_writes: None,
-            });
-
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-
-            // Deep Debt Evolution: Capability-based dispatch
-            let caps = DeviceCapabilities::from_device(device);
-            let optimal_wg_size = caps.optimal_workgroup_size(WorkloadType::MatMul);
-            let workgroups = (self.num_nodes as u32).div_ceil(optimal_wg_size);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
-
-        // Create output tensor
         Ok(Tensor::from_buffer(
             output_buffer,
             vec![self.num_nodes, self.node_feat_dim],

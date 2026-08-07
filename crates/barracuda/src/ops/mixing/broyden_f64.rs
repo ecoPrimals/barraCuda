@@ -5,7 +5,7 @@
 //! Uses WGSL shaders for f64 precision on all GPU hardware.
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
@@ -39,8 +39,6 @@ impl Default for MixingParams {
 /// `x_new` = (1-α)·x_old + `α·x_computed`
 pub struct LinearMixer {
     device: Arc<WgpuDevice>,
-    pipeline: wgpu::ComputePipeline,
-    bind_group_layout: wgpu::BindGroupLayout,
     vec_dim: usize,
     params: MixingParams,
 }
@@ -57,86 +55,9 @@ impl LinearMixer {
                 "vec_dim must be > 0 (zero-length buffers are invalid for GPU compute)",
             ));
         }
-        let shader_source = include_str!("../../shaders/mixing/broyden_f64.wgsl");
-        let shader_module = device.compile_shader_f64(shader_source, Some("linear_mixer_shader"));
-
-        let bind_group_layout =
-            device
-                .device()
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("linear_mixer_bgl"),
-                    entries: &[
-                        // params uniform
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // old_vec
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // computed_vec
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // output_vec
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        let pipeline_layout =
-            device
-                .device()
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("linear_mixer_layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device()
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("linear_mixer_pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader_module,
-                entry_point: Some("mix_linear"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
 
         Ok(Self {
             device,
-            pipeline,
-            bind_group_layout,
             vec_dim,
             params,
         })
@@ -213,49 +134,18 @@ impl LinearMixer {
             mapped_at_creation: false,
         });
 
-        let bind_group = self
-            .device
-            .device()
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("linear_mixer_bg"),
-                layout: &self.bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: params_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: old_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: computed_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: output_buffer.as_entire_binding(),
-                    },
-                ],
-            });
-
-        // Dispatch
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("linear_mix"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            pass.dispatch_workgroups(
-                self.vec_dim.div_ceil(WORKGROUP_SIZE_1D as usize) as u32,
-                1,
-                1,
-            );
-        }
+        ComputeDispatch::new(self.device.as_ref(), "linear_mix")
+            .shader(
+                include_str!("../../shaders/mixing/broyden_f64.wgsl"),
+                "mix_linear",
+            )
+            .f64()
+            .uniform(0, &params_buffer)
+            .storage_read(1, &old_buffer)
+            .storage_read(2, &computed_buffer)
+            .storage_rw(3, &output_buffer)
+            .dispatch_1d(self.vec_dim as u32)
+            .submit()?;
 
         // Read back
         let staging_buffer = self.device.device().create_buffer(&wgpu::BufferDescriptor {
@@ -264,6 +154,9 @@ impl LinearMixer {
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
         encoder.copy_buffer_to_buffer(
             &output_buffer,
             0,

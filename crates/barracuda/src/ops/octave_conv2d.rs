@@ -13,7 +13,8 @@
 //!
 //! Reference: "Drop an Octave: Reducing Spatial Redundancy in CNNs with Octave Convolution" by Chen et al. (2019)
 
-use crate::device::DeviceCapabilities;
+use crate::device::capabilities::WORKGROUP_SIZE_2D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
@@ -118,10 +119,7 @@ impl OctaveConv2D {
     }
 
     fn wgsl_shader() -> &'static str {
-        {
-            const SHADER: &str = include_str!("../shaders/conv/octave_conv2d_f64.wgsl");
-            SHADER
-        }
+        include_str!("../shaders/conv/octave_conv2d_f64.wgsl")
     }
 
     /// Run octave convolution on GPU.
@@ -282,97 +280,6 @@ impl OctaveConv2D {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let shader = device.compile_shader(Self::wgsl_shader(), Some("octave_conv2d_shader"));
-
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("octave_conv2d_bind_group_layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 4,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 5,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("octave_conv2d_pipeline_layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("octave_conv2d_pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
         let placeholder = device.placeholder_buffer();
         let input_high_buffer = self
             .input_high
@@ -383,58 +290,20 @@ impl OctaveConv2D {
             .as_ref()
             .map_or(placeholder, super::super::tensor::Tensor::buffer);
 
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("octave_conv2d_bind_group"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: input_high_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: input_low_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: self.weight.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: self.bias.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("octave_conv2d_encoder"),
-        });
-
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("octave_conv2d_pass"),
-                timestamp_writes: None,
-            });
-            compute_pass.set_pipeline(&pipeline);
-            compute_pass.set_bind_group(0, Some(&bind_group), &[]);
-
-            // Dispatch using standard 2D shader workgroup size (16, 16)
-            let caps = DeviceCapabilities::from_device(device);
-            let (workgroups_x, workgroups_y) =
-                caps.dispatch_2d(out_width as u32, out_height as u32);
-            let workgroups_z = batch_size * out_channels;
-            compute_pass.dispatch_workgroups(workgroups_x, workgroups_y, workgroups_z as u32);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(device, "octave_conv2d")
+            .shader(Self::wgsl_shader(), "main")
+            .storage_read(0, input_high_buffer)
+            .storage_read(1, input_low_buffer)
+            .storage_read(2, self.weight.buffer())
+            .storage_read(3, self.bias.buffer())
+            .storage_rw(4, &output_buffer)
+            .uniform(5, &params_buffer)
+            .dispatch(
+                (out_width as u32).div_ceil(WORKGROUP_SIZE_2D),
+                (out_height as u32).div_ceil(WORKGROUP_SIZE_2D),
+                (batch_size * out_channels) as u32,
+            )
+            .submit()?;
 
         let output_data = crate::utils::read_buffer(device, &output_buffer, output_size)?;
         Ok(Tensor::new(

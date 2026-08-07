@@ -12,8 +12,7 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
-use crate::device::compute_pipeline::{storage_bgl_entry, uniform_bgl_entry};
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 
 /// WGSL shader for bipartition → bit-vector encoding.
@@ -30,8 +29,6 @@ struct BipartConfig {
 
 /// GPU kernel for bipartition → bit-vector encoding.
 pub struct BipartitionEncodeGpu {
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
     device: Arc<WgpuDevice>,
 }
 
@@ -39,39 +36,7 @@ impl BipartitionEncodeGpu {
     /// Create the bipartition encoding kernel.
     #[must_use]
     pub fn new(device: Arc<WgpuDevice>) -> Self {
-        let d = device.device();
-
-        let bgl = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("BipartitionEncode BGL"),
-            entries: &[
-                uniform_bgl_entry(0),
-                storage_bgl_entry(1, true),
-                storage_bgl_entry(2, false),
-            ],
-        });
-
-        let layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("BipartitionEncode Layout"),
-            bind_group_layouts: &[&bgl],
-            immediate_size: 0,
-        });
-
-        let module = device.compile_shader(WGSL_BIPARTITION_ENCODE, Some("bipartition_encode"));
-
-        let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("BipartitionEncode Pipeline"),
-            layout: Some(&layout),
-            module: &module,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: device.pipeline_cache(),
-        });
-
-        Self {
-            pipeline,
-            bgl,
-            device,
-        }
+        Self { device }
     }
 
     /// Encode bipartitions into packed bit-vectors.
@@ -120,40 +85,19 @@ impl BipartitionEncodeGpu {
             mapped_at_creation: false,
         });
 
-        let bg = d.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("bipart_bg"),
-            layout: &self.bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: config_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: membership_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: output_buf.as_entire_binding(),
-                },
-            ],
-        });
+        ComputeDispatch::new(&self.device, "BipartitionEncode")
+            .shader(WGSL_BIPARTITION_ENCODE, "main")
+            .uniform(0, &config_buf)
+            .storage_read(1, &membership_buf)
+            .storage_rw(2, &output_buf)
+            .dispatch_1d(n_bipartitions)
+            .submit()?;
 
-        let wg_count = n_bipartitions.div_ceil(WORKGROUP_SIZE_1D);
         let mut encoder = self
             .device
             .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("bipart_encode"),
+                label: Some("bipart_encode_copy"),
             });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("bipart_pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(wg_count, 1, 1);
-        }
         encoder.copy_buffer_to_buffer(&output_buf, 0, &staging_buf, 0, out_size);
         self.device
             .queue()

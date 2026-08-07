@@ -17,6 +17,7 @@
 //!
 //! Absorbed from hotSpring lattice QCD (Mar 2026), rewritten to barraCuda patterns.
 
+use crate::device::compute_pipeline::BglBuilder;
 use crate::device::WgpuDevice;
 use crate::error::Result;
 use crate::pipeline::ReduceScalarPipeline;
@@ -104,78 +105,51 @@ impl GpuMultiShiftCgPipelines {
         let ms_x_mod = device.compile_shader_f64(WGSL_MS_X_UPDATE_F64, Some("ms_x_update"));
         let ms_p_mod = device.compile_shader_f64(WGSL_MS_P_UPDATE_F64, Some("ms_p_update"));
 
-        let shifted_alpha_bgl =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("ms_alpha_shifted:bgl"),
-                    entries: &[
-                        storage_bgl(0, true),  // rz
-                        storage_bgl(1, true),  // pap
-                        storage_bgl(2, true),  // pp
-                        storage_bgl(3, true),  // sigma
-                        storage_bgl(4, false), // alpha
-                    ],
-                });
+        let shifted_alpha_bgl = BglBuilder::new("ms_alpha_shifted:bgl")
+            .storage_read(0)
+            .storage_read(1)
+            .storage_read(2)
+            .storage_read(3)
+            .storage_rw(4)
+            .build(&device.device);
 
-        let shifted_xr_bgl =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("ms_xr_shifted:bgl"),
-                    entries: &[
-                        uniform_bgl(0),        // params
-                        storage_bgl(1, false), // x
-                        storage_bgl(2, false), // r
-                        storage_bgl(3, true),  // p
-                        storage_bgl(4, true),  // ap
-                        storage_bgl(5, true),  // alpha
-                        storage_bgl(6, true),  // sigma
-                    ],
-                });
+        let shifted_xr_bgl = BglBuilder::new("ms_xr_shifted:bgl")
+            .uniform(0)
+            .storage_rw(1)
+            .storage_rw(2)
+            .storage_read(3)
+            .storage_read(4)
+            .storage_read(5)
+            .storage_read(6)
+            .build(&device.device);
 
-        let zeta_bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("ms_zeta:bgl"),
-                entries: &[
-                    uniform_bgl(0),        // params
-                    storage_bgl(1, true),  // sigma
-                    storage_bgl(2, false), // zeta_curr
-                    storage_bgl(3, false), // zeta_prev
-                    storage_bgl(4, false), // alpha_s
-                    storage_bgl(5, false), // beta_ratio
-                    storage_bgl(6, true),  // alpha_j
-                    storage_bgl(7, true),  // beta_prev
-                    storage_bgl(8, true),  // alpha_prev
-                ],
-            });
+        let zeta_bgl = BglBuilder::new("ms_zeta:bgl")
+            .uniform(0)
+            .storage_read(1)
+            .storage_rw(2)
+            .storage_rw(3)
+            .storage_rw(4)
+            .storage_rw(5)
+            .storage_read(6)
+            .storage_read(7)
+            .storage_read(8)
+            .build(&device.device);
 
-        let ms_x_bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("ms_x_update:bgl"),
-                entries: &[
-                    uniform_bgl(0),        // params
-                    storage_bgl(1, false), // x
-                    storage_bgl(2, true),  // p
-                    storage_bgl(3, true),  // alpha_s
-                ],
-            });
+        let ms_x_bgl = BglBuilder::new("ms_x_update:bgl")
+            .uniform(0)
+            .storage_rw(1)
+            .storage_read(2)
+            .storage_read(3)
+            .build(&device.device);
 
-        let ms_p_bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("ms_p_update:bgl"),
-                entries: &[
-                    uniform_bgl(0),        // params
-                    storage_bgl(1, false), // p
-                    storage_bgl(2, true),  // r
-                    storage_bgl(3, true),  // zeta_curr
-                    storage_bgl(4, true),  // beta_ratio
-                    storage_bgl(5, true),  // beta_base
-                ],
-            });
+        let ms_p_bgl = BglBuilder::new("ms_p_update:bgl")
+            .uniform(0)
+            .storage_rw(1)
+            .storage_read(2)
+            .storage_read(3)
+            .storage_read(4)
+            .storage_read(5)
+            .build(&device.device);
 
         let make_pipeline = |bgl: &wgpu::BindGroupLayout,
                              module: &wgpu::ShaderModule,
@@ -454,32 +428,6 @@ pub fn multi_shift_cg_generic(
             residual_sq: rz / b_norm_sq,
         },
     )
-}
-
-fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Complex Power z^n
 
-use crate::device::{DeviceCapabilities, WorkloadType};
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
@@ -9,8 +9,6 @@ use crate::tensor::Tensor;
 pub struct ComplexPow {
     input: Tensor,
     exponent: f32,
-    pipeline: wgpu::ComputePipeline,
-    bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl ComplexPow {
@@ -26,70 +24,7 @@ impl ComplexPow {
                 "Must have last dimension = 2".to_string(),
             ));
         }
-        let device = input.device();
-        let shader = device.compile_shader(include_str!("pow.wgsl"), Some("Complex Pow Shader"));
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("BGL"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("PL"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("Pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-        Ok(Self {
-            input,
-            exponent,
-            pipeline,
-            bind_group_layout,
-        })
+        Ok(Self { input, exponent })
     }
 
     /// Execute complex power on GPU.
@@ -101,6 +36,8 @@ impl ComplexPow {
     pub fn execute(self) -> Result<Tensor> {
         let device = self.input.device();
         let n = self.input.len();
+        let num_complex = n / 2;
+
         let output_buffer = device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Out"),
             size: (n * std::mem::size_of::<f32>()) as u64,
@@ -114,7 +51,7 @@ impl ComplexPow {
             exponent: f32,
         }
         let params = Params {
-            num_complex: (n / 2) as u32,
+            num_complex: num_complex as u32,
             exponent: self.exponent,
         };
         let params_buffer = device
@@ -124,39 +61,15 @@ impl ComplexPow {
                 contents: bytemuck::bytes_of(&params),
                 usage: wgpu::BufferUsages::UNIFORM,
             });
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("BG"),
-            layout: &self.bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.input.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-        let mut encoder =
-            device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: Some("E") });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("P"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            let caps = DeviceCapabilities::from_device(device);
-            let wg =
-                ((n / 2) as u32).div_ceil(caps.optimal_workgroup_size(WorkloadType::ElementWise));
-            pass.dispatch_workgroups(wg, 1, 1);
-        }
-        device.submit_commands(Some(encoder.finish()));
+
+        ComputeDispatch::new(device, "ComplexPow")
+            .shader(include_str!("pow.wgsl"), "main")
+            .storage_read(0, self.input.buffer())
+            .storage_rw(1, &output_buffer)
+            .uniform(2, &params_buffer)
+            .dispatch_1d(num_complex as u32)
+            .submit()?;
+
         Ok(Tensor::from_buffer(
             output_buffer,
             self.input.shape().to_vec(),

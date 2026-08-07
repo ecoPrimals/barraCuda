@@ -8,7 +8,7 @@
 //! Provenance: airSpring precision agriculture / wetSpring monitoring
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -78,11 +78,6 @@ impl MovingWindowStats {
         let d = self.device.device();
         let q = self.device.queue();
 
-        let module = d.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("moving_window_stats"),
-            source: wgpu::ShaderSource::Wgsl(WGSL_MOVING_WINDOW_STATS.into()),
-        });
-
         let params = MovingWindowParams {
             n,
             window: crate::utils::checked_u32(window_size, "moving_window window_size")?,
@@ -117,134 +112,16 @@ impl MovingWindowStats {
         let min_buf = make_out_buf("mw_min");
         let max_buf = make_out_buf("mw_max");
 
-        let bgl = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("mw_bgl"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 4,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 5,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
-        });
-
-        let pipeline_layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("mw_pl"),
-            bind_group_layouts: &[&bgl],
-            immediate_size: 0,
-        });
-
-        let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("moving_window_stats"),
-            layout: Some(&pipeline_layout),
-            module: &module,
-            entry_point: Some("moving_window_stats"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
-
-        let bind_group = d.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("mw_bg"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: input_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: mean_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: var_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: min_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: max_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let workgroups = n_out.div_ceil(WORKGROUP_SIZE_1D);
-
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("mw_enc"),
-            });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("mw_pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
+        ComputeDispatch::new(&self.device, "moving_window_stats")
+            .shader(WGSL_MOVING_WINDOW_STATS, "moving_window_stats")
+            .uniform(0, &params_buf)
+            .storage_read(1, &input_buf)
+            .storage_rw(2, &mean_buf)
+            .storage_rw(3, &var_buf)
+            .storage_rw(4, &min_buf)
+            .storage_rw(5, &max_buf)
+            .dispatch_1d(n_out)
+            .submit()?;
 
         let staging_size = out_size as u64;
         let make_staging = |label: &str| {
@@ -261,6 +138,11 @@ impl MovingWindowStats {
         let s_min = make_staging("s_min");
         let s_max = make_staging("s_max");
 
+        let mut encoder = self
+            .device
+            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+                label: Some("mw_readback"),
+            });
         encoder.copy_buffer_to_buffer(&mean_buf, 0, &s_mean, 0, staging_size);
         encoder.copy_buffer_to_buffer(&var_buf, 0, &s_var, 0, staging_size);
         encoder.copy_buffer_to_buffer(&min_buf, 0, &s_min, 0, staging_size);

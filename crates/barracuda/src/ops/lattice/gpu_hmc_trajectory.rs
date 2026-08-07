@@ -10,6 +10,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::pipeline::ReduceScalarPipeline;
 use std::sync::Arc;
@@ -17,7 +18,7 @@ use std::sync::Arc;
 use super::dirac::DiracGpuLayout;
 use super::gpu_cg_solver::{GpuCgBuffers, GpuCgSolver};
 use super::gpu_hmc_leapfrog::{GpuHmcLeapfrog, LeapfrogBuffers};
-use super::gpu_hmc_types::{AxpyParamsLocal, DotParamsLocal, HostRng, storage_bgl, uniform_bgl};
+use super::gpu_hmc_types::{AxpyParamsLocal, DotParamsLocal, HostRng};
 pub use super::gpu_hmc_types::{GpuHmcBuffers, GpuHmcConfig, GpuHmcResult};
 use super::gpu_kinetic_energy::GpuKineticEnergy;
 use super::gpu_pseudofermion::{GpuPseudofermionForce, GpuPseudofermionHeatbath};
@@ -349,41 +350,6 @@ impl GpuHmcTrajectory {
             pad1: 0,
             pad2: 0,
         };
-        let module = self
-            .device
-            .compile_shader_f64(super::cg::WGSL_COMPLEX_DOT_RE_F64, Some("hmc_dot"));
-        let bgl = self
-            .device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("hmc_dot:bgl"),
-                entries: &[
-                    uniform_bgl(0),
-                    storage_bgl(1, true),
-                    storage_bgl(2, true),
-                    storage_bgl(3, false),
-                ],
-            });
-        let layout = self
-            .device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("hmc_dot:layout"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-        let pipeline =
-            self.device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("hmc_dot:pipeline"),
-                    layout: Some(&layout),
-                    module: &module,
-                    entry_point: Some("main"),
-                    compilation_options: Default::default(),
-                    cache: None,
-                });
-
         let params_buf = self.device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("hmc_dot:params"),
             size: std::mem::size_of::<DotParamsLocal>() as u64,
@@ -394,40 +360,15 @@ impl GpuHmcTrajectory {
             .queue
             .write_buffer(&params_buf, 0, bytemuck::bytes_of(&dot_params));
 
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("hmc_dot:bg"),
-                layout: &bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: params_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: phi_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: cg_bufs.x.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: cg_bufs.dot_out.as_entire_binding(),
-                    },
-                ],
-            });
-
-        let mut enc = self.device.create_encoder_guarded(&Default::default());
-        {
-            let mut pass = enc.begin_compute_pass(&Default::default());
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(n_pairs.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
-        }
-        self.device.submit_commands(Some(enc.finish()));
+        ComputeDispatch::new(self.device.as_ref(), "hmc_dot")
+            .shader(super::cg::WGSL_COMPLEX_DOT_RE_F64, "main")
+            .f64()
+            .uniform(0, &params_buf)
+            .storage_read(1, phi_buf)
+            .storage_read(2, &cg_bufs.x)
+            .storage_rw(3, &cg_bufs.dot_out)
+            .dispatch(n_pairs.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()?;
 
         let reducer = ReduceScalarPipeline::new(self.device.clone(), n_pairs as usize)?;
         reducer.sum_f64(&cg_bufs.dot_out)
@@ -441,36 +382,6 @@ impl GpuHmcTrajectory {
             pad0: 0,
             alpha: 1.0,
         };
-        let module = self
-            .device
-            .compile_shader_f64(super::cg::WGSL_AXPY_F64, Some("force_add"));
-        let bgl = self
-            .device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("force_add:bgl"),
-                entries: &[uniform_bgl(0), storage_bgl(1, true), storage_bgl(2, false)],
-            });
-        let layout = self
-            .device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("force_add:layout"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-        let pipeline =
-            self.device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("force_add:pipeline"),
-                    layout: Some(&layout),
-                    module: &module,
-                    entry_point: Some("main"),
-                    compilation_options: Default::default(),
-                    cache: None,
-                });
-
         let params_buf = self.device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("force_add:params"),
             size: std::mem::size_of::<AxpyParamsLocal>() as u64,
@@ -481,36 +392,14 @@ impl GpuHmcTrajectory {
             .queue
             .write_buffer(&params_buf, 0, bytemuck::bytes_of(&params_data));
 
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("force_add:bg"),
-                layout: &bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: params_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: src.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: dst.as_entire_binding(),
-                    },
-                ],
-            });
-
-        let mut enc = self.device.create_encoder_guarded(&Default::default());
-        {
-            let mut pass = enc.begin_compute_pass(&Default::default());
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(n.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
-        }
-        self.device.submit_commands(Some(enc.finish()));
+        ComputeDispatch::new(self.device.as_ref(), "force_add")
+            .shader(super::cg::WGSL_AXPY_F64, "main")
+            .f64()
+            .uniform(0, &params_buf)
+            .storage_read(1, src)
+            .storage_rw(2, dst)
+            .dispatch(n.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()?;
         Ok(())
     }
 

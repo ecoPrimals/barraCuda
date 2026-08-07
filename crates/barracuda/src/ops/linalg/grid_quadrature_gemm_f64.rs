@@ -34,6 +34,7 @@
 //! ```
 
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -145,10 +146,6 @@ impl GridQuadratureGemm {
             )));
         }
 
-        let shader = self
-            .device
-            .compile_shader_f64(Self::wgsl_shader(), Some("Grid Quadrature GEMM f64"));
-
         // Choose entry point based on grid size and symmetry
         let entry_point = if self.symmetric {
             "grid_quadrature_gemm_symmetric"
@@ -157,92 +154,6 @@ impl GridQuadratureGemm {
         } else {
             "grid_quadrature_gemm"
         };
-
-        // Create bind group layout
-        let bgl = self
-            .device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("GridQuadGEMM BGL"),
-                entries: &[
-                    // phi [batch, n, grid]
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: true },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    // w [batch, grid]
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: true },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    // quad_weights [grid]
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: true },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    // output [batch, n, n]
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 3,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    // params
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 4,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                ],
-            });
-
-        let pl = self
-            .device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("GridQuadGEMM PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let pipeline =
-            self.device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some(entry_point),
-                    layout: Some(&pl),
-                    module: &shader,
-                    entry_point: Some(entry_point),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
 
         // Create buffers
         let phi_bytes: &[u8] = bytemuck::cast_slice(phi);
@@ -293,37 +204,6 @@ impl GridQuadratureGemm {
             .device
             .create_uniform_buffer("GridQuadGEMM params", &params);
 
-        // Create bind group
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("GridQuadGEMM BG"),
-                layout: &bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: phi_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: w_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: qw_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: output_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 4,
-                        resource: params_buffer.as_entire_binding(),
-                    },
-                ],
-            });
-
         // Calculate workgroup dimensions
         let (wg_x, wg_y) = if self.symmetric {
             let n_upper = (self.n * (self.n + 1)) / 2;
@@ -332,24 +212,16 @@ impl GridQuadratureGemm {
             ((self.n * self.n) as u32, self.batch_size as u32)
         };
 
-        // Execute
-        {
-            let mut encoder = self
-                .device
-                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                    label: Some("GridQuadGEMM encoder"),
-                });
-            {
-                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("GridQuadGEMM pass"),
-                    timestamp_writes: None,
-                });
-                pass.set_pipeline(&pipeline);
-                pass.set_bind_group(0, Some(&bg), &[]);
-                pass.dispatch_workgroups(wg_x, wg_y, 1);
-            }
-            self.device.submit_commands(Some(encoder.finish()));
-        }
+        ComputeDispatch::new(&self.device, entry_point)
+            .shader(Self::wgsl_shader(), entry_point)
+            .f64()
+            .storage_read(0, &phi_buffer)
+            .storage_read(1, &w_buffer)
+            .storage_read(2, &qw_buffer)
+            .storage_rw(3, &output_buffer)
+            .uniform(4, &params_buffer)
+            .dispatch(wg_x, wg_y, 1)
+            .submit()?;
 
         // Read back results
         self.device.read_f64_buffer(&output_buffer, output_size)

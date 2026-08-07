@@ -83,7 +83,7 @@ impl MaskedFill {
 
         ComputeDispatch::new(device, "MaskedFill")
             .shader(include_str!("../shaders/tensor/masked_fill_f64.wgsl"), "main")
-            .storage_read(0, &input_buffer)
+            .storage_read(0, input_buffer)
             .storage_read(1, &mask_buffer)
             .storage_rw(2, &output_buffer)
             .uniform(3, &params_buffer)

@@ -30,6 +30,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -254,123 +255,6 @@ impl SpinOrbitGpu {
             w0,
             entry_point,
         } = inputs;
-        let shader = self
-            .device
-            .compile_shader_f64(Self::wgsl_shader(), Some("SpinOrbit f64"));
-
-        // Create bind group layout
-        let mut entries = vec![
-            // params
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            // wf_squared
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            // drho_dr
-            wgpu::BindGroupLayoutEntry {
-                binding: 2,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            // r_grid
-            wgpu::BindGroupLayoutEntry {
-                binding: 3,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            // ls_factors
-            wgpu::BindGroupLayoutEntry {
-                binding: 4,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            // h_so_diag output
-            wgpu::BindGroupLayoutEntry {
-                binding: 5,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: false },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-        ];
-
-        // Add density binding if using spin_orbit_with_gradient
-        if density.is_some() {
-            entries.push(wgpu::BindGroupLayoutEntry {
-                binding: 6,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            });
-        }
-
-        let bgl = self
-            .device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("SpinOrbit BGL"),
-                entries: &entries,
-            });
-
-        let pl = self
-            .device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("SpinOrbit PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let pipeline =
-            self.device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("SpinOrbit Pipeline"),
-                    layout: Some(&pl),
-                    module: &shader,
-                    entry_point: Some(entry_point),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
         // Create buffers
         let params = SpinOrbitParams::new(
             *batch_size as u32,
@@ -431,79 +315,41 @@ impl SpinOrbitGpu {
             mapped_at_creation: false,
         });
 
-        // Build bind group entries
-        let mut bg_entries = vec![
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: params_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: wf_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: drho_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: r_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
-                resource: ls_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 5,
-                resource: output_buffer.as_entire_binding(),
-            },
-        ];
-
-        // Add density buffer if needed
-        let density_buffer;
-        if let Some(dens) = density {
-            density_buffer =
-                self.device
-                    .device
-                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("SpinOrbit density"),
-                        contents: bytemuck::cast_slice(dens),
-                        usage: wgpu::BufferUsages::STORAGE,
-                    });
-            bg_entries.push(wgpu::BindGroupEntry {
-                binding: 6,
-                resource: density_buffer.as_entire_binding(),
-            });
-        }
-
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("SpinOrbit BG"),
-                layout: &bgl,
-                entries: &bg_entries,
-            });
-
-        // Execute
         let n_threads = batch_size * n_states;
         let n_workgroups = n_threads.div_ceil(WORKGROUP_SIZE_COMPACT as usize);
-        {
-            let mut encoder = self
-                .device
-                .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                    label: Some("SpinOrbit Encoder"),
-                });
-            {
-                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("SpinOrbit Pass"),
-                    timestamp_writes: None,
-                });
-                pass.set_pipeline(&pipeline);
-                pass.set_bind_group(0, Some(&bg), &[]);
-                pass.dispatch_workgroups(n_workgroups as u32, 1, 1);
-            }
-            self.device.submit_commands(Some(encoder.finish()));
+
+        if let Some(dens) = density {
+            let density_buffer = self.device.device.create_buffer_init(
+                &wgpu::util::BufferInitDescriptor {
+                    label: Some("SpinOrbit density"),
+                    contents: bytemuck::cast_slice(dens),
+                    usage: wgpu::BufferUsages::STORAGE,
+                },
+            );
+            ComputeDispatch::new(self.device.as_ref(), "SpinOrbit")
+                .shader(Self::wgsl_shader(), entry_point)
+                .f64()
+                .uniform(0, &params_buffer)
+                .storage_read(1, &wf_buffer)
+                .storage_read(2, drho_buffer)
+                .storage_read(3, &r_buffer)
+                .storage_read(4, &ls_buffer)
+                .storage_rw(5, &output_buffer)
+                .storage_read(6, &density_buffer)
+                .dispatch(n_workgroups as u32, 1, 1)
+                .submit()?;
+        } else {
+            ComputeDispatch::new(self.device.as_ref(), "SpinOrbit")
+                .shader(Self::wgsl_shader(), entry_point)
+                .f64()
+                .uniform(0, &params_buffer)
+                .storage_read(1, &wf_buffer)
+                .storage_read(2, drho_buffer)
+                .storage_read(3, &r_buffer)
+                .storage_read(4, &ls_buffer)
+                .storage_rw(5, &output_buffer)
+                .dispatch(n_workgroups as u32, 1, 1)
+                .submit()?;
         }
 
         // Read back results

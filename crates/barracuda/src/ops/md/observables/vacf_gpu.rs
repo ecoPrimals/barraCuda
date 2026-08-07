@@ -24,6 +24,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_2D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::ops::md::observables::{Vacf, compute_vacf};
 use std::sync::Arc;
@@ -113,69 +114,18 @@ impl VacfGpu {
             mapped_at_creation: false,
         });
 
-        // ── Pipeline ────────────────────────────────────────────────────────────
-        let module = gpu_d.compile_shader_f64(VACF_SHADER, Some("vacf_f64"));
-
-        let bgl = gpu_d
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("VACF BGL"),
-                entries: &[
-                    storage_bgl(0, true),
-                    storage_bgl(1, true),
-                    storage_bgl(2, false),
-                ],
-            });
-        let pl_layout = gpu_d
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("VACF PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-        let pipeline = gpu_d
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("VACF Pipeline"),
-                layout: Some(&pl_layout),
-                module: &module,
-                entry_point: Some("vacf_pair"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-        let bg = gpu_d.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("VACF BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: vel_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: c_raw_buf.as_entire_binding(),
-                },
-            ],
-        });
-
         // ── Dispatch: ceil(L/16) × ceil(T/16) workgroups ─────────────────────
         let wg_x = (actual_lag as u32).div_ceil(WORKGROUP_SIZE_2D);
         let wg_y = (n_frames as u32).div_ceil(WORKGROUP_SIZE_2D);
 
-        let mut encoder = gpu_d.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("VACF"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(wg_x, wg_y, 1);
-        }
-        gpu_d.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(gpu_d, "VACF")
+            .shader(VACF_SHADER, "vacf_pair")
+            .f64()
+            .storage_read(0, &params_buf)
+            .storage_read(1, &vel_buf)
+            .storage_rw(2, &c_raw_buf)
+            .dispatch(wg_x, wg_y, 1)
+            .submit()?;
 
         // ── Readback c_raw[T × L] ─────────────────────────────────────────────
         let c_raw_f64: Vec<f64> = gpu_d.read_buffer_f64(&c_raw_buf, n_frames * actual_lag)?;
@@ -222,19 +172,6 @@ impl VacfGpu {
 fn n_particles_u32(n: usize) -> u32 {
     debug_assert!(u32::try_from(n).is_ok(), "n_particles must fit in u32");
     n as u32
-}
-
-fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────

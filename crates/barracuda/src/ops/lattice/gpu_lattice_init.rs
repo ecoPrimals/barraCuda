@@ -3,6 +3,7 @@
 //!
 //! Replaces CPU-only `wilson.rs` `cold_start/hot_start` with GPU shaders.
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::error::Result;
@@ -26,9 +27,7 @@ struct InitParams {
 pub struct GpuLatticeInit {
     device: Arc<WgpuDevice>,
     n_links: u32,
-    cold_pipeline: wgpu::ComputePipeline,
-    hot_pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
+    shader_src: String,
 }
 
 impl GpuLatticeInit {
@@ -37,58 +36,12 @@ impl GpuLatticeInit {
     /// Returns [`Err`] if shader compilation or pipeline creation fails.
     pub fn new(device: Arc<WgpuDevice>, volume: u32) -> Result<Self> {
         let n_links = volume * 4;
-        let src = format!("{}{}", su3_extended_preamble(), SHADER_BODY);
-        let module = device.compile_shader_f64(&src, Some("lattice_init"));
-
-        let bgl = device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("GpuLatticeInit:bgl"),
-                entries: &[
-                    uniform_bgl(0),
-                    storage_bgl(1, false), // links (write)
-                    storage_bgl(2, false), // rng_state (read_write)
-                ],
-            });
-
-        let layout = device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("GpuLatticeInit:layout"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let cold_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("GpuLatticeInit:cold"),
-                    layout: Some(&layout),
-                    module: &module,
-                    entry_point: Some("cold_start"),
-                    compilation_options: Default::default(),
-                    cache: None,
-                });
-
-        let hot_pipeline =
-            device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("GpuLatticeInit:hot"),
-                    layout: Some(&layout),
-                    module: &module,
-                    entry_point: Some("hot_start"),
-                    compilation_options: Default::default(),
-                    cache: None,
-                });
+        let shader_src = format!("{}{}", su3_extended_preamble(), SHADER_BODY);
 
         Ok(Self {
             device,
             n_links,
-            cold_pipeline,
-            hot_pipeline,
-            bgl,
+            shader_src,
         })
     }
 
@@ -101,14 +54,7 @@ impl GpuLatticeInit {
         rng_buf: &wgpu::Buffer,
         volume: u32,
     ) -> Result<()> {
-        self.dispatch(
-            &self.cold_pipeline,
-            links_buf,
-            rng_buf,
-            volume,
-            0.0,
-            "cold_start",
-        )
+        self.dispatch(links_buf, rng_buf, volume, 0.0, "cold_start", "cold_start")
     }
 
     /// Initialize links with random SU(3) near identity.
@@ -121,23 +67,16 @@ impl GpuLatticeInit {
         volume: u32,
         epsilon: f64,
     ) -> Result<()> {
-        self.dispatch(
-            &self.hot_pipeline,
-            links_buf,
-            rng_buf,
-            volume,
-            epsilon,
-            "hot_start",
-        )
+        self.dispatch(links_buf, rng_buf, volume, epsilon, "hot_start", "hot_start")
     }
 
     fn dispatch(
         &self,
-        pipeline: &wgpu::ComputePipeline,
         links_buf: &wgpu::Buffer,
         rng_buf: &wgpu::Buffer,
         volume: u32,
         epsilon: f64,
+        entry_point: &str,
         label: &str,
     ) -> Result<()> {
         let params_data = InitParams {
@@ -158,43 +97,15 @@ impl GpuLatticeInit {
             .queue
             .write_buffer(&params, 0, bytemuck::bytes_of(&params_data));
 
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some(&format!("GpuLatticeInit:{label}:bg")),
-                layout: &self.bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: params.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: links_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: rng_buf.as_entire_binding(),
-                    },
-                ],
-            });
+        ComputeDispatch::new(&self.device, &format!("GpuLatticeInit:{label}"))
+            .shader(&self.shader_src, entry_point)
+            .f64()
+            .uniform(0, &params)
+            .storage_rw(1, links_buf)
+            .storage_rw(2, rng_buf)
+            .dispatch(self.n_links.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .submit()?;
 
-        let mut enc = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some(&format!("GpuLatticeInit:{label}:enc")),
-            });
-        {
-            let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some(&format!("GpuLatticeInit:{label}:pass")),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups(self.n_links.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1);
-        }
-        self.device.submit_commands(Some(enc.finish()));
         Ok(())
     }
 
@@ -202,32 +113,6 @@ impl GpuLatticeInit {
     #[must_use]
     pub fn n_links(&self) -> u32 {
         self.n_links
-    }
-}
-
-fn storage_bgl(binding: u32, read_only: bool) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-fn uniform_bgl(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

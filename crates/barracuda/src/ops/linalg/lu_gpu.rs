@@ -32,6 +32,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use std::sync::Arc;
@@ -58,89 +59,6 @@ impl LuGpu {
 
     fn wgsl_shader_f64() -> &'static str {
         include_str!("../../shaders/linalg/lu_decomp_f64.wgsl")
-    }
-
-    /// Build a 3-binding layout: binding 0 = uniform, binding 1 = storage, binding 2 = storage (rw).
-    fn make_bgl(device: &wgpu::Device, b1_read_only: bool) -> wgpu::BindGroupLayout {
-        let entry = |binding: u32, ty: wgpu::BufferBindingType| wgpu::BindGroupLayoutEntry {
-            binding,
-            visibility: wgpu::ShaderStages::COMPUTE,
-            ty: wgpu::BindingType::Buffer {
-                ty,
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-            count: None,
-        };
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: None,
-            entries: &[
-                entry(0, wgpu::BufferBindingType::Uniform),
-                entry(
-                    1,
-                    wgpu::BufferBindingType::Storage {
-                        read_only: b1_read_only,
-                    },
-                ),
-                entry(2, wgpu::BufferBindingType::Storage { read_only: false }),
-            ],
-        })
-    }
-
-    fn make_pipe(
-        device: &wgpu::Device,
-        shader: &wgpu::ShaderModule,
-        bgl: &wgpu::BindGroupLayout,
-        entry_point: &str,
-    ) -> wgpu::ComputePipeline {
-        let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: None,
-            bind_group_layouts: &[bgl],
-            immediate_size: 0,
-        });
-        device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some(entry_point),
-            layout: Some(&pl),
-            module: shader,
-            entry_point: Some(entry_point),
-            cache: None,
-            compilation_options: Default::default(),
-        })
-    }
-
-    fn make_bg(
-        device: &wgpu::Device,
-        layout: &wgpu::BindGroupLayout,
-        bufs: &[&wgpu::Buffer],
-    ) -> wgpu::BindGroup {
-        device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout,
-            entries: &bufs
-                .iter()
-                .enumerate()
-                .map(|(i, b)| wgpu::BindGroupEntry {
-                    binding: i as u32,
-                    resource: b.as_entire_binding(),
-                })
-                .collect::<Vec<_>>(),
-        })
-    }
-
-    fn dispatch(
-        dev: &WgpuDevice,
-        pipeline: &wgpu::ComputePipeline,
-        bg: &wgpu::BindGroup,
-        wg: (u32, u32, u32),
-    ) {
-        let mut enc = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor { label: None });
-        {
-            let mut p = enc.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
-            p.set_pipeline(pipeline);
-            p.set_bind_group(0, Some(bg), &[]);
-            p.dispatch_workgroups(wg.0, wg.1, wg.2);
-        }
-        dev.submit_commands(Some(enc.finish()));
     }
 
     /// Execute LU decomposition (f32 via Tensor API)
@@ -181,13 +99,7 @@ impl LuGpu {
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
         });
 
-        let shader = device.compile_shader(Self::wgsl_shader_f32(), Some("LU f32"));
-        let pivot_bgl = Self::make_bgl(&device.device, true);
-        let main_bgl = Self::make_bgl(&device.device, false);
-        let find_pivot_pipe = Self::make_pipe(&device.device, &shader, &pivot_bgl, "find_pivot");
-        let row_swap_pipe = Self::make_pipe(&device.device, &shader, &main_bgl, "row_swap");
-        let mult_pipe = Self::make_pipe(&device.device, &shader, &main_bgl, "compute_multipliers");
-        let elim_pipe = Self::make_pipe(&device.device, &shader, &main_bgl, "row_elimination");
+        let shader_src = Self::wgsl_shader_f32();
 
         for k in 0..(n - 1) {
             let params_buf = device
@@ -198,12 +110,13 @@ impl LuGpu {
                     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                 });
 
-            let pivot_bg = Self::make_bg(
-                &device.device,
-                &pivot_bgl,
-                &[&params_buf, &lu_buffer, &pivot_buf],
-            );
-            Self::dispatch(device, &find_pivot_pipe, &pivot_bg, (1, 1, 1));
+            ComputeDispatch::new(device, "LU find_pivot")
+                .shader(shader_src, "find_pivot")
+                .uniform(0, &params_buf)
+                .storage_read(1, &lu_buffer)
+                .storage_rw(2, &pivot_buf)
+                .dispatch(1, 1, 1)
+                .submit()?;
 
             let pivot_data = device.read_buffer_u32(&pivot_buf, 2)?;
             let pivot_row = pivot_data[0];
@@ -216,33 +129,31 @@ impl LuGpu {
                         contents: bytemuck::cast_slice(&[n, k, pivot_row, 0u32]),
                         usage: wgpu::BufferUsages::UNIFORM,
                     });
-            let main_bg = Self::make_bg(
-                &device.device,
-                &main_bgl,
-                &[&params_pivot, &lu_buffer, &perm_buffer],
-            );
 
             if pivot_row != k {
-                Self::dispatch(
-                    device,
-                    &row_swap_pipe,
-                    &main_bg,
-                    (n.div_ceil(WORKGROUP_SIZE_1D), 1, 1),
-                );
+                ComputeDispatch::new(device, "LU row_swap")
+                    .shader(shader_src, "row_swap")
+                    .uniform(0, &params_pivot)
+                    .storage_rw(1, &lu_buffer)
+                    .storage_rw(2, &perm_buffer)
+                    .dispatch(n.div_ceil(WORKGROUP_SIZE_1D), 1, 1)
+                    .submit()?;
             }
-            Self::dispatch(
-                device,
-                &mult_pipe,
-                &main_bg,
-                ((n - k - 1).div_ceil(WORKGROUP_SIZE_1D), 1, 1),
-            );
+            ComputeDispatch::new(device, "LU compute_multipliers")
+                .shader(shader_src, "compute_multipliers")
+                .uniform(0, &params_pivot)
+                .storage_rw(1, &lu_buffer)
+                .storage_rw(2, &perm_buffer)
+                .dispatch((n - k - 1).div_ceil(WORKGROUP_SIZE_1D), 1, 1)
+                .submit()?;
             let sub = n - k - 1;
-            Self::dispatch(
-                device,
-                &elim_pipe,
-                &main_bg,
-                (sub.div_ceil(16), sub.div_ceil(16), 1),
-            );
+            ComputeDispatch::new(device, "LU row_elimination")
+                .shader(shader_src, "row_elimination")
+                .uniform(0, &params_pivot)
+                .storage_rw(1, &lu_buffer)
+                .storage_rw(2, &perm_buffer)
+                .dispatch(sub.div_ceil(16), sub.div_ceil(16), 1)
+                .submit()?;
         }
 
         let lu_data = device.read_buffer_f32(&lu_buffer, (n * n) as usize)?;
@@ -306,13 +217,7 @@ impl LuGpu {
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
         });
 
-        let shader = device.compile_shader_f64(Self::wgsl_shader_f64(), Some("LU f64"));
-        let pivot_bgl = Self::make_bgl(&device.device, true);
-        let main_bgl = Self::make_bgl(&device.device, false);
-        let find_pivot_pipe = Self::make_pipe(&device.device, &shader, &pivot_bgl, "find_pivot");
-        let row_swap_pipe = Self::make_pipe(&device.device, &shader, &main_bgl, "row_swap");
-        let mult_pipe = Self::make_pipe(&device.device, &shader, &main_bgl, "compute_multipliers");
-        let elim_pipe = Self::make_pipe(&device.device, &shader, &main_bgl, "row_elimination");
+        let shader_src = Self::wgsl_shader_f64();
 
         for k in 0..(nu - 1) {
             let params_buf = device
@@ -323,12 +228,14 @@ impl LuGpu {
                     usage: wgpu::BufferUsages::UNIFORM,
                 });
 
-            let pivot_bg = Self::make_bg(
-                &device.device,
-                &pivot_bgl,
-                &[&params_buf, &lu_buffer, &pivot_buf],
-            );
-            Self::dispatch(&device, &find_pivot_pipe, &pivot_bg, (1, 1, 1));
+            ComputeDispatch::new(&device, "LU f64 find_pivot")
+                .shader(shader_src, "find_pivot")
+                .f64()
+                .uniform(0, &params_buf)
+                .storage_read(1, &lu_buffer)
+                .storage_rw(2, &pivot_buf)
+                .dispatch(1, 1, 1)
+                .submit()?;
 
             let pivot_data = device.read_buffer_u32(&pivot_buf, 1)?;
             let pivot_row = pivot_data[0];
@@ -341,33 +248,34 @@ impl LuGpu {
                         contents: bytemuck::cast_slice(&[nu, k, pivot_row, 0u32]),
                         usage: wgpu::BufferUsages::UNIFORM,
                     });
-            let main_bg = Self::make_bg(
-                &device.device,
-                &main_bgl,
-                &[&params_pivot, &lu_buffer, &perm_buffer],
-            );
 
             if pivot_row != k {
-                Self::dispatch(
-                    &device,
-                    &row_swap_pipe,
-                    &main_bg,
-                    (nu.div_ceil(WORKGROUP_SIZE_1D), 1, 1),
-                );
+                ComputeDispatch::new(&device, "LU f64 row_swap")
+                    .shader(shader_src, "row_swap")
+                    .f64()
+                    .uniform(0, &params_pivot)
+                    .storage_rw(1, &lu_buffer)
+                    .storage_rw(2, &perm_buffer)
+                    .dispatch(nu.div_ceil(WORKGROUP_SIZE_1D), 1, 1)
+                    .submit()?;
             }
-            Self::dispatch(
-                &device,
-                &mult_pipe,
-                &main_bg,
-                ((nu - k - 1).div_ceil(WORKGROUP_SIZE_1D), 1, 1),
-            );
+            ComputeDispatch::new(&device, "LU f64 compute_multipliers")
+                .shader(shader_src, "compute_multipliers")
+                .f64()
+                .uniform(0, &params_pivot)
+                .storage_rw(1, &lu_buffer)
+                .storage_rw(2, &perm_buffer)
+                .dispatch((nu - k - 1).div_ceil(WORKGROUP_SIZE_1D), 1, 1)
+                .submit()?;
             let sub = nu - k - 1;
-            Self::dispatch(
-                &device,
-                &elim_pipe,
-                &main_bg,
-                (sub.div_ceil(16), sub.div_ceil(16), 1),
-            );
+            ComputeDispatch::new(&device, "LU f64 row_elimination")
+                .shader(shader_src, "row_elimination")
+                .f64()
+                .uniform(0, &params_pivot)
+                .storage_rw(1, &lu_buffer)
+                .storage_rw(2, &perm_buffer)
+                .dispatch(sub.div_ceil(16), sub.div_ceil(16), 1)
+                .submit()?;
         }
 
         let lu_data = device.read_f64_buffer(&lu_buffer, n * n)?;

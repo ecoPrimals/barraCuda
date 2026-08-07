@@ -46,13 +46,10 @@
 //! # }
 //! ```
 
-use std::borrow::Cow;
 use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::{
-    WORKGROUP_SIZE_1D, WORKGROUP_SIZE_COMPACT, WORKGROUP_SIZE_MEDIUM,
-};
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result as BarracudaResult};
 
 /// Sparse matrix multiply with quantized int8 values
@@ -99,13 +96,6 @@ pub fn sparse_matmul_quantized(
     let nnz = crate::utils::checked_u32(sparse_values.len(), "sparse_matmul nnz")?;
     let d = device.device();
     let q = device.queue();
-
-    let shader = d.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("Sparse MatMul Quantized Shader"),
-        source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!(
-            "sparse_matmul_quantized.wgsl"
-        ))),
-    });
 
     // Convert i8 to i32 for GPU (WGSL doesn't have i8)
     let values_i32: Vec<i32> = sparse_values.iter().map(|&x| x as i32).collect();
@@ -164,152 +154,29 @@ pub fn sparse_matmul_quantized(
         usage: wgpu::BufferUsages::UNIFORM,
     });
 
-    let bind_group_layout = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        label: Some("Sparse MatMul Layout"),
-        entries: &[
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 2,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 3,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 4,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: false },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 5,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-        ],
-    });
-
-    let bind_group = d.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Sparse MatMul Bind Group"),
-        layout: &bind_group_layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: values_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: rows_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: cols_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: dense_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
-                resource: output_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 5,
-                resource: params_buffer.as_entire_binding(),
-            },
-        ],
-    });
-
-    let pipeline_layout = d.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: Some("Sparse MatMul Pipeline Layout"),
-        bind_group_layouts: &[&bind_group_layout],
-        immediate_size: 0,
-    });
-
-    let pipeline = d.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-        label: Some("Sparse MatMul Pipeline"),
-        layout: Some(&pipeline_layout),
-        module: &shader,
-        entry_point: Some("sparse_matmul_quantized"),
-        cache: None,
-        compilation_options: Default::default(),
-    });
-
-    let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-        label: Some("Sparse MatMul Encoder"),
-    });
-
-    {
-        let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: Some("Sparse MatMul Pass"),
-            timestamp_writes: None,
-        });
-        cpass.set_pipeline(&pipeline);
-        cpass.set_bind_group(0, Some(&bind_group), &[]);
-        // Deep Debt Evolution: Capability-based dispatch
-        // Note: This function uses raw wgpu::Device, so we use device limits for capability awareness
-        let limits = d.limits();
-        let max_invocations = limits.max_compute_invocations_per_workgroup;
-        // Use capability-aware workgroup size, respecting device limits
-        // Choose optimal size based on device capabilities: prefer 256 for discrete GPUs,
-        // 128 for integrated GPUs, but always respect device limits
-        let optimal_wg_size = if max_invocations >= WORKGROUP_SIZE_1D {
-            WORKGROUP_SIZE_1D
-        } else if max_invocations >= WORKGROUP_SIZE_MEDIUM {
-            WORKGROUP_SIZE_MEDIUM
-        } else {
-            max_invocations.max(WORKGROUP_SIZE_COMPACT)
-        };
-        let workgroups = output_size.div_ceil(optimal_wg_size);
-        cpass.dispatch_workgroups(workgroups.max(1), 1, 1);
-    }
+    ComputeDispatch::new(device, "Sparse MatMul Quantized")
+        .shader(
+            include_str!("sparse_matmul_quantized.wgsl"),
+            "sparse_matmul_quantized",
+        )
+        .storage_read(0, &values_buffer)
+        .storage_read(1, &rows_buffer)
+        .storage_read(2, &cols_buffer)
+        .storage_read(3, &dense_buffer)
+        .storage_rw(4, &output_buffer)
+        .uniform(5, &params_buffer)
+        .dispatch_1d(output_size)
+        .submit()?;
 
     let staging_buffer = d.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Staging"),
         size: (output_size * std::mem::size_of::<f32>() as u32) as u64,
         usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
         mapped_at_creation: false,
+    });
+
+    let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
+        label: Some("Sparse MatMul Readback Encoder"),
     });
 
     encoder.copy_buffer_to_buffer(

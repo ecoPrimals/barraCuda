@@ -9,8 +9,8 @@
 //!
 //! `WetSpring` Exp018: 259 Jones Lab PFAS ions grouped by CH₂ / CF₂ homology.
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -62,10 +62,6 @@ pub mod repeat_units {
 }
 
 impl KmdGroupingF64 {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/bio/kmd_grouping_f64.wgsl")
-    }
-
     /// Create a KMD calculator for the given repeat unit.
     ///
     /// Use `repeat_units::CF2` for PFAS, `repeat_units::CH2` for hydrocarbons.
@@ -121,68 +117,14 @@ impl KmdGroupingF64 {
             mapped_at_creation: false,
         });
 
-        let bgl = dev
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("KMD BGL"),
-                entries: &[
-                    bgl_entry(0, wgpu::BufferBindingType::Uniform),
-                    bgl_entry(1, wgpu::BufferBindingType::Storage { read_only: true }),
-                    bgl_entry(2, wgpu::BufferBindingType::Storage { read_only: false }),
-                ],
-            });
-
-        let bg = dev.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("KMD BG"),
-            layout: &bgl,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: cfg_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: mass_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: out_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let shader = dev.compile_shader_f64(Self::wgsl_shader(), Some("KmdGrouping"));
-        let pl = dev
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("KMD PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-        let pipeline = dev
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("KMD Pipeline"),
-                layout: Some(&pl),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let mut encoder = dev.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("KMD Encoder"),
-        });
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("KMD Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            pass.dispatch_workgroups((n as u32).div_ceil(WORKGROUP_SIZE_1D), 1, 1);
-        }
-        dev.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(dev, "KmdGrouping")
+            .shader(include_str!("../shaders/bio/kmd_grouping_f64.wgsl"), "main")
+            .f64()
+            .uniform(0, &cfg_buf)
+            .storage_read(1, &mass_buf)
+            .storage_rw(2, &out_buf)
+            .dispatch_1d(n as u32)
+            .submit()?;
 
         let raw = crate::utils::read_buffer_f64(dev, &out_buf, n * 3)?;
         Ok(raw
@@ -223,19 +165,6 @@ impl KmdGroupingF64 {
             next_group += 1;
         }
         Ok(groups)
-    }
-}
-
-fn bgl_entry(idx: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding: idx,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
     }
 }
 

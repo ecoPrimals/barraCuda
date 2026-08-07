@@ -94,7 +94,7 @@ impl MaxPool1D {
 
         ComputeDispatch::new(device, "MaxPool1D")
             .shader(include_str!("../shaders/pooling/max_pool1d_f64.wgsl"), "main")
-            .storage_read(0, &input_buffer)
+            .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
             .dispatch_1d(total_elements as u32)

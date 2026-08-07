@@ -11,7 +11,7 @@
 //! f64 pipeline: seeds as `array<u32>` (1 per output, expanded to 4-stride),
 //! output as `array<f64>` in [0, 1).
 
-use crate::device::DeviceCapabilities;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
@@ -62,13 +62,7 @@ impl PrngXoshiro {
         let expanded: Vec<u32> = (0..seed_count)
             .flat_map(|i| [seeds_data[i], 0u32, 0u32, 0u32])
             .collect();
-        let seeds_buffer = device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("PRNG Xoshiro seeds expanded"),
-                contents: bytemuck::cast_slice(&expanded),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
+        let seeds_buffer = device.create_buffer_u32_init("PRNG Xoshiro seeds expanded", &expanded);
 
         let output_buffer = device.create_buffer_f64(seed_count)?;
 
@@ -83,111 +77,16 @@ impl PrngXoshiro {
             size: seed_count as u32,
             offset: self.offset,
         };
-        let params_buffer = device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("PRNG Xoshiro Params"),
-                contents: bytemuck::cast_slice(&[params]),
-                usage: wgpu::BufferUsages::UNIFORM,
-            });
+        let params_buffer = device.create_uniform_buffer("PRNG Xoshiro Params", &params);
 
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("PRNG Xoshiro f64 Bind Group Layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("PRNG Xoshiro Bind Group"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: seeds_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let shader = device.compile_shader_f64(Self::wgsl_shader_f64(), Some("PRNG Xoshiro f64"));
-
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("PRNG Xoshiro Pipeline Layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("PRNG Xoshiro Pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("PRNG Xoshiro Encoder"),
-        });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("PRNG Xoshiro Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-            let caps = DeviceCapabilities::from_device(device);
-            let workgroups = caps.dispatch_1d(seed_count as u32);
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(device, "PRNG Xoshiro")
+            .shader(include_str!("../shaders/misc/prng_xoshiro_f64.wgsl"), "main")
+            .f64()
+            .storage_read(0, &seeds_buffer)
+            .storage_rw(1, &output_buffer)
+            .uniform(2, &params_buffer)
+            .dispatch_1d(seed_count as u32)
+            .submit()?;
 
         Ok(Tensor::from_buffer(
             output_buffer,

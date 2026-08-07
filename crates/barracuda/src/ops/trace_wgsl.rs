@@ -15,15 +15,10 @@
 //! For [[a, b], [c, d]]: trace = a + d
 //! ```
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::{DeviceCapabilities, WorkloadType};
 use crate::error::Result;
 use crate::tensor::Tensor;
-
-/// f64 is the canonical source — math is universal, precision is silicon.
-const SHADER_F64: &str = include_str!("../shaders/linalg/trace_f64.wgsl");
-
-/// f32 variant derived from f64 via precision downcast.
-const SHADER_F32: &str = SHADER_F64;
 
 /// Sum of diagonal elements of a square matrix.
 pub struct Trace {
@@ -35,10 +30,6 @@ impl Trace {
     #[must_use]
     pub fn new(input: Tensor) -> Self {
         Self { input }
-    }
-
-    fn wgsl_shader() -> &'static str {
-        SHADER_F32
     }
 
     /// Execute trace (sum of diagonal elements) on a square matrix.
@@ -74,109 +65,18 @@ impl Trace {
 
         let params_buffer = device.create_uniform_buffer("Params", &[n as u32, 0u32, 0u32, 0u32]);
 
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("Trace BGL"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
-
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Trace BG"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.input.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let shader = device.compile_shader(Self::wgsl_shader(), Some("Trace"));
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("Trace PL"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("Trace Pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("Trace Encoder"),
-        });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Trace Pass"),
-                timestamp_writes: None,
-            });
-
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-
-            pass.dispatch_workgroups(workgroups, 1, 1);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(device, "Trace")
+            .shader(include_str!("../shaders/linalg/trace_f64.wgsl"), "main")
+            .storage_read(0, self.input.buffer())
+            .storage_rw(1, &output_buffer)
+            .uniform(2, &params_buffer)
+            .dispatch(workgroups, 1, 1)
+            .submit()?;
 
         // If multiple workgroups, reduce partial results in a second pass using reduce shader
         let final_buffer = if workgroups > 1 {
             // Second pass: reduce partial results using reduce shader
             let reduce_shader_source = crate::ops::reduce::Reduce::wgsl_shader();
-            let reduce_shader =
-                device.compile_shader(reduce_shader_source, Some("Trace Reduce Shader"));
 
             #[repr(C)]
             #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -196,113 +96,20 @@ impl Trace {
 
             let final_output_buffer = device.create_buffer_f32(1)?;
             let reduce_params_buffer =
-                device
-                    .device
-                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Trace Reduce Params"),
-                        contents: bytemuck::cast_slice(&[reduce_params]),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    });
+                device.create_uniform_buffer("Trace Reduce Params", &reduce_params);
 
-            let bind_group_layout_2 =
-                device
-                    .device
-                    .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                        label: Some("Trace Reduce BGL"),
-                        entries: &[
-                            wgpu::BindGroupLayoutEntry {
-                                binding: 0,
-                                visibility: wgpu::ShaderStages::COMPUTE,
-                                ty: wgpu::BindingType::Buffer {
-                                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                    has_dynamic_offset: false,
-                                    min_binding_size: None,
-                                },
-                                count: None,
-                            },
-                            wgpu::BindGroupLayoutEntry {
-                                binding: 1,
-                                visibility: wgpu::ShaderStages::COMPUTE,
-                                ty: wgpu::BindingType::Buffer {
-                                    ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                    has_dynamic_offset: false,
-                                    min_binding_size: None,
-                                },
-                                count: None,
-                            },
-                            wgpu::BindGroupLayoutEntry {
-                                binding: 2,
-                                visibility: wgpu::ShaderStages::COMPUTE,
-                                ty: wgpu::BindingType::Buffer {
-                                    ty: wgpu::BufferBindingType::Uniform,
-                                    has_dynamic_offset: false,
-                                    min_binding_size: None,
-                                },
-                                count: None,
-                            },
-                        ],
-                    });
+            let caps_2 = DeviceCapabilities::from_device(device);
+            let optimal_wg_size_2 = caps_2.optimal_workgroup_size(WorkloadType::Reduction);
+            let workgroups_2 = workgroups.div_ceil(optimal_wg_size_2);
 
-            let bind_group_2 = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Trace Reduce BG"),
-                layout: &bind_group_layout_2,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: output_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: final_output_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: reduce_params_buffer.as_entire_binding(),
-                    },
-                ],
-            });
+            ComputeDispatch::new(device, "Trace Reduce")
+                .shader(reduce_shader_source, "main")
+                .storage_read(0, &output_buffer)
+                .storage_rw(1, &final_output_buffer)
+                .uniform(2, &reduce_params_buffer)
+                .dispatch(workgroups_2.max(1), 1, 1)
+                .submit()?;
 
-            let pipeline_layout_2 =
-                device
-                    .device
-                    .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                        label: Some("Trace Reduce PL"),
-                        bind_group_layouts: &[&bind_group_layout_2],
-                        immediate_size: 0,
-                    });
-
-            let pipeline_2 =
-                device
-                    .device
-                    .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                        label: Some("Trace Reduce Pipeline"),
-                        layout: Some(&pipeline_layout_2),
-                        module: &reduce_shader,
-                        entry_point: Some("main"),
-                        cache: None,
-                        compilation_options: Default::default(),
-                    });
-
-            let mut encoder_2 = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("Trace Reduce Encoder"),
-            });
-
-            {
-                let mut pass_2 = encoder_2.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("Trace Reduce Pass"),
-                    timestamp_writes: None,
-                });
-
-                pass_2.set_pipeline(&pipeline_2);
-                pass_2.set_bind_group(0, Some(&bind_group_2), &[]);
-                // Deep Debt Evolution: Capability-based dispatch for reduction pass
-                let caps_2 = DeviceCapabilities::from_device(device);
-                let optimal_wg_size_2 = caps_2.optimal_workgroup_size(WorkloadType::Reduction);
-                let workgroups_2 = workgroups.div_ceil(optimal_wg_size_2);
-                pass_2.dispatch_workgroups(workgroups_2.max(1), 1, 1);
-            }
-
-            device.submit_commands(Some(encoder_2.finish()));
             final_output_buffer
         } else {
             output_buffer

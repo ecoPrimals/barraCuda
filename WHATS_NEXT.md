@@ -15,16 +15,32 @@ Prioritized work items, ordered by impact. Updated 2026-08-07.
 - **Impact**: barraCuda requires no G68 changes. Transport layer is already
   properly abstracted via G66.
 
-### ComputeDispatch Migration (~92 ops)
-- **Status**: `ComputeDispatch` builder exists in `device/compute_pipeline.rs`.
-  ~12 ops already migrated (autocorrelation, argmax, scatter, etc.).
-  ~92 elementwise `*_wgsl.rs` ops still use manual BGL→pipeline→dispatch
-  boilerplate (~170 LOC each). Largest structural debt remaining.
-- **Impact**: −10K+ LOC, fewer shader dispatch bugs, consistent workgroup sizing.
+### Remaining Non-WGSL ComputeDispatch Migration
+- **Status**: All 92 `*_wgsl.rs` ops migrated to `ComputeDispatch` builder.
+  ~225 non-WGSL ops in `ops/` still use manual BGL→pipeline→dispatch.
+  These include f64 variants, linalg ops, MD integrators, and domain ops.
+- **Impact**: Additional LOC reduction, consistent dispatch pattern across
+  the entire ops directory.
 
 ---
 
 ## Recently Completed
+
+### Wave 157a — ComputeDispatch Migration (Aug 7, 2026)
+**Commit 3** — ComputeDispatch P0 Migration (92 files, −10,771 LOC):
+- **All 92 `*_wgsl.rs` ops** migrated from manual BGL→pipeline→encoder→submit
+  boilerplate to `ComputeDispatch::new().shader().storage_read().storage_rw()
+  .uniform().dispatch_1d().submit()` builder pattern. Includes:
+  - 12 simple unary math ops (sin, cos, tan, exp, sqrt, log, abs, sign,
+    trunc, floor, ceil, round)
+  - 34 script-migrated unary ops (trig inverses, bessels, activations, etc.)
+  - 16 parameterized ops (pow, clamp, pool1d, cumsum, norm, etc.)
+  - 16 multi-constructor ops (pad variants, interpolate, PRNG, polynomials)
+  - 14 complex multi-binding ops (gather, sparse_matvec, rnn_cell, trace, etc.)
+- **`create_uniform_buffer<T: Pod>()` helper** already existed — all ops now
+  use it for shader parameter structs (correct UNIFORM usage instead of
+  STORAGE usage from `create_buffer_f32_init`).
+- 4,990 tests pass, 0 failures. Zero clippy warnings.
 
 ### Wave 157a — Deep Debt Sweep Phase 4 (Aug 7, 2026)
 **Commit 1** — Error Idiom Evolution Phase 3 + Magic Number Centralization:

@@ -18,6 +18,7 @@
 //! Uses bilinear interpolation for smooth sampling
 //! ```
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
 use crate::error::Result;
 use crate::tensor::Tensor;
@@ -33,11 +34,6 @@ impl GridSample {
     #[must_use]
     pub fn new(input: Tensor, grid: Tensor) -> Self {
         Self { input, grid }
-    }
-
-    fn wgsl_shader() -> &'static str {
-        const SHADER: &str = include_str!("../shaders/misc/grid_sample_f64.wgsl");
-        SHADER
     }
 
     /// Execute grid sampling on GPU with bilinear interpolation.
@@ -95,120 +91,18 @@ impl GridSample {
         ];
         let params_buffer = device.create_uniform_buffer("Params", &params_data);
 
-        let bind_group_layout =
-            device
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("GridSample BGL"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
-                });
+        let caps = DeviceCapabilities::from_device(device);
+        let (workgroups_x, workgroups_y) =
+            caps.dispatch_2d(out_width as u32, out_height as u32);
 
-        let bind_group = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("GridSample BG"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.input.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.grid.buffer().as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: output_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: params_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let shader = device.compile_shader(Self::wgsl_shader(), Some("GridSample"));
-        let pipeline_layout =
-            device
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("GridSample PL"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
-
-        let pipeline = device
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("GridSample Pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some("main"),
-                cache: None,
-                compilation_options: Default::default(),
-            });
-
-        let mut encoder = device.create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-            label: Some("GridSample Encoder"),
-        });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("GridSample Pass"),
-                timestamp_writes: None,
-            });
-
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bind_group), &[]);
-
-            // Dispatch using standard 2D shader workgroup size (16, 16)
-            let caps = DeviceCapabilities::from_device(device);
-            let (workgroups_x, workgroups_y) =
-                caps.dispatch_2d(out_width as u32, out_height as u32);
-            pass.dispatch_workgroups(workgroups_x, workgroups_y, 1);
-        }
-
-        device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(device, "GridSample")
+            .shader(include_str!("../shaders/misc/grid_sample_f64.wgsl"), "main")
+            .storage_read(0, self.input.buffer())
+            .storage_read(1, self.grid.buffer())
+            .storage_rw(2, &output_buffer)
+            .uniform(3, &params_buffer)
+            .dispatch(workgroups_x, workgroups_y, 1)
+            .submit()?;
 
         let output_data = crate::utils::read_buffer(device, &output_buffer, output_size)?;
         Ok(Tensor::new(

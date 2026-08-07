@@ -11,8 +11,8 @@
 //!
 //! **Note**: f32 precision. For f64, use manual computation with `weighted_dot_f64`.
 
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_1D;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -33,10 +33,6 @@ pub struct Correlation {
 }
 
 impl Correlation {
-    fn wgsl_shader() -> &'static str {
-        include_str!("../shaders/special/correlation.wgsl")
-    }
-
     /// Create a new Correlation orchestrator
     /// # Errors
     /// Returns [`Err`] if device initialization fails.
@@ -143,10 +139,6 @@ impl Correlation {
         size: usize,
         num_pairs: usize,
     ) -> Result<Vec<f32>> {
-        let shader = self
-            .device
-            .compile_shader(Self::wgsl_shader(), Some("Correlation"));
-
         // Create buffers
         let x_buf = self
             .device
@@ -180,131 +172,16 @@ impl Correlation {
             _pad: 0,
         };
 
-        let params_buf = self
-            .device
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Params"),
-                contents: bytemuck::bytes_of(&params),
-                usage: wgpu::BufferUsages::UNIFORM,
-            });
+        let params_buf = self.device.create_uniform_buffer("Params", &params);
 
-        // Create bind group layout
-        let bgl = self
-            .device
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Correlation BGL"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: true },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: true },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 3,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                ],
-            });
-
-        let pl = self
-            .device
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Correlation PL"),
-                bind_group_layouts: &[&bgl],
-                immediate_size: 0,
-            });
-
-        let pipeline =
-            self.device
-                .device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("Correlation Pipeline"),
-                    layout: Some(&pl),
-                    module: &shader,
-                    entry_point: Some("main"),
-                    cache: None,
-                    compilation_options: Default::default(),
-                });
-
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Correlation BG"),
-                layout: &bgl,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: x_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: y_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: output_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: params_buf.as_entire_binding(),
-                    },
-                ],
-            });
-
-        // Dispatch
-        let mut encoder = self
-            .device
-            .create_encoder_guarded(&wgpu::CommandEncoderDescriptor {
-                label: Some("Correlation Encoder"),
-            });
-
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Correlation Pass"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, Some(&bg), &[]);
-            let n_workgroups = num_pairs.div_ceil(WORKGROUP_SIZE_1D as usize);
-            pass.dispatch_workgroups(n_workgroups as u32, 1, 1);
-        }
-
-        self.device.submit_commands(Some(encoder.finish()));
+        ComputeDispatch::new(&self.device, "Correlation")
+            .shader(include_str!("../shaders/special/correlation.wgsl"), "main")
+            .storage_read(0, &x_buf)
+            .storage_read(1, &y_buf)
+            .storage_rw(2, &output_buf)
+            .uniform(3, &params_buf)
+            .dispatch_1d(num_pairs as u32)
+            .submit()?;
 
         // Read back results
         let staging = self.device.device.create_buffer(&wgpu::BufferDescriptor {

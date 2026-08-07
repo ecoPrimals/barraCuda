@@ -260,22 +260,19 @@
 - **CLI refactored** (Mar 12): `barracuda` binary's monolithic main() split into modular subcommand handlers.
 - **Arc allocation elimination** (Mar 12): `Arc::from(format!(...).as_str())` → `Arc::from(format!(...))` across 11 files, eliminating double heap allocation.
 
-## What's Not Working Yet
+## Remaining Gaps
 
-- ~~P1: Multi-GPU OOM automatic migration~~ — ✅ DONE: `execute_with_migration()` (Wave 119) + `execute_with_migration_quota()` (Wave 124) shipped. `QuotaTracker` records OOM failures, `acquire_excluding` skips OOM-flagged devices.
 - P1: coralReef HMMA/WGMMA codegen — `kernel_router` routes tensor-core eligible matmul; awaiting coralReef emission
 - P1: coralReef `shader.compile.multi` — batch compilation method not yet wired upstream
-- P1: toadStool not enrolled on ironGate (12/12 NUCLEUS, toadStool excluded from composition)
 - P2: Test coverage 80%→90% — 80.54% line on llvmpipe; 90% target requires real GPU hardware; 4,994 tests
 - P2: sm_120 (Blackwell) codegen — coralReef falls back to sm_70 on RTX 5070
 - P2: Kokkos GPU parity benchmarks — framework parity bench infra added; awaiting hardware run
-- ~~P2: Dual-target depot gnu directory~~ — ✅ DONE: 15/15 built on sporeGate, synced to golgi, fetch validated on ironGate (BLAKE3 verified, binary runs on RTX 5070)
 
-### Cross-Primal Pins (current — Wave 129)
+### Cross-Primal Pins (Wave 157a)
 
-| Primal | Version/Session | Key capability |
-|--------|-----------------|----------------|
-| toadStool | S325 (9,127 tests) | Fleet dispatch, GPU workload coordination, sentinel coverage |
-| coralReef | v0.2.0 | WGSL→PTX 27ms, sm_70/sm_120, BLAKE3 provenance, shader.compile.wgsl live |
-| primalSpring | 1,017 tests (98 scenarios) | Cross-gate validation, toadStool S325, debt sweep |
-| cellMembrane | 779 tests | Transport resolver, relay.forward wired, typed RPC errors |
+| Primal | Tests | Key capability |
+|--------|-------|----------------|
+| toadStool | 9,193+ | Fleet dispatch, GPU workload coordination, 48 dead deps removed |
+| coralReef | 3,512 | WGSL→PTX, sm_70/sm_120, BLAKE3 provenance, ShaderInfo dedup |
+| primalSpring | 1,263 (197 scenarios) | NeuralBridge migration, N2-N5 verification |
+| cellMembrane | 1,281+ | Transport resolver, relay.forward, gate.configure/gate.apply |

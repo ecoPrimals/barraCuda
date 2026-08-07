@@ -1,23 +1,51 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-08-06.
+Prioritized work items, ordered by impact. Updated 2026-08-07.
 
 ---
 
 ## Upcoming
 
-### G65 Protocol Negotiation (Phase 3 Cephalization)
-- **Status**: Spec published (`specs/PROTOCOL_NEGOTIATION_SPEC.md`). squirrel has 432-line
-  reference impl. **Blocked on C7** — sourDough extraction, then all 15 primals adopt.
-- **barraCuda readiness**: Accept loop (`serve_listener`) already uses first-bytes
-  peek pattern (BTSP guard). G65 adds `PROTOCOLS: tarpc,jsonrpc\n` header detection
-  before BTSP. Architecture supports it — no pre-factoring needed.
-- **Impact**: Eliminates dual-socket (`.sock` + `.tarpc.sock`). Single socket with
-  protocol negotiation. Backward-compatible (no header = JSON-RPC).
+### G68 Platform Substrate Abstraction
+- **barraCuda status**: CLEAN. All `#[cfg(unix)]` is in the transport layer
+  (legacy socket symlinks, systemd notify, UDS listeners) — legitimate
+  platform gating, not silicon deism. G66 transport abstraction already
+  provides `platform_default()` / `from_env_or_default()` for agnostic
+  socket resolution. No L1/L2/L3 platform API debt.
+- **Impact**: barraCuda requires no G68 changes. Transport layer is already
+  properly abstracted via G66.
+
+### ComputeDispatch Migration (~92 ops)
+- **Status**: `ComputeDispatch` builder exists in `device/compute_pipeline.rs`.
+  ~12 ops already migrated (autocorrelation, argmax, scatter, etc.).
+  ~92 elementwise `*_wgsl.rs` ops still use manual BGL→pipeline→dispatch
+  boilerplate (~170 LOC each). Largest structural debt remaining.
+- **Impact**: −10K+ LOC, fewer shader dispatch bugs, consistent workgroup sizing.
 
 ---
 
 ## Recently Completed
+
+### Wave 157a — Error Idiom Evolution Phase 3 + Magic Number Centralization (Aug 7, 2026)
+- **Verbose error constructor cleanup** — Migrated remaining `InvalidOperation { op, reason }`
+  struct literals to `invalid_op()` helper in `snn.rs`, `esn_v2/model.rs`,
+  `esn_v2/multi_head.rs`, `ops/mha/mod.rs`. Migrated `InvalidInput { message }`
+  patterns in `cpu_executor/storage.rs`, `npu_executor.rs`. Migrated
+  `Device("...".into())` and `Gpu("...".to_string())` to `device()` / `gpu()` helpers
+  in `sovereign_device.rs`, `sovereign_dispatch_wire.rs`, `gpu_executor/storage.rs`,
+  `interpolate/cubic_spline.rs`, `fhe_poly_add.rs`, `complex/div.rs`.
+  `DeviceLost("...".into())` → `device_lost()` in 3 pharma/bio ops.
+- **`device_ctx` error helper** — Added `device_ctx()` (mirrors `gpu_ctx()`) for
+  wrapping `Display` errors with device context. Migrated 40 `Gpu(format!("ctx: {e}"))`
+  patterns in `domain_ops.rs` to `gpu_ctx()`, and `Device(format!("ctx: {e}"))` in
+  `sovereign_dispatch_wire.rs` to `device_ctx()`.
+- **Magic number centralization** — `SOFTPLUS_UPPER_THRESHOLD` (20.0) in
+  `activations.rs`. `DEFAULT_FITTS_HICK_B` (0.155) in `ipc/methods/math.rs`.
+- **Protocol negotiation zero-alloc** — Replaced `to_ascii_lowercase()` (allocates
+  per-connection) with `eq_ignore_ascii_case()` in `IpcProtocol::from_negotiation_name`.
+- **G68 Platform Substrate audit** — barraCuda confirmed CLEAN. All `#[cfg(unix)]`
+  is legitimate transport-layer gating. No silicon deism.
+- 20 files changed. 5,011 tests pass, 0 failures. Zero clippy warnings.
 
 ### Wave 156l — Fmt Drift + G65 Readiness Review (Aug 6, 2026)
 - **182-file `cargo fmt` correction** — systematic line-length and indentation drift

@@ -34,7 +34,7 @@ impl ComplexDiv {
             ));
         }
         if !std::ptr::eq(input_a.device().as_ref(), input_b.device().as_ref()) {
-            return Err(BarracudaError::Device("Must be on same device".to_string()));
+            return Err(BarracudaError::device("Must be on same device"));
         }
 
         let device = input_a.device();

@@ -212,7 +212,7 @@ impl VpcSimulateGpu {
         self.device.poll_safe()?;
         rx.recv()
             .map_err(|_| {
-                crate::error::BarracudaError::DeviceLost("readback channel closed".into())
+                crate::error::BarracudaError::device_lost("readback channel closed")
             })?
             .map_err(|e| {
                 crate::error::BarracudaError::DeviceLost(format!("buffer map failed: {e:?}"))

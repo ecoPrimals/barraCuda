@@ -108,7 +108,7 @@ pub(super) fn submit_dispatch(
                 "params": [request],
                 "id": 1,
             }))
-            .map_err(|e| BarracudaError::Device(format!("serialize dispatch: {e}")))?;
+            .map_err(|e| BarracudaError::device_ctx("serialize dispatch", e))?;
 
             let http_request = format!(
                 "POST / HTTP/1.1\r\nHost: {host_port}\r\n\
@@ -121,32 +121,33 @@ pub(super) fn submit_dispatch(
             let mut stream = tokio::net::TcpStream::connect(host_port)
                 .await
                 .map_err(|e| {
-                    BarracudaError::Device(format!(
-                        "SovereignDevice: dispatch connect to {host_port}: {e}"
-                    ))
+                    BarracudaError::device_ctx(
+                        &format!("SovereignDevice: dispatch connect to {host_port}"),
+                        e,
+                    )
                 })?;
 
             tokio::io::AsyncWriteExt::write_all(&mut stream, http_request.as_bytes())
                 .await
                 .map_err(|e| {
-                    BarracudaError::Device(format!("SovereignDevice: dispatch write: {e}"))
+                    BarracudaError::device_ctx("SovereignDevice: dispatch write", e)
                 })?;
 
             let mut response_buf = Vec::new();
             tokio::io::AsyncReadExt::read_to_end(&mut stream, &mut response_buf)
                 .await
                 .map_err(|e| {
-                    BarracudaError::Device(format!("SovereignDevice: dispatch read: {e}"))
+                    BarracudaError::device_ctx("SovereignDevice: dispatch read", e)
                 })?;
 
             let response_str = String::from_utf8_lossy(&response_buf);
             let json_start = response_str.find('{').ok_or_else(|| {
-                BarracudaError::Device("SovereignDevice: no JSON body in dispatch response".into())
+                BarracudaError::device("SovereignDevice: no JSON body in dispatch response")
             })?;
 
             let rpc_response: serde_json::Value = serde_json::from_str(&response_str[json_start..])
                 .map_err(|e| {
-                    BarracudaError::Device(format!("SovereignDevice: parse response: {e}"))
+                    BarracudaError::device_ctx("SovereignDevice: parse response", e)
                 })?;
 
             if let Some(error) = rpc_response.get("error") {
@@ -154,7 +155,7 @@ pub(super) fn submit_dispatch(
                     .get("message")
                     .and_then(|m| m.as_str())
                     .unwrap_or("unknown error");
-                return Err(BarracudaError::Device(format!(
+                return Err(BarracudaError::device(format!(
                     "SovereignDevice: compute dispatch error: {msg}"
                 )));
             }
@@ -164,7 +165,7 @@ pub(super) fn submit_dispatch(
                 && let Some(arr) = output_buffers.as_array()
             {
                 let mut staged = staged_buffers.lock().map_err(|e| {
-                    BarracudaError::Device(format!("SovereignDevice: staged lock poisoned: {e}"))
+                    BarracudaError::device_ctx("SovereignDevice: staged lock poisoned", e)
                 })?;
                 for entry in arr {
                     let Some(buf_id) = entry.get("buffer_id").and_then(serde_json::Value::as_u64)

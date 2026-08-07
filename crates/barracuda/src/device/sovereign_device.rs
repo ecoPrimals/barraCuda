@@ -322,7 +322,7 @@ impl SovereignDevice {
         };
 
         let handle = tokio::runtime::Handle::try_current().map_err(|_| {
-            BarracudaError::Device("SovereignDevice: no tokio runtime for live compilation".into())
+            BarracudaError::device("SovereignDevice: no tokio runtime for live compilation")
         })?;
 
         let source = shader_source.to_owned();
@@ -357,7 +357,7 @@ impl SovereignDevice {
                 };
 
                 let binary = binary.ok_or_else(|| {
-                    BarracudaError::Device(format!(
+                    BarracudaError::device(format!(
                         "SovereignDevice: live compilation failed for target {target}"
                     ))
                 })?;
@@ -494,7 +494,7 @@ impl GpuBackend for SovereignDevice {
     #[cfg(feature = "sovereign-dispatch")]
     fn download(&self, buffer: &SovereignBuffer, _size: u64) -> Result<bytes::Bytes> {
         let staged = self.staged_buffers.lock().map_err(|e| {
-            BarracudaError::Device(format!("SovereignDevice: staged lock poisoned: {e}"))
+            BarracudaError::device_ctx("SovereignDevice: staged lock poisoned", e)
         })?;
         // `copy_from_slice` is required here: staged buffers remain mutable
         // (`BytesMut`) for future `upload()` calls, so we cannot `freeze()`
@@ -505,7 +505,7 @@ impl GpuBackend for SovereignDevice {
             .get(&buffer.id)
             .map(|b| bytes::Bytes::copy_from_slice(b))
             .ok_or_else(|| {
-                BarracudaError::Device(format!(
+                BarracudaError::device(format!(
                     "SovereignDevice: buffer {} not found in staging",
                     buffer.id
                 ))
@@ -529,7 +529,7 @@ impl GpuBackend for SovereignDevice {
         let key = hasher.finish();
 
         let mut cache = self.binary_cache.lock().map_err(|e| {
-            BarracudaError::Device(format!("SovereignDevice: cache lock poisoned: {e}"))
+            BarracudaError::device_ctx("SovereignDevice: cache lock poisoned", e)
         })?;
 
         let cached = match cache.entry(key) {

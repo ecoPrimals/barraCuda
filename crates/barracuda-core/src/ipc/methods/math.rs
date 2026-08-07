@@ -11,6 +11,8 @@ use super::super::jsonrpc::{INVALID_PARAMS, JsonRpcResponse};
 use super::params::{extract_f64, extract_f64_array, extract_matrix};
 use serde_json::Value;
 
+const DEFAULT_FITTS_HICK_B: f64 = 0.155;
+
 // ── Math element-wise ─────────────────────────────────────────────────────
 
 /// `math.sigmoid` — element-wise sigmoid on f64 array.
@@ -99,7 +101,7 @@ pub(super) fn activation_fitts(params: &Value, id: Value) -> JsonRpcResponse {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "width must be > 0");
     }
     let a = extract_f64(params, "a").unwrap_or(0.0);
-    let b = extract_f64(params, "b").unwrap_or(0.155);
+    let b = extract_f64(params, "b").unwrap_or(DEFAULT_FITTS_HICK_B);
     let variant = params
         .get("variant")
         .and_then(|v| v.as_str())
@@ -131,7 +133,7 @@ pub(super) fn activation_hick(params: &Value, id: Value) -> JsonRpcResponse {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "n_choices must be > 0");
     }
     let a = extract_f64(params, "a").unwrap_or(0.0);
-    let b = extract_f64(params, "b").unwrap_or(0.155);
+    let b = extract_f64(params, "b").unwrap_or(DEFAULT_FITTS_HICK_B);
     let include_no_choice = params
         .get("include_no_choice")
         .and_then(|v| v.as_bool())

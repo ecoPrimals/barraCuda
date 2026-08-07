@@ -150,10 +150,10 @@ impl MultiHeadAttention {
 
         // Validate num_heads divides d_model evenly
         if !d_model.is_multiple_of(num_heads) {
-            return Err(BarracudaError::InvalidOperation {
-                op: "multi_head_attention".to_string(),
-                reason: format!("d_model ({d_model}) must be divisible by num_heads ({num_heads})"),
-            });
+            return Err(BarracudaError::invalid_op(
+                "multi_head_attention",
+                format!("d_model ({d_model}) must be divisible by num_heads ({num_heads})"),
+            ));
         }
 
         Ok(Self {

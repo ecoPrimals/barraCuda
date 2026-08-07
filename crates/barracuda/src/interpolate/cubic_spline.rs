@@ -308,8 +308,8 @@ impl CubicSpline {
         });
         device.poll_safe()?;
         rx.recv()
-            .map_err(|_| BarracudaError::Gpu("spline readback".into()))?
-            .map_err(|e| BarracudaError::Gpu(format!("spline map: {e}")))?;
+            .map_err(|_| BarracudaError::gpu("spline readback"))?
+            .map_err(|e| BarracudaError::gpu_ctx("spline map", e))?;
 
         let data = slice.get_mapped_range();
         // Allocation required: mapped range is dropped before return; caller receives owned Vec

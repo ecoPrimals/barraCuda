@@ -10,6 +10,8 @@
 
 use std::f64::consts::PI;
 
+const SOFTPLUS_UPPER_THRESHOLD: f64 = 20.0;
+
 // ── Scalar functions ─────────────────────────────────────────────────────────
 
 /// `ReLU`: `max(0, x)`
@@ -64,9 +66,9 @@ pub fn mish(x: f64) -> f64 {
 #[inline]
 #[must_use]
 pub fn softplus(x: f64) -> f64 {
-    if x > 20.0 {
+    if x > SOFTPLUS_UPPER_THRESHOLD {
         x
-    } else if x < -20.0 {
+    } else if x < -SOFTPLUS_UPPER_THRESHOLD {
         x.exp()
     } else {
         x.exp().ln_1p()

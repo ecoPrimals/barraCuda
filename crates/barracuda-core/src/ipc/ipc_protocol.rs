@@ -29,12 +29,18 @@ impl IpcProtocol {
     /// Parse from a wire negotiation name (case-insensitive).
     #[must_use]
     pub fn from_negotiation_name(name: &str) -> Option<Self> {
-        match name.trim().to_ascii_lowercase().as_str() {
-            "jsonrpc" | "json-rpc" | "json_rpc" => Some(Self::JsonRpc),
-            #[cfg(feature = "tarpc-transport")]
-            "tarpc" => Some(Self::Tarpc),
-            _ => None,
+        let trimmed = name.trim();
+        if trimmed.eq_ignore_ascii_case("jsonrpc")
+            || trimmed.eq_ignore_ascii_case("json-rpc")
+            || trimmed.eq_ignore_ascii_case("json_rpc")
+        {
+            return Some(Self::JsonRpc);
         }
+        #[cfg(feature = "tarpc-transport")]
+        if trimmed.eq_ignore_ascii_case("tarpc") {
+            return Some(Self::Tarpc);
+        }
+        None
     }
 
     /// All protocols this primal supports, in preference order (tarpc first).

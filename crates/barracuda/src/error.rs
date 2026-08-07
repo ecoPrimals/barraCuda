@@ -358,6 +358,13 @@ impl BarracudaError {
     pub fn gpu_ctx(context: &str, err: impl std::fmt::Display) -> Self {
         Self::Gpu(format!("{context}: {err}"))
     }
+
+    /// Wrap any `Display` error as a Device error with contextual message.
+    ///
+    /// Same pattern as [`gpu_ctx`](Self::gpu_ctx) for the `Device` variant.
+    pub fn device_ctx(context: &str, err: impl std::fmt::Display) -> Self {
+        Self::Device(format!("{context}: {err}"))
+    }
 }
 
 impl From<std::io::Error> for BarracudaError {

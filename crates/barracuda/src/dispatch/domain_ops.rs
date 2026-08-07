@@ -140,17 +140,17 @@ fn matmul_gpu(
     device: &Arc<WgpuDevice>,
 ) -> Result<Vec<f64>> {
     let a_t = Tensor::from_data(&to_f32(a), vec![m, k], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("matmul A upload: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("matmul A upload", e))?;
     let b_t = Tensor::from_data(&to_f32(b), vec![k, n], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("matmul B upload: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("matmul B upload", e))?;
 
     let c_t = a_t
         .matmul(&b_t)
-        .map_err(|e| BarracudaError::Gpu(format!("matmul: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("matmul", e))?;
 
     let c_f32 = c_t
         .to_vec()
-        .map_err(|e| BarracudaError::Gpu(format!("matmul readback: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("matmul readback", e))?;
 
     Ok(c_f32.into_iter().map(f64::from).collect())
 }
@@ -160,15 +160,15 @@ fn frobenius_norm_gpu(a: &[f64], device: &Arc<WgpuDevice>) -> Result<f64> {
     let n = a_f32.len();
 
     let a_t = Tensor::from_data(&a_f32, vec![n], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("frobenius_norm upload: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("frobenius_norm upload", e))?;
 
     let norm_t = a_t
         .norm()
-        .map_err(|e| BarracudaError::Gpu(format!("frobenius_norm: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("frobenius_norm", e))?;
 
     let result = norm_t
         .to_vec()
-        .map_err(|e| BarracudaError::Gpu(format!("frobenius_norm readback: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("frobenius_norm readback", e))?;
 
     Ok(f64::from(result[0]))
 }
@@ -180,15 +180,15 @@ fn transpose_gpu(
     device: &Arc<WgpuDevice>,
 ) -> Result<Vec<f64>> {
     let a_t = Tensor::from_data(&to_f32(a), vec![rows, cols], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("transpose upload: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("transpose upload", e))?;
 
     let t_t = a_t
         .transpose()
-        .map_err(|e| BarracudaError::Gpu(format!("transpose: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("transpose", e))?;
 
     let t_f32 = t_t
         .to_vec()
-        .map_err(|e| BarracudaError::Gpu(format!("transpose readback: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("transpose readback", e))?;
 
     Ok(t_f32.into_iter().map(f64::from).collect())
 }
@@ -198,15 +198,15 @@ fn softmax_gpu(x: &[f64], device: &Arc<WgpuDevice>) -> Result<Vec<f64>> {
     let n = x_f32.len();
 
     let x_t = Tensor::from_data(&x_f32, vec![n], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("softmax upload: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("softmax upload", e))?;
 
     let sm = x_t
         .softmax()
-        .map_err(|e| BarracudaError::Gpu(format!("softmax: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("softmax", e))?;
 
     let out = sm
         .to_vec()
-        .map_err(|e| BarracudaError::Gpu(format!("softmax readback: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("softmax readback", e))?;
 
     Ok(out.into_iter().map(f64::from).collect())
 }
@@ -216,15 +216,15 @@ fn gelu_gpu(x: &[f64], device: &Arc<WgpuDevice>) -> Result<Vec<f64>> {
     let n = x_f32.len();
 
     let x_t = Tensor::from_data(&x_f32, vec![n], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("gelu upload: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("gelu upload", e))?;
 
     let out_t = x_t
         .gelu_wgsl()
-        .map_err(|e| BarracudaError::Gpu(format!("gelu: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("gelu", e))?;
 
     let out = out_t
         .to_vec()
-        .map_err(|e| BarracudaError::Gpu(format!("gelu readback: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("gelu readback", e))?;
 
     Ok(out.into_iter().map(f64::from).collect())
 }
@@ -234,21 +234,21 @@ fn l2_distance_gpu(a: &[f64], b: &[f64], device: &Arc<WgpuDevice>) -> Result<f64
     let n = a_f32.len();
 
     let a_t = Tensor::from_data(&a_f32, vec![n], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("l2_distance A: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("l2_distance A", e))?;
     let b_t = Tensor::from_data(&to_f32(b), vec![n], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("l2_distance B: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("l2_distance B", e))?;
 
     let diff = a_t
         .sub(&b_t)
-        .map_err(|e| BarracudaError::Gpu(format!("l2_distance sub: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("l2_distance sub", e))?;
 
     let norm = diff
         .norm()
-        .map_err(|e| BarracudaError::Gpu(format!("l2_distance norm: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("l2_distance norm", e))?;
 
     let result = norm
         .to_vec()
-        .map_err(|e| BarracudaError::Gpu(format!("l2_distance readback: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("l2_distance readback", e))?;
 
     Ok(f64::from(result[0]))
 }
@@ -258,15 +258,15 @@ fn mean_gpu(data: &[f64], device: &Arc<WgpuDevice>) -> Result<f64> {
     let n = data_f32.len();
 
     let t = Tensor::from_data(&data_f32, vec![n], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("mean upload: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("mean upload", e))?;
 
     let m = t
         .mean()
-        .map_err(|e| BarracudaError::Gpu(format!("mean: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("mean", e))?;
 
     let result = m
         .to_vec()
-        .map_err(|e| BarracudaError::Gpu(format!("mean readback: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("mean readback", e))?;
 
     Ok(f64::from(result[0]))
 }
@@ -276,32 +276,32 @@ fn variance_gpu(data: &[f64], device: &Arc<WgpuDevice>) -> Result<f64> {
     let n = data_f32.len();
 
     let t = Tensor::from_data(&data_f32, vec![n], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("variance upload: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("variance upload", e))?;
 
     let mean_t = t
         .mean()
-        .map_err(|e| BarracudaError::Gpu(format!("variance mean: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("variance mean", e))?;
     let mean_val = mean_t
         .to_vec()
-        .map_err(|e| BarracudaError::Gpu(format!("variance mean readback: {e}")))?[0];
+        .map_err(|e| BarracudaError::gpu_ctx("variance mean readback", e))?[0];
 
     let mean_vec = vec![mean_val; n];
     let mean_broadcast = Tensor::from_data(&mean_vec, vec![n], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("variance mean_vec: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("variance mean_vec", e))?;
 
     let diff = t
         .sub(&mean_broadcast)
-        .map_err(|e| BarracudaError::Gpu(format!("variance sub: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("variance sub", e))?;
     let sq = diff
         .mul(&diff)
-        .map_err(|e| BarracudaError::Gpu(format!("variance sq: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("variance sq", e))?;
     let var = sq
         .mean()
-        .map_err(|e| BarracudaError::Gpu(format!("variance: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("variance", e))?;
 
     let result = var
         .to_vec()
-        .map_err(|e| BarracudaError::Gpu(format!("variance readback: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("variance readback", e))?;
 
     Ok(f64::from(result[0]))
 }
@@ -314,35 +314,35 @@ fn hmm_forward_step_gpu(
     device: &Arc<WgpuDevice>,
 ) -> Result<(Vec<f64>, f64)> {
     let alpha_t = Tensor::from_data(&to_f32(alpha_prev), vec![1, n_states], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("hmm_fwd alpha: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("hmm_fwd alpha", e))?;
     let trans_t = Tensor::from_data(
         &to_f32(transition),
         vec![n_states, n_states],
         device.clone(),
     )
-    .map_err(|e| BarracudaError::Gpu(format!("hmm_fwd trans: {e}")))?;
+    .map_err(|e| BarracudaError::gpu_ctx("hmm_fwd trans", e))?;
 
     let propagated = alpha_t
         .matmul(&trans_t)
-        .map_err(|e| BarracudaError::Gpu(format!("hmm_fwd matmul: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("hmm_fwd matmul", e))?;
 
     let emit_t = Tensor::from_data(&to_f32(emission_col), vec![1, n_states], device.clone())
-        .map_err(|e| BarracudaError::Gpu(format!("hmm_fwd emit: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("hmm_fwd emit", e))?;
 
     let raw = propagated
         .mul(&emit_t)
-        .map_err(|e| BarracudaError::Gpu(format!("hmm_fwd mul: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("hmm_fwd mul", e))?;
 
     let scale_t = raw
         .sum()
-        .map_err(|e| BarracudaError::Gpu(format!("hmm_fwd sum: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("hmm_fwd sum", e))?;
     let scale_val = scale_t
         .to_vec()
-        .map_err(|e| BarracudaError::Gpu(format!("hmm_fwd scale_read: {e}")))?[0];
+        .map_err(|e| BarracudaError::gpu_ctx("hmm_fwd scale_read", e))?[0];
 
     let raw_vec = raw
         .to_vec()
-        .map_err(|e| BarracudaError::Gpu(format!("hmm_fwd raw_read: {e}")))?;
+        .map_err(|e| BarracudaError::gpu_ctx("hmm_fwd raw_read", e))?;
 
     let scale = f64::from(scale_val).max(LOG_GUARD);
     let alpha_new: Vec<f64> = raw_vec.iter().map(|&x| f64::from(x) / scale).collect();

@@ -127,10 +127,10 @@ impl TensorStorage for GpuTensorStorage {
             device.poll_safe()?;
             rx.recv()
                 .map_err(|_| {
-                    crate::error::BarracudaError::Gpu("map_async channel closed".to_string())
+                    crate::error::BarracudaError::gpu("map_async channel closed")
                 })?
                 .map_err(|e| {
-                    crate::error::BarracudaError::Gpu(format!("Buffer map failed: {e:?}"))
+                    crate::error::BarracudaError::gpu_ctx("Buffer map failed", e)
                 })?;
             let data = slice.get_mapped_range();
             let bytes = Bytes::copy_from_slice(&data);

@@ -469,9 +469,11 @@ impl ESN {
         let w_out =
             self.w_out
                 .as_ref()
-                .ok_or_else(|| crate::error::BarracudaError::InvalidOperation {
-                    op: "ESN::predict_return_state".to_string(),
-                    reason: "ESN has not been trained yet — call train() first".to_string(),
+                .ok_or_else(|| {
+                    crate::error::BarracudaError::invalid_op(
+                        "ESN::predict_return_state",
+                        "ESN has not been trained yet — call train() first",
+                    )
                 })?;
         let output = w_out.transpose()?.matmul(&state)?;
 
@@ -527,9 +529,11 @@ impl ESN {
         let w_out =
             self.w_out
                 .as_ref()
-                .ok_or_else(|| crate::error::BarracudaError::InvalidOperation {
-                    op: "ESN::to_npu_weights".to_string(),
-                    reason: "ESN has not been trained yet — call train() first".to_string(),
+                .ok_or_else(|| {
+                    crate::error::BarracudaError::invalid_op(
+                        "ESN::to_npu_weights",
+                        "ESN has not been trained yet — call train() first",
+                    )
                 })?;
 
         let w_out_f32 = w_out.to_vec()?;

@@ -52,7 +52,7 @@ impl TensorStorage for CpuTensorStorage {
                 data.len()
             );
             return Box::pin(async move {
-                Err(crate::error::BarracudaError::InvalidInput { message: msg })
+                Err(crate::error::BarracudaError::invalid_input(msg))
             });
         }
         self.data.copy_from_slice(data);
@@ -70,7 +70,7 @@ impl TensorStorage for CpuTensorStorage {
                 data.len()
             );
             return Box::pin(async move {
-                Err(crate::error::BarracudaError::InvalidInput { message: msg })
+                Err(crate::error::BarracudaError::invalid_input(msg))
             });
         }
         self.data.copy_from_slice(&data);

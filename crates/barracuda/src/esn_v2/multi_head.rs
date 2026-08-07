@@ -307,9 +307,11 @@ impl MultiHeadEsn {
         let w_out = head
             .w_out
             .as_ref()
-            .ok_or_else(|| BarracudaError::InvalidOperation {
-                op: "MultiHeadEsn::predict_head".to_string(),
-                reason: format!("Head {head_idx} not trained"),
+            .ok_or_else(|| {
+                BarracudaError::invalid_op(
+                    "MultiHeadEsn::predict_head",
+                    format!("Head {head_idx} not trained"),
+                )
             })?;
         w_out.transpose()?.matmul(state)
     }

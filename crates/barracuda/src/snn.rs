@@ -399,10 +399,10 @@ impl SpikingNetwork {
                 }
 
                 let weights = state.weights.as_ref().ok_or_else(|| {
-                    crate::error::BarracudaError::InvalidOperation {
-                        op: "SNN Dense layer".to_string(),
-                        reason: "Dense layer weights not initialized".to_string(),
-                    }
+                    crate::error::BarracudaError::invalid_op(
+                        "SNN Dense layer",
+                        "Dense layer weights not initialized",
+                    )
                 })?;
                 let mut output = vec![0.0; *output_size];
 

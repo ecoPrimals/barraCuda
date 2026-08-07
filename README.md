@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **859 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,208 Rust source files**, 25 integration test harnesses, 4,984 tests passing
+- **1,208 Rust source files**, 25 integration test harnesses, 5,011 tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -61,6 +61,7 @@ results.
 
 ## Recent
 
+- **Wave 157a: Error Idiom Phase 3 + G68 Audit (Aug 7)**: Remaining verbose error constructor patterns migrated across 20 files. New `device_ctx()` helper. 40 `Gpu(format!)` → `gpu_ctx()` in domain_ops. Protocol negotiation zero-alloc. Magic numbers centralized (softplus, Fitts/Hick). G68 Platform Substrate audit: CLEAN. 5,011 tests.
 - **Wave 155u: Deep Idiom Evolution (Aug 4)**: LazyLock<String> Phase 2 (323 statics → const &str across 310 files). Error constructor helpers (518 call sites migrated). Env var centralization (9 keys into env_keys.rs). Total: -1,488 LOC. 12-axis deep debt scan clean. 4,984 tests.
 - **Wave 155p: PRNG Validation + Shader Evolution + Magic Numbers (Aug 3)**: CPU `state_to_f64` and GPU `prng_xoshiro_f64.wgsl` half-range bugs fixed ([0, 0.5) → [0, 1)). 11 PRNG statistical validation tests. 51 `LazyLock<String>` → `const &str` across 18 files (-182 LOC). Protocol version inconsistency unified (`PROTOCOL_ID`). `BTSP_WIRE_VERSION` + `IPC_PROBE_TIMEOUT` centralized. PRNG YELLOW → GREEN.
 - **Wave 155n: Idiom Evolution + Subgroup Fixes (Jul 31–Aug 3)**: RK4 ODE solver zero-alloc inner loop. MD force dead-code collapse. Subgroup reduce entry point fixed. Diversity self-recursion eliminated. SU(3) labels corrected.

@@ -62,6 +62,60 @@ impl TransportEndpoint {
             port,
         }
     }
+
+    /// Platform-appropriate default endpoint per G66.
+    ///
+    /// - Unix: UDS at the standard socket path for the given domain
+    /// - Non-Unix: TCP localhost on an ephemeral port (port 0)
+    ///
+    /// Callers should prefer [`Self::from_env_or_default`] which checks
+    /// `TRANSPORT_ENDPOINT` first.
+    #[must_use]
+    pub fn platform_default(socket_path: &str) -> Self {
+        #[cfg(unix)]
+        {
+            Self::Uds {
+                path: socket_path.to_string(),
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = socket_path;
+            Self::Tcp {
+                host: "127.0.0.1".to_string(),
+                port: 0,
+            }
+        }
+    }
+
+    /// Resolve transport from `TRANSPORT_ENDPOINT` env var, falling back to
+    /// [`Self::platform_default`] per G66 transport injection.
+    ///
+    /// The launcher, biomeOS, or songBird injects the env var:
+    /// ```text
+    /// TRANSPORT_ENDPOINT='{"transport":"uds","path":"/run/biomeos/math.sock"}'
+    /// TRANSPORT_ENDPOINT='{"transport":"tcp","host":"127.0.0.1","port":9100}'
+    /// ```
+    #[must_use]
+    pub fn from_env_or_default(socket_path: &str) -> Self {
+        std::env::var("TRANSPORT_ENDPOINT")
+            .ok()
+            .and_then(|raw| serde_json::from_str(&raw).ok())
+            .unwrap_or_else(|| Self::platform_default(socket_path))
+    }
+
+    /// Whether this endpoint represents a local (same-host) connection.
+    ///
+    /// Used by BTSP auth to determine if `SO_PEERCRED` local-trust (G63)
+    /// applies without leaking transport details into business logic.
+    #[must_use]
+    pub fn is_local(&self) -> bool {
+        match self {
+            Self::Uds { .. } => true,
+            Self::Tcp { host, .. } => host == "127.0.0.1" || host == "::1" || host == "localhost",
+            Self::MeshRelay { .. } => false,
+        }
+    }
 }
 
 /// Transport-agnostic connected stream.
@@ -351,5 +405,59 @@ mod tests {
         let ep = TransportEndpoint::uds("/tmp/nonexistent_barracuda_test_39dj3.sock");
         let err = connect_transport(&ep).await.unwrap_err();
         assert_eq!(err.kind(), std::io::ErrorKind::NotFound);
+    }
+
+    #[test]
+    fn platform_default_returns_uds_on_unix() {
+        let ep = TransportEndpoint::platform_default("/run/biomeos/math.sock");
+        #[cfg(unix)]
+        assert_eq!(
+            ep,
+            TransportEndpoint::Uds {
+                path: "/run/biomeos/math.sock".into()
+            }
+        );
+        #[cfg(not(unix))]
+        assert!(matches!(ep, TransportEndpoint::Tcp { .. }));
+    }
+
+    #[test]
+    fn is_local_uds() {
+        let ep = TransportEndpoint::uds("/tmp/test.sock");
+        assert!(ep.is_local());
+    }
+
+    #[test]
+    fn is_local_tcp_localhost() {
+        assert!(TransportEndpoint::tcp("127.0.0.1", 9100).is_local());
+        assert!(TransportEndpoint::tcp("::1", 9100).is_local());
+        assert!(TransportEndpoint::tcp("localhost", 9100).is_local());
+    }
+
+    #[test]
+    fn is_local_tcp_remote() {
+        assert!(!TransportEndpoint::tcp("192.168.1.5", 9100).is_local());
+        assert!(!TransportEndpoint::tcp("10.0.0.1", 7700).is_local());
+    }
+
+    #[test]
+    fn is_local_mesh_relay() {
+        let ep = TransportEndpoint::MeshRelay {
+            peer_id: "westgate".into(),
+            capability: "math".into(),
+        };
+        assert!(!ep.is_local());
+    }
+
+    #[test]
+    fn from_env_or_default_no_env() {
+        // When TRANSPORT_ENDPOINT is not set (typical case), falls back to platform_default
+        if std::env::var("TRANSPORT_ENDPOINT").is_err() {
+            let ep = TransportEndpoint::from_env_or_default("/run/biomeos/math.sock");
+            assert_eq!(
+                ep,
+                TransportEndpoint::platform_default("/run/biomeos/math.sock")
+            );
+        }
     }
 }

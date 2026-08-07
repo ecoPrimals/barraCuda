@@ -15,18 +15,23 @@ Prioritized work items, ordered by impact. Updated 2026-08-07.
 - **Impact**: barraCuda requires no G68 changes. Transport layer is already
   properly abstracted via G66.
 
-### Remaining Non-WGSL ComputeDispatch Migration
-- **Status**: All 92 `*_wgsl.rs` ops migrated to `ComputeDispatch` builder.
-  ~225 non-WGSL ops in `ops/` still use manual BGL→pipeline→dispatch.
-  These include f64 variants, linalg ops, MD integrators, and domain ops.
-- **Impact**: Additional LOC reduction, consistent dispatch pattern across
-  the entire ops directory.
-
 ---
 
 ## Recently Completed
 
-### Wave 157a — ComputeDispatch Migration (Aug 7, 2026)
+### Wave 157a — ComputeDispatch P1 Migration (Aug 7, 2026)
+**Commit 4** — ComputeDispatch P1 Migration (225 non-WGSL ops, −26,373 LOC):
+- **All 225 remaining non-WGSL ops** migrated to `ComputeDispatch` builder.
+  Categories: simple binary (4), simple unary (4), unary_with_params (55),
+  binary_with_params (49), multi_buffer (48), complex (65).
+- 107 false `.f64()` additions corrected (f32 ops incorrectly marked as f64).
+- Dead BGL helpers, shader constants, and unused imports cleaned.
+- Only 3 files retain manual BGL (intentional cached pipeline patterns:
+  `snp.rs`, `fd_common.rs`, `gemm_f64.rs`).
+- Combined with P0: **317 ops migrated, −37,144 LOC total**.
+- 4,990 tests pass, 0 failures. Zero clippy warnings.
+- Zero files over 800 lines (largest: 783L test file).
+
 **Commit 3** — ComputeDispatch P0 Migration (92 files, −10,771 LOC):
 - **All 92 `*_wgsl.rs` ops** migrated from manual BGL→pipeline→encoder→submit
   boilerplate to `ComputeDispatch::new().shader().storage_read().storage_rw()

@@ -61,7 +61,7 @@ results.
 
 ## Recent
 
-- **Wave 157a: ComputeDispatch P0 Migration (Aug 7)**: All 92 `*_wgsl.rs` ops migrated from manual BGL→pipeline boilerplate to `ComputeDispatch` builder. 92 files changed, −10,771 LOC. Error Idiom Phase 3, magic number centralization, G68 audit: CLEAN. 4,990 tests.
+- **Wave 157a: ComputeDispatch Full Migration (Aug 7)**: All 317 ops migrated from manual BGL→pipeline boilerplate to `ComputeDispatch` builder. P0: 92 WGSL ops (−10,771 LOC). P1: 225 non-WGSL ops (−26,373 LOC). Combined: −37,144 LOC. Error Idiom Phase 3, magic number centralization, G68 audit: CLEAN. 4,990 tests.
 - **Wave 155u: Deep Idiom Evolution (Aug 4)**: LazyLock<String> Phase 2 (323 statics → const &str across 310 files). Error constructor helpers (518 call sites migrated). Env var centralization (9 keys into env_keys.rs). Total: -1,488 LOC. 12-axis deep debt scan clean. 4,984 tests.
 - **Wave 155p: PRNG Validation + Shader Evolution + Magic Numbers (Aug 3)**: CPU `state_to_f64` and GPU `prng_xoshiro_f64.wgsl` half-range bugs fixed ([0, 0.5) → [0, 1)). 11 PRNG statistical validation tests. 51 `LazyLock<String>` → `const &str` across 18 files (-182 LOC). Protocol version inconsistency unified (`PROTOCOL_ID`). `BTSP_WIRE_VERSION` + `IPC_PROBE_TIMEOUT` centralized. PRNG YELLOW → GREEN.
 - **Wave 155n: Idiom Evolution + Subgroup Fixes (Jul 31–Aug 3)**: RK4 ODE solver zero-alloc inner loop. MD force dead-code collapse. Subgroup reduce entry point fixed. Diversity self-recursion eliminated. SU(3) labels corrected.

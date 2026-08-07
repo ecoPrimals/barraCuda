@@ -54,7 +54,7 @@ results.
 2. **Vendor-agnostic** — same binary, identical results on any GPU
 3. **Sovereign** — zero external SDK dependency for correctness or performance
 4. **Pure Rust** — `#![forbid(unsafe_code)]` in both crates, zero `unsafe` blocks, zero external C dependencies, zero dependencies on any other primal (wire format is the contract, `TransportEndpoint` implemented locally)
-5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; split-lock GPU submission (submit and poll use separate lock acquisitions); fire-and-forget dispatch via `submit_commands` for non-readback ops; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; `GPU_TEST_GUARD` serializes device lifecycle in tests; all 4,984 tests pass at full parallelism on llvmpipe
+5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; split-lock GPU submission (submit and poll use separate lock acquisitions); fire-and-forget dispatch via `submit_commands` for non-readback ops; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; `GPU_TEST_GUARD` serializes device lifecycle in tests; all 4,990 tests pass at full parallelism on llvmpipe
 6. **AGPL-3.0** — free as in freedom
 
 ---

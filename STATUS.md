@@ -266,7 +266,7 @@
 - P1: coralReef HMMA/WGMMA codegen — `kernel_router` routes tensor-core eligible matmul; awaiting coralReef emission
 - P1: coralReef `shader.compile.multi` — batch compilation method not yet wired upstream
 - P1: toadStool not enrolled on ironGate (12/12 NUCLEUS, toadStool excluded from composition)
-- P2: Test coverage 80%→90% — 80.54% line on llvmpipe; 90% target requires real GPU hardware; 4,984+ tests
+- P2: Test coverage 80%→90% — 80.54% line on llvmpipe; 90% target requires real GPU hardware; 4,990 tests
 - P2: sm_120 (Blackwell) codegen — coralReef falls back to sm_70 on RTX 5070
 - P2: Kokkos GPU parity benchmarks — framework parity bench infra added; awaiting hardware run
 - ~~P2: Dual-target depot gnu directory~~ — ✅ DONE: 15/15 built on sporeGate, synced to golgi, fetch validated on ironGate (BLAKE3 verified, binary runs on RTX 5070)

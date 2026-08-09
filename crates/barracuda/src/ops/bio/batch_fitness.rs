@@ -16,6 +16,7 @@ use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::error::Result;
 
 /// WGSL source for batch fitness evaluation (f32).
 pub const WGSL_BATCH_FITNESS_EVAL: &str = include_str!("../../shaders/ml/batch_fitness_eval.wgsl");
@@ -48,10 +49,9 @@ impl BatchFitnessGpu {
     /// `population_buf`: `[pop_size × genome_len]` f64 (row-major genotypes)
     /// `weights_buf`:    `[genome_len]` f64
     /// `fitness_buf`:    `[pop_size]` f64 (output)
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "dispatch submit is infallible on valid device"
-    )]
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch(
         &self,
         population_buf: &wgpu::Buffer,
@@ -59,7 +59,7 @@ impl BatchFitnessGpu {
         fitness_buf: &wgpu::Buffer,
         pop_size: u32,
         genome_len: u32,
-    ) {
+    ) -> Result<()> {
         let d = self.device.device();
 
         let params = FitnessParams {
@@ -80,8 +80,8 @@ impl BatchFitnessGpu {
             .storage_rw(2, fitness_buf)
             .uniform(3, &params_buf)
             .dispatch_1d(pop_size)
-            .submit()
-            .expect("BatchFitness GPU dispatch failed");
+            .submit()?;
+        Ok(())
     }
 }
 

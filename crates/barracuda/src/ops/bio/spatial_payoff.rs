@@ -20,6 +20,7 @@ use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::error::Result;
 
 const WGSL_SPATIAL_PAYOFF: &str = include_str!("../../shaders/math/spatial_payoff_f64.wgsl");
 
@@ -49,10 +50,9 @@ impl SpatialPayoffGpu {
     /// `grid_buf`: `[grid_size²]` u32 (0 = defector, 1 = cooperator)
     /// `fitness_buf`: `[grid_size²]` f32 (cumulative payoff)
     /// `benefit` / `cost`: PD parameters (encoded as x1000 integers internally)
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "dispatch submit is infallible on valid device"
-    )]
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch(
         &self,
         grid_buf: &wgpu::Buffer,
@@ -60,7 +60,7 @@ impl SpatialPayoffGpu {
         grid_size: u32,
         benefit: f32,
         cost: f32,
-    ) {
+    ) -> Result<()> {
         let d = self.device.device();
 
         let params = PayoffParams {
@@ -83,7 +83,7 @@ impl SpatialPayoffGpu {
             .storage_rw(1, fitness_buf)
             .uniform(2, &params_buf)
             .dispatch_1d(total)
-            .submit()
-            .expect("SpatialPayoff GPU dispatch failed");
+            .submit()?;
+        Ok(())
     }
 }

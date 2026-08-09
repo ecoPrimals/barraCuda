@@ -13,6 +13,7 @@ use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::error::Result;
 
 /// WGSL source for multi-objective fitness (f32).
 pub const WGSL_MULTI_OBJ_FITNESS: &str = include_str!("../../shaders/bio/multi_obj_fitness.wgsl");
@@ -46,10 +47,9 @@ impl MultiObjFitnessGpu {
     ///
     /// `genotypes_buf`: `[pop × genome_len]` f64
     /// `fitness_buf`: `[pop × n_obj]` f64
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "dispatch submit is infallible on valid device"
-    )]
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch(
         &self,
         genotypes_buf: &wgpu::Buffer,
@@ -57,7 +57,7 @@ impl MultiObjFitnessGpu {
         pop: u32,
         genome_len: u32,
         n_obj: u32,
-    ) {
+    ) -> Result<()> {
         let d = self.device.device();
 
         let params = MultiObjFitnessParams {
@@ -81,8 +81,8 @@ impl MultiObjFitnessGpu {
             .storage_rw(1, fitness_buf)
             .uniform(2, &params_buf)
             .dispatch_1d(total)
-            .submit()
-            .expect("MultiObjFitness GPU dispatch failed");
+            .submit()?;
+        Ok(())
     }
 }
 

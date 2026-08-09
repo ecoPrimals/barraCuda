@@ -29,6 +29,7 @@
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
@@ -68,10 +69,9 @@ impl VacfBatchGpu {
     /// `vel_ring_buf` must hold `[n_frames × n_particles × 3]` f64 values.
     /// Returns a buffer of `[n_particles]` f64 values (per-particle C(lag)),
     /// ready for reduction via `ReduceScalarPipeline`.
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "dispatch submit is infallible on valid device"
-    )]
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch(
         &self,
         vel_ring_buf: &wgpu::Buffer,
@@ -79,7 +79,7 @@ impl VacfBatchGpu {
         n_particles: u32,
         n_frames: u32,
         lag: u32,
-    ) {
+    ) -> Result<()> {
         let stride = n_particles * 3;
         let params = VacfBatchParams {
             n: n_particles,
@@ -103,8 +103,8 @@ impl VacfBatchGpu {
             .storage_rw(1, out_buf)
             .uniform(2, &params_buf)
             .dispatch(n_particles.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
-            .submit()
-            .expect("VacfBatch dispatch");
+            .submit()?;
+        Ok(())
     }
 }
 
@@ -131,10 +131,9 @@ impl StressVirialGpu {
     /// `vel_buf`:  `[N×3]` f64 — particle velocities
     /// `out_buf`:  `[N]`   f64 — per-particle `σ_xy` contribution
     /// `params`:   simulation parameters packed as `[8]` f64
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "dispatch submit is infallible on valid device"
-    )]
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch(
         &self,
         pos_buf: &wgpu::Buffer,
@@ -142,7 +141,7 @@ impl StressVirialGpu {
         out_buf: &wgpu::Buffer,
         params_buf: &wgpu::Buffer,
         n_particles: u32,
-    ) {
+    ) -> Result<()> {
         ComputeDispatch::new(&self.device, "StressVirial")
             .shader(STRESS_VIRIAL_SHADER, "main")
             .f64()
@@ -151,8 +150,8 @@ impl StressVirialGpu {
             .storage_rw(2, out_buf)
             .storage_read(3, params_buf)
             .dispatch(n_particles.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
-            .submit()
-            .expect("StressVirial dispatch");
+            .submit()?;
+        Ok(())
     }
 }
 

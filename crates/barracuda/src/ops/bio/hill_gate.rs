@@ -14,6 +14,7 @@ use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::error::Result;
 
 /// WGSL source for f32 Hill gate (paired or grid mode).
 pub const WGSL_HILL_GATE: &str = include_str!("../../shaders/bio/hill_gate.wgsl");
@@ -61,17 +62,16 @@ impl HillGateGpu {
 
     /// Compute Hill gate. Mode 0: paired (output[i] = f(a[i], b[i])).
     /// Mode 1: grid (output[ix*`n_b` + iy] = f(a[ix], b[iy])).
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "dispatch submit is infallible on valid device"
-    )]
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch(
         &self,
         input_a: &wgpu::Buffer,
         input_b: &wgpu::Buffer,
         output: &wgpu::Buffer,
         params: &HillGateParams,
-    ) {
+    ) -> Result<()> {
         let d = self.device.device();
 
         let params_buf = d.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -94,8 +94,8 @@ impl HillGateGpu {
             .storage_rw(2, output)
             .uniform(3, &params_buf)
             .dispatch_1d(element_count)
-            .submit()
-            .expect("HillGate GPU dispatch failed");
+            .submit()?;
+        Ok(())
     }
 }
 

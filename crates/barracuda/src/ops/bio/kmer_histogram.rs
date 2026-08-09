@@ -13,6 +13,7 @@ use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::error::Result;
 
 /// WGSL shader for k-mer histogram computation (atomic increments).
 pub const WGSL_KMER_HISTOGRAM: &str = include_str!("../../shaders/bio/kmer_histogram.wgsl");
@@ -42,17 +43,16 @@ impl KmerHistogramGpu {
     ///
     /// `kmers_buf`: `[n_kmers]` u32 — encoded k-mer hashes (each < 4^k)
     /// `histogram_buf`: `[4^k]` u32 — output histogram (must be zeroed before dispatch)
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "dispatch submit is infallible on valid device"
-    )]
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch(
         &self,
         kmers_buf: &wgpu::Buffer,
         histogram_buf: &wgpu::Buffer,
         n_kmers: u32,
         k: u32,
-    ) {
+    ) -> Result<()> {
         let d = self.device.device();
 
         let config = KmerConfig {
@@ -73,8 +73,8 @@ impl KmerHistogramGpu {
             .storage_read(1, kmers_buf)
             .storage_rw(2, histogram_buf)
             .dispatch_1d(n_kmers)
-            .submit()
-            .expect("KmerHistogram GPU dispatch failed");
+            .submit()?;
+        Ok(())
     }
 }
 

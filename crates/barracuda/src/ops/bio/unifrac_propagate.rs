@@ -18,6 +18,7 @@ use wgpu::util::DeviceExt;
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::error::Result;
 
 /// WGSL source for `UniFrac` tree propagation (leaf init + `propagate_level`).
 pub const WGSL_UNIFRAC_PROPAGATE: &str = include_str!("../../shaders/bio/unifrac_propagate.wgsl");
@@ -49,6 +50,10 @@ impl UniFracPropagateGpu {
     }
 
     /// Initialize leaf nodes from sample matrix.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch_leaf_init(
         &self,
         config: &UniFracConfig,
@@ -56,7 +61,7 @@ impl UniFracPropagateGpu {
         branch_len_buf: &wgpu::Buffer,
         sample_mat_buf: &wgpu::Buffer,
         node_sums_buf: &wgpu::Buffer,
-    ) {
+    ) -> Result<()> {
         self.dispatch(
             config,
             parent_buf,
@@ -65,10 +70,14 @@ impl UniFracPropagateGpu {
             node_sums_buf,
             "unifrac_leaf_init",
             config.n_leaves.div_ceil(WORKGROUP_SIZE_COMPACT),
-        );
+        )
     }
 
     /// Propagate one tree level (call bottom-up per level).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch_propagate_level(
         &self,
         config: &UniFracConfig,
@@ -76,7 +85,7 @@ impl UniFracPropagateGpu {
         branch_len_buf: &wgpu::Buffer,
         sample_mat_buf: &wgpu::Buffer,
         node_sums_buf: &wgpu::Buffer,
-    ) {
+    ) -> Result<()> {
         self.dispatch(
             config,
             parent_buf,
@@ -85,7 +94,7 @@ impl UniFracPropagateGpu {
             node_sums_buf,
             "unifrac_propagate_level",
             config.n_nodes.div_ceil(WORKGROUP_SIZE_COMPACT),
-        );
+        )
     }
 
     fn dispatch(
@@ -97,7 +106,7 @@ impl UniFracPropagateGpu {
         node_sums_buf: &wgpu::Buffer,
         entry_point: &str,
         workgroups_x: u32,
-    ) {
+    ) -> Result<()> {
         let d = self.device.device();
         let config_buf = d.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("UniFrac Config"),
@@ -114,8 +123,8 @@ impl UniFracPropagateGpu {
             .storage_read(3, sample_mat_buf)
             .storage_rw(4, node_sums_buf)
             .dispatch(workgroups_x, 1, 1)
-            .submit()
-            .expect("UniFrac GPU dispatch failed");
+            .submit()?;
+        Ok(())
     }
 }
 

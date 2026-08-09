@@ -200,510 +200,557 @@ pub(super) fn method_describe(params: &Value, id: Value) -> JsonRpcResponse {
     JsonRpcResponse::success(id, descriptor)
 }
 
-/// Structured descriptor for a method — params, description, access, examples.
-fn method_descriptor(method: &str) -> Value {
-    let (description, params_schema, access) = match method {
-        // Ecosystem probes
-        "health.liveness" => ("Returns alive status", serde_json::json!({}), "public"),
-        "health.readiness" => (
+fn describe_health(method: &str) -> Option<(&str, Value, &str)> {
+    match method {
+        "health.liveness" => Some(("Returns alive status", serde_json::json!({}), "public")),
+        "health.readiness" => Some((
             "Returns readiness with GPU/lifecycle state",
             serde_json::json!({}),
             "public",
-        ),
-        "health.check" => (
+        )),
+        "health.check" => Some((
             "Full health report with device info",
             serde_json::json!({}),
             "public",
-        ),
-        "health.version" => (
+        )),
+        "health.version" => Some((
             "Version and build metadata",
             serde_json::json!({}),
             "public",
-        ),
-        "capabilities.list" => (
+        )),
+        "capabilities.list" => Some((
             "Full capability advertisement",
             serde_json::json!({}),
             "public",
-        ),
-        "protocols.list" => (
+        )),
+        "protocols.list" => Some((
             "Supported protocols with G65 negotiation and C2 endpoints",
             serde_json::json!({}),
             "public",
-        ),
-        // Identity
-        "identity.get" => (
+        )),
+        _ => None,
+    }
+}
+
+fn describe_identity(method: &str) -> Option<(&str, Value, &str)> {
+    match method {
+        "identity.get" => Some((
             "Lightweight primal identity",
             serde_json::json!({}),
             "public",
-        ),
-        "primal.info" => (
+        )),
+        "primal.info" => Some((
             "Full primal info with capabilities",
             serde_json::json!({}),
             "public",
-        ),
-        "primal.capabilities" => (
+        )),
+        "primal.capabilities" => Some((
             "Alias for capabilities.list",
             serde_json::json!({}),
             "public",
-        ),
-        "primal.announce" => (
+        )),
+        "primal.announce" => Some((
             "Composition registration payload for biomeOS",
             serde_json::json!({}),
             "public",
-        ),
-        // Device
-        "device.list" => (
+        )),
+        _ => None,
+    }
+}
+
+fn describe_device(method: &str) -> Option<(&str, Value, &str)> {
+    match method {
+        "device.list" => Some((
             "List available compute devices",
             serde_json::json!({}),
             "public",
-        ),
-        "device.pool" => (
+        )),
+        "device.pool" => Some((
             "Multi-GPU pool status and per-device diagnostics",
             serde_json::json!({}),
             "public",
-        ),
-        "device.probe" => ("Probe GPU capabilities", serde_json::json!({}), "public"),
-        "device.video_codecs" => (
+        )),
+        "device.probe" => Some(("Probe GPU capabilities", serde_json::json!({}), "public")),
+        "device.video_codecs" => Some((
             "Probe available video codec backends (NVENC, VAAPI, software)",
             serde_json::json!({}),
             "public",
-        ),
-        "tolerances.get" => (
+        )),
+        "tolerances.get" => Some((
             "Get precision tolerances for an operation",
             serde_json::json!({"op": "string (operation name)"}),
             "public",
-        ),
-        "validate.gpu_stack" => (
+        )),
+        "validate.gpu_stack" => Some((
             "Validate GPU driver and shader stack",
             serde_json::json!({}),
             "public",
-        ),
-        // Precision
-        "precision.route" => (
+        )),
+        "precision.route" => Some((
             "Advisory: route computation to best-precision path",
             serde_json::json!({"op": "string", "precision": "string? (f32|f64)"}),
             "public",
-        ),
-        // Compute
-        "compute.dispatch" => (
+        )),
+        _ => None,
+    }
+}
+
+fn describe_compute(method: &str) -> Option<(&str, Value, &str)> {
+    match method {
+        "compute.dispatch" => Some((
             "Dispatch a compute operation",
             serde_json::json!({"op": "string", "data": "array<f64>", "shape": "array<u32>?"}),
             "protected",
-        ),
-        "compute.dispatch.capabilities" => (
+        )),
+        "compute.dispatch.capabilities" => Some((
             "List dispatchable operations",
             serde_json::json!({}),
             "public",
-        ),
-        "compute.dispatch.submit" => (
+        )),
+        "compute.dispatch.submit" => Some((
             "Submit compute to peer",
             serde_json::json!({"op": "string", "data": "array<f64>"}),
             "protected",
-        ),
-        "compute.dispatch.result" => (
+        )),
+        "compute.dispatch.result" => Some((
             "Retrieve dispatch result",
             serde_json::json!({"job_id": "string"}),
             "protected",
-        ),
-        // Math
-        "math.sigmoid" => (
+        )),
+        "math.sigmoid" => Some((
             "Sigmoid activation on scalar or array",
             serde_json::json!({"x": "f64 | array<f64>"}),
             "public",
-        ),
-        "math.log2" => (
+        )),
+        "math.log2" => Some((
             "Base-2 logarithm",
             serde_json::json!({"x": "f64 | array<f64>"}),
             "public",
-        ),
-        "activation.fitts" => (
+        )),
+        "activation.fitts" => Some((
             "Fitts' law index of difficulty",
             serde_json::json!({"distance": "f64", "width": "f64"}),
             "public",
-        ),
-        "activation.hick" => (
+        )),
+        "activation.hick" => Some((
             "Hick-Hyman reaction time",
             serde_json::json!({"n": "u32 (number of choices)"}),
             "public",
-        ),
-        "activation.softmax" => (
+        )),
+        "activation.softmax" => Some((
             "Softmax over array",
             serde_json::json!({"data": "array<f64>"}),
             "public",
-        ),
-        "activation.gelu" => (
+        )),
+        "activation.gelu" => Some((
             "GELU activation",
             serde_json::json!({"data": "array<f64>"}),
             "public",
-        ),
-        // Stats
-        "stats.mean" => (
+        )),
+        _ => None,
+    }
+}
+
+fn describe_stats(method: &str) -> Option<(&str, Value, &str)> {
+    match method {
+        "stats.mean" => Some((
             "Arithmetic mean",
             serde_json::json!({"data": "array<f64>"}),
             "public",
-        ),
-        "stats.std_dev" => (
+        )),
+        "stats.std_dev" => Some((
             "Standard deviation",
             serde_json::json!({"data": "array<f64>"}),
             "public",
-        ),
-        "stats.variance" => (
+        )),
+        "stats.variance" => Some((
             "Variance",
             serde_json::json!({"data": "array<f64>"}),
             "public",
-        ),
-        "stats.correlation" | "stats.pearson" => (
+        )),
+        "stats.correlation" | "stats.pearson" => Some((
             "Pearson correlation coefficient",
             serde_json::json!({"x": "array<f64>", "y": "array<f64>"}),
             "public",
-        ),
-        "stats.spearman" => (
+        )),
+        "stats.spearman" => Some((
             "Spearman rank correlation",
             serde_json::json!({"x": "array<f64>", "y": "array<f64>"}),
             "public",
-        ),
-        "stats.covariance" => (
+        )),
+        "stats.covariance" => Some((
             "Sample covariance",
             serde_json::json!({"x": "array<f64>", "y": "array<f64>"}),
             "public",
-        ),
-        "stats.weighted_mean" => (
+        )),
+        "stats.weighted_mean" => Some((
             "Weighted mean",
             serde_json::json!({"data": "array<f64>", "weights": "array<f64>"}),
             "public",
-        ),
-        "stats.chi_squared" => (
+        )),
+        "stats.chi_squared" => Some((
             "Chi-squared test statistic",
             serde_json::json!({"observed": "array<f64>", "expected": "array<f64>"}),
             "public",
-        ),
-        "stats.anova_oneway" => (
+        )),
+        "stats.anova_oneway" => Some((
             "One-way ANOVA F-statistic",
             serde_json::json!({"groups": "array<array<f64>>"}),
             "public",
-        ),
-        "stats.shannon" | "stats.entropy" => (
+        )),
+        "stats.shannon" | "stats.entropy" => Some((
             "Shannon entropy",
             serde_json::json!({"data": "array<f64>"}),
             "public",
-        ),
-        "stats.fit_linear" => (
+        )),
+        "stats.fit_linear" => Some((
             "Linear regression fit",
             serde_json::json!({"x": "array<f64>", "y": "array<f64>"}),
             "public",
-        ),
-        "stats.empirical_spectral_density" => (
+        )),
+        "stats.empirical_spectral_density" => Some((
             "Empirical spectral density estimate",
             serde_json::json!({"data": "array<f64>"}),
             "public",
-        ),
-        "stats.simpson" => (
+        )),
+        "stats.simpson" => Some((
             "Simpson diversity index",
             serde_json::json!({"data": "array<f64>"}),
             "public",
-        ),
-        "stats.bray_curtis" => (
+        )),
+        "stats.bray_curtis" => Some((
             "Bray-Curtis dissimilarity",
             serde_json::json!({"a": "array<f64>", "b": "array<f64>"}),
             "public",
-        ),
-        "stats.hill" => (
+        )),
+        "stats.hill" => Some((
             "Hill diversity number",
             serde_json::json!({"data": "array<f64>", "q": "f64"}),
             "public",
-        ),
-        "stats.fit_quadratic" => (
+        )),
+        "stats.fit_quadratic" => Some((
             "Quadratic regression fit",
             serde_json::json!({"x": "array<f64>", "y": "array<f64>"}),
             "public",
-        ),
-        "stats.fit_exponential" => (
+        )),
+        "stats.fit_exponential" => Some((
             "Exponential regression fit",
             serde_json::json!({"x": "array<f64>", "y": "array<f64>"}),
             "public",
-        ),
-        "stats.fit_logarithmic" => (
+        )),
+        "stats.fit_logarithmic" => Some((
             "Logarithmic regression fit",
             serde_json::json!({"x": "array<f64>", "y": "array<f64>"}),
             "public",
-        ),
-        "stats.rarefaction_curve" => (
+        )),
+        "stats.rarefaction_curve" => Some((
             "Rarefaction curve computation",
             serde_json::json!({"data": "array<f64>", "steps": "u32?"}),
             "public",
-        ),
-        "stats.gamma_fit" => (
+        )),
+        "stats.gamma_fit" => Some((
             "Fit gamma distribution",
             serde_json::json!({"data": "array<f64>"}),
             "public",
-        ),
-        "stats.gamma_cdf" => (
+        )),
+        "stats.gamma_cdf" => Some((
             "Gamma CDF evaluation",
             serde_json::json!({"x": "f64", "shape": "f64", "rate": "f64"}),
             "public",
-        ),
-        // Signal
-        "signal.detect_peaks" => (
+        )),
+        _ => None,
+    }
+}
+
+fn describe_signal(method: &str) -> Option<(&str, Value, &str)> {
+    match method {
+        "signal.detect_peaks" => Some((
             "Peak detection in time series",
             serde_json::json!({"data": "array<f64>", "threshold": "f64?"}),
             "public",
-        ),
-        "signal.bandpass" => (
+        )),
+        "signal.bandpass" => Some((
             "Bandpass filter",
             serde_json::json!({"data": "array<f64>", "low": "f64", "high": "f64", "sample_rate": "f64"}),
             "public",
-        ),
-        "signal.derivative" => (
+        )),
+        "signal.derivative" => Some((
             "Numerical derivative",
             serde_json::json!({"data": "array<f64>", "dt": "f64?"}),
             "public",
-        ),
-        // Linalg
-        "linalg.solve" => (
+        )),
+        _ => None,
+    }
+}
+
+fn describe_linalg(method: &str) -> Option<(&str, Value, &str)> {
+    match method {
+        "linalg.solve" => Some((
             "Solve linear system Ax=b",
             serde_json::json!({"a": "array<array<f64>>", "b": "array<f64>"}),
             "public",
-        ),
-        "linalg.eigenvalues" => (
+        )),
+        "linalg.eigenvalues" => Some((
             "Eigenvalue decomposition",
             serde_json::json!({"matrix": "array<array<f64>>"}),
             "public",
-        ),
-        "linalg.batched_tridiag_eigh" => (
+        )),
+        "linalg.batched_tridiag_eigh" => Some((
             "Batched tridiagonal symmetric eigendecomposition (QL with Wilkinson shifts)",
             serde_json::json!({"diagonals": "array<f64>", "subdiagonals": "array<f64>", "n": "u64", "n_batches": "u64 (optional, default 1)"}),
             "public",
-        ),
-        "linalg.svd" => (
+        )),
+        "linalg.svd" => Some((
             "Singular value decomposition",
             serde_json::json!({"matrix": "array<array<f64>>"}),
             "public",
-        ),
-        "linalg.qr" => (
+        )),
+        "linalg.qr" => Some((
             "QR decomposition",
             serde_json::json!({"matrix": "array<array<f64>>"}),
             "public",
-        ),
-        "linalg.graph_laplacian" => (
+        )),
+        "linalg.graph_laplacian" => Some((
             "Graph Laplacian from adjacency matrix",
             serde_json::json!({"adjacency": "array<array<f64>>"}),
             "public",
-        ),
-        // Numerical
-        "ode.step" => (
+        )),
+        _ => None,
+    }
+}
+
+fn describe_domain(method: &str) -> Option<(&str, Value, &str)> {
+    match method {
+        "ode.step" => Some((
             "Single ODE integration step",
             serde_json::json!({"state": "array<f64>", "dt": "f64", "method": "string? (euler|rk4)"}),
             "public",
-        ),
-        // Graph
-        "graph.belief_propagation" => (
+        )),
+        "graph.belief_propagation" => Some((
             "Belief propagation on factor graph",
             serde_json::json!({"factors": "array", "messages": "array?", "iterations": "u32?"}),
             "public",
-        ),
-        // Spectral
-        "spectral.fft" => (
+        )),
+        "spectral.fft" => Some((
             "Fast Fourier transform",
             serde_json::json!({"data": "array<f64>"}),
             "public",
-        ),
-        "spectral.power_spectrum" => (
+        )),
+        "spectral.power_spectrum" => Some((
             "Power spectral density",
             serde_json::json!({"data": "array<f64>"}),
             "public",
-        ),
-        "spectral.stft" => (
+        )),
+        "spectral.stft" => Some((
             "Short-time Fourier transform",
             serde_json::json!({"data": "array<f64>", "window_size": "u32", "hop_size": "u32?"}),
             "public",
-        ),
-        // ML
-        "ml.mlp_forward" => (
+        )),
+        "ml.mlp_forward" => Some((
             "Forward pass through trained MLP",
             serde_json::json!({"model": "object (SimpleMlp)", "input": "array<f64>"}),
             "public",
-        ),
-        "ml.mlp_train" => (
+        )),
+        "ml.mlp_train" => Some((
             "Train single-layer perceptron",
             serde_json::json!({"input_dim": "u32", "output_dim": "u32", "data": "array<array<f64>>", "labels": "array<array<f64>>", "epochs": "u32?", "lr": "f64?"}),
             "public",
-        ),
-        "ml.mlp_infer" => (
+        )),
+        "ml.mlp_infer" => Some((
             "Batch inference on trained model",
             serde_json::json!({"model": "object (SimpleMlp)", "inputs": "array<array<f64>>"}),
             "public",
-        ),
-        "ml.mlp_save" => (
+        )),
+        "ml.mlp_save" => Some((
             "Save model to binary format",
             serde_json::json!({"model": "object (SimpleMlp)", "path": "string"}),
             "public",
-        ),
-        "ml.mlp_load" => (
+        )),
+        "ml.mlp_load" => Some((
             "Load model from file",
             serde_json::json!({"path": "string"}),
             "public",
-        ),
-        "ml.perceptron_train" => (
+        )),
+        "ml.perceptron_train" => Some((
             "End-to-end perceptron training pipeline",
             serde_json::json!({"input_dim": "u32", "output_dim": "u32", "data": "array<array<f64>>", "labels": "array<array<f64>>", "epochs": "u32?", "lr": "f64?"}),
             "public",
-        ),
-        "ml.attention" => (
+        )),
+        "ml.attention" => Some((
             "Scaled dot-product attention",
             serde_json::json!({"q": "array<array<f64>>", "k": "array<array<f64>>", "v": "array<array<f64>>"}),
             "public",
-        ),
-        "ml.esn_predict" => (
+        )),
+        "ml.esn_predict" => Some((
             "Echo State Network prediction",
             serde_json::json!({"input": "array<f64>", "reservoir_size": "u32?"}),
             "public",
-        ),
-        // Nautilus
-        "nautilus.create" => (
+        )),
+        "nautilus.create" => Some((
             "Create nautilus session",
             serde_json::json!({"config": "object?"}),
             "public",
-        ),
-        "nautilus.observe" => (
+        )),
+        "nautilus.observe" => Some((
             "Feed observation data",
             serde_json::json!({"session_id": "string", "data": "array<f64>"}),
             "public",
-        ),
-        "nautilus.train" => (
+        )),
+        "nautilus.train" => Some((
             "Train nautilus model",
             serde_json::json!({"session_id": "string"}),
             "public",
-        ),
-        "nautilus.predict" => (
+        )),
+        "nautilus.predict" => Some((
             "Predict from nautilus model",
             serde_json::json!({"session_id": "string", "horizon": "u32?"}),
             "public",
-        ),
-        "nautilus.export" => (
+        )),
+        "nautilus.export" => Some((
             "Export trained model",
             serde_json::json!({"session_id": "string"}),
             "public",
-        ),
-        "nautilus.import" => (
+        )),
+        "nautilus.import" => Some((
             "Import model into session",
             serde_json::json!({"model": "object"}),
             "public",
-        ),
-        // Noise & RNG
-        "noise.perlin2d" => (
+        )),
+        "noise.perlin2d" => Some((
             "2D Perlin noise",
             serde_json::json!({"x": "f64", "y": "f64", "seed": "u32?"}),
             "public",
-        ),
-        "noise.perlin3d" => (
+        )),
+        "noise.perlin3d" => Some((
             "3D Perlin noise",
             serde_json::json!({"x": "f64", "y": "f64", "z": "f64", "seed": "u32?"}),
             "public",
-        ),
-        "rng.uniform" => (
+        )),
+        "rng.uniform" => Some((
             "Uniform random numbers",
             serde_json::json!({"count": "u32", "min": "f64?", "max": "f64?"}),
             "public",
-        ),
-        // Tensor
-        "tensor.create" => (
+        )),
+        _ => None,
+    }
+}
+
+fn describe_tensor(method: &str) -> Option<(&str, Value, &str)> {
+    match method {
+        "tensor.create" => Some((
             "Create GPU tensor from data",
             serde_json::json!({"data": "array<f64>", "shape": "array<u32>"}),
             "protected",
-        ),
-        "tensor.matmul" => (
+        )),
+        "tensor.matmul" => Some((
             "GPU matrix multiplication (tensor handles)",
             serde_json::json!({"a": "string (handle)", "b": "string (handle)"}),
             "protected",
-        ),
-        "tensor.matmul_inline" => (
+        )),
+        "tensor.matmul_inline" => Some((
             "CPU matrix multiplication (inline data)",
             serde_json::json!({"a": "array<array<f64>>", "b": "array<array<f64>>"}),
             "public",
-        ),
-        "tensor.add" => (
+        )),
+        "tensor.add" => Some((
             "Element-wise tensor addition",
             serde_json::json!({"a": "string (handle)", "b": "string (handle)"}),
             "protected",
-        ),
-        "tensor.scale" => (
+        )),
+        "tensor.scale" => Some((
             "Scalar multiplication",
             serde_json::json!({"tensor": "string (handle)", "scalar": "f64"}),
             "protected",
-        ),
-        "tensor.clamp" => (
+        )),
+        "tensor.clamp" => Some((
             "Clamp tensor values",
             serde_json::json!({"tensor": "string (handle)", "min": "f64", "max": "f64"}),
             "protected",
-        ),
-        "tensor.reduce" => (
+        )),
+        "tensor.reduce" => Some((
             "Reduction operation (sum, mean, max, min)",
             serde_json::json!({"tensor": "string (handle)", "op": "string (sum|mean|max|min)"}),
             "protected",
-        ),
-        "tensor.sigmoid" => (
+        )),
+        "tensor.sigmoid" => Some((
             "Sigmoid activation on tensor",
             serde_json::json!({"tensor": "string (handle)"}),
             "protected",
-        ),
-        "tensor.batch.submit" => (
+        )),
+        "tensor.batch.submit" => Some((
             "Submit batch of tensor operations",
             serde_json::json!({"ops": "array<object>"}),
             "protected",
-        ),
-        // FHE
-        "fhe.ntt" => (
+        )),
+        "fhe.ntt" => Some((
             "Number-theoretic transform for FHE",
             serde_json::json!({"data": "array<u64>", "modulus": "u64"}),
             "protected",
-        ),
-        "fhe.pointwise_mul" => (
+        )),
+        "fhe.pointwise_mul" => Some((
             "Pointwise polynomial multiplication",
             serde_json::json!({"a": "array<u64>", "b": "array<u64>", "modulus": "u64"}),
             "protected",
-        ),
-        // Mesh
-        "mesh.trust_verify" => (
+        )),
+        _ => None,
+    }
+}
+
+fn describe_auth(method: &str) -> Option<(&str, Value, &str)> {
+    match method {
+        "mesh.trust_verify" => Some((
             "Verify BTSP trust with peer",
             serde_json::json!({"peer_id": "string", "token": "string?"}),
             "public",
-        ),
-        "mesh.health" => (
+        )),
+        "mesh.health" => Some((
             "Cross-gate mesh health probe",
             serde_json::json!({}),
             "public",
-        ),
-        // Auth
-        "auth.check" => (
+        )),
+        "auth.check" => Some((
             "Check caller authentication status",
             serde_json::json!({}),
             "public",
-        ),
-        "auth.mode" => ("Report current auth mode", serde_json::json!({}), "public"),
-        "auth.peer_info" => (
+        )),
+        "auth.mode" => Some(("Report current auth mode", serde_json::json!({}), "public")),
+        "auth.peer_info" => Some((
             "Report peer connection info",
             serde_json::json!({}),
             "public",
-        ),
-        // BTSP
-        "btsp.negotiate" => (
+        )),
+        "btsp.negotiate" => Some((
             "Initiate BTSP Phase 1 handshake",
             serde_json::json!({"peer_id": "string"}),
             "protected",
-        ),
-        "btsp.capabilities" => (
+        )),
+        "btsp.capabilities" => Some((
             "List supported BTSP capabilities",
             serde_json::json!({}),
             "public",
-        ),
-        // Method introspection
-        "method.describe" => (
+        )),
+        "method.describe" => Some((
             "Describe a method's params, access level, and purpose",
             serde_json::json!({"method": "string (method name)"}),
             "public",
-        ),
-        _ => ("Unknown method", serde_json::json!({}), "unknown"),
-    };
+        )),
+        _ => None,
+    }
+}
+
+/// Structured descriptor for a method — params, description, access, examples.
+fn method_descriptor(method: &str) -> Value {
+    let (description, params_schema, access) = describe_health(method)
+        .or_else(|| describe_identity(method))
+        .or_else(|| describe_device(method))
+        .or_else(|| describe_compute(method))
+        .or_else(|| describe_stats(method))
+        .or_else(|| describe_signal(method))
+        .or_else(|| describe_linalg(method))
+        .or_else(|| describe_domain(method))
+        .or_else(|| describe_tensor(method))
+        .or_else(|| describe_auth(method))
+        .unwrap_or_else(|| ("Unknown method", serde_json::json!({}), "unknown"));
 
     serde_json::json!({
         "method": method,

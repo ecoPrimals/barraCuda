@@ -14,6 +14,7 @@ use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::error::Result;
 
 /// WGSL shader for taxonomy naive Bayes fully-connected classification.
 pub const WGSL_TAXONOMY_FC: &str = include_str!("../../shaders/bio/taxonomy_fc.wgsl");
@@ -45,10 +46,9 @@ impl TaxonomyFcGpu {
     /// `log_priors_buf`: `[n_taxa]` f64 — log prior probabilities
     /// `features_buf`: `[n_queries × n_features]` u32 — binary feature vectors
     /// `scores_buf`: `[n_queries × n_taxa]` f64 — output log-posterior scores
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "dispatch submit is infallible on valid device"
-    )]
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch(
         &self,
         log_probs_buf: &wgpu::Buffer,
@@ -58,7 +58,7 @@ impl TaxonomyFcGpu {
         n_queries: u32,
         n_taxa: u32,
         n_features: u32,
-    ) {
+    ) -> Result<()> {
         let d = self.device.device();
 
         let config = TaxConfig {
@@ -82,8 +82,8 @@ impl TaxonomyFcGpu {
             .storage_read(3, features_buf)
             .storage_rw(4, scores_buf)
             .dispatch(n_queries.div_ceil(16), n_taxa.div_ceil(16), 1)
-            .submit()
-            .expect("TaxonomyFC GPU dispatch failed");
+            .submit()?;
+        Ok(())
     }
 }
 

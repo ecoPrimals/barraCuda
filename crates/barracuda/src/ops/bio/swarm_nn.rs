@@ -15,6 +15,7 @@ use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::error::Result;
 
 /// WGSL source for swarm NN forward pass (f32).
 pub const WGSL_SWARM_NN_FORWARD: &str = include_str!("../../shaders/bio/swarm_nn_forward.wgsl");
@@ -68,17 +69,16 @@ impl SwarmNnGpu {
     /// `weights_buf`: `[n_controllers × weights_per_ctrl]` f64
     /// `inputs_buf`: `[n_controllers × n_evals × input_dim]` f64
     /// `actions_buf`: `[n_controllers × n_evals]` u32
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "dispatch submit is infallible on valid device"
-    )]
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch(
         &self,
         weights_buf: &wgpu::Buffer,
         inputs_buf: &wgpu::Buffer,
         actions_buf: &wgpu::Buffer,
         params: &SwarmNnParams,
-    ) {
+    ) -> Result<()> {
         let d = self.device.device();
 
         let params_buf = d.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -97,8 +97,8 @@ impl SwarmNnGpu {
             .storage_rw(2, actions_buf)
             .uniform(3, &params_buf)
             .dispatch_1d(total)
-            .submit()
-            .expect("SwarmNn GPU dispatch failed");
+            .submit()?;
+        Ok(())
     }
 }
 

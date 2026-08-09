@@ -19,6 +19,7 @@ use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::error::Result;
 
 /// f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 pub const WGSL_WRIGHT_FISHER_F64: &str =
@@ -51,10 +52,9 @@ impl WrightFisherGpu {
     /// `selection_buf`:  `[n_loci]` f64 — selection coefficients
     /// `freq_out_buf`:   `[n_pops × n_loci]` f64 — output frequencies
     /// `prng_state_buf`: `[n_pops × n_loci × 4]` u32 — PRNG state
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "dispatch submit is infallible on valid device"
-    )]
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch(
         &self,
         freq_in_buf: &wgpu::Buffer,
@@ -64,7 +64,7 @@ impl WrightFisherGpu {
         n_pops: u32,
         n_loci: u32,
         two_n: u32,
-    ) {
+    ) -> Result<()> {
         let d = self.device.device();
 
         let params = WfParams {
@@ -90,8 +90,8 @@ impl WrightFisherGpu {
             .storage_rw(3, prng_state_buf)
             .uniform(4, &params_buf)
             .dispatch_1d(total)
-            .submit()
-            .expect("WrightFisher GPU dispatch failed");
+            .submit()?;
+        Ok(())
     }
 }
 

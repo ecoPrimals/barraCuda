@@ -427,11 +427,11 @@ const AKIDA_SDK_SYSTEM_DIRS: &[&str] = &["/opt/akida", "/usr/local/akida", "/usr
 fn detect_akida_sdk_version() -> Option<String> {
     let mut search_paths = Vec::new();
 
-    if let Ok(home) = std::env::var("AKIDA_HOME") {
+    if let Ok(home) = std::env::var(crate::env_keys::AKIDA_HOME) {
         search_paths.push(format!("{home}/version"));
     }
 
-    if let Ok(sdk_dir) = std::env::var("AKIDA_SDK_DIR") {
+    if let Ok(sdk_dir) = std::env::var(crate::env_keys::AKIDA_SDK_DIR) {
         search_paths.push(format!("{sdk_dir}/version"));
     }
 
@@ -465,15 +465,15 @@ fn detect_akida_sdk_version() -> Option<String> {
 pub(crate) fn akida_model_dirs() -> Vec<std::path::PathBuf> {
     let mut dirs = Vec::new();
 
-    if let Ok(path) = std::env::var("AKIDA_MODEL_PATH") {
+    if let Ok(path) = std::env::var(crate::env_keys::AKIDA_MODEL_PATH) {
         dirs.push(std::path::PathBuf::from(path));
     }
 
-    if let Ok(home) = std::env::var("AKIDA_HOME") {
+    if let Ok(home) = std::env::var(crate::env_keys::AKIDA_HOME) {
         dirs.push(std::path::PathBuf::from(home).join("models"));
     }
 
-    if let Ok(dir) = std::env::var("AKIDA_MODELS_DIR") {
+    if let Ok(dir) = std::env::var(crate::env_keys::AKIDA_MODELS_DIR) {
         dirs.push(std::path::PathBuf::from(dir));
     }
 

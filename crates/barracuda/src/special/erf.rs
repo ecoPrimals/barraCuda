@@ -159,7 +159,6 @@ fn erf_batch(x: &[f64]) -> Vec<f64> {
 }
 
 #[cfg(all(test, feature = "cpu-shader"))]
-#[allow(dead_code)]
 const ERFC_F64_WGSL: &str = r"
 @group(0) @binding(0) var<storage, read> input: array<f64>;
 @group(0) @binding(1) var<storage, read_write> output: array<f64>;
@@ -193,7 +192,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 ///
 /// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
 #[cfg(test)]
-#[allow(dead_code)]
+#[expect(dead_code, reason = "test-only batch helper")]
 #[must_use]
 fn erfc_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]

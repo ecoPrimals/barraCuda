@@ -17,6 +17,7 @@ use wgpu::util::DeviceExt;
 
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::error::Result;
 
 /// f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 pub const WGSL_LOCUS_VARIANCE_F64: &str = include_str!("../../shaders/bio/locus_variance_f64.wgsl");
@@ -44,17 +45,16 @@ impl LocusVarianceGpu {
     ///
     /// `allele_freqs_buf`: `[n_pops × n_loci]` f64
     /// `output_buf`:       `[n_loci]` f64
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "dispatch submit is infallible on valid device"
-    )]
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch(
         &self,
         allele_freqs_buf: &wgpu::Buffer,
         output_buf: &wgpu::Buffer,
         n_pops: u32,
         n_loci: u32,
-    ) {
+    ) -> Result<()> {
         let d = self.device.device();
 
         let params = VarianceParams { n_pops, n_loci };
@@ -71,8 +71,8 @@ impl LocusVarianceGpu {
             .storage_rw(1, output_buf)
             .uniform(2, &params_buf)
             .dispatch_1d(n_loci)
-            .submit()
-            .expect("LocusVariance GPU dispatch failed");
+            .submit()?;
+        Ok(())
     }
 }
 

@@ -64,3 +64,18 @@ pub const HOME: &str = "HOME";
 
 /// Default loopback address for localhost-only IPC and discovery probes.
 pub const DEFAULT_LOOPBACK: &str = "127.0.0.1";
+
+/// Test backend selector (`gpu` runs tests against GPU workload path).
+pub const BARRACUDA_TEST_BACKEND: &str = "BARRACUDA_TEST_BACKEND";
+
+/// Akida SDK home directory for version and model discovery.
+pub const AKIDA_HOME: &str = "AKIDA_HOME";
+
+/// Akida SDK directory override for version discovery.
+pub const AKIDA_SDK_DIR: &str = "AKIDA_SDK_DIR";
+
+/// Explicit Akida model file path for NPU model discovery.
+pub const AKIDA_MODEL_PATH: &str = "AKIDA_MODEL_PATH";
+
+/// Akida models directory (backward-compatible discovery path).
+pub const AKIDA_MODELS_DIR: &str = "AKIDA_MODELS_DIR";

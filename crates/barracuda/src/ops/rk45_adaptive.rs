@@ -19,6 +19,7 @@ use wgpu::util::DeviceExt;
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::error::Result;
 
 /// WGSL source for adaptive RK45 (f32).
 pub const WGSL_RK45_ADAPTIVE: &str = include_str!("../shaders/numerical/rk45_adaptive.wgsl");
@@ -91,11 +92,10 @@ impl Rk45AdaptiveGpu {
     /// `buffers.new_state_buf`: `[n_systems × dim]` f64 — output state (5th order)
     /// `buffers.error_buf`:     `[n_systems × dim]` f64 — per-variable absolute error
     /// `buffers.scratch_buf`:   `[n_systems × dim × 8]` f64 — k-stage + tmp workspace
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "dispatch submit is infallible on valid device"
-    )]
-    pub fn dispatch(&self, args: &Rk45DispatchArgs<'_>) {
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
+    pub fn dispatch(&self, args: &Rk45DispatchArgs<'_>) -> Result<()> {
         let d = self.device.device();
 
         let params = Rk45Params {
@@ -122,8 +122,8 @@ impl Rk45AdaptiveGpu {
             .uniform(4, &params_buf)
             .storage_rw(5, args.buffers.scratch_buf)
             .dispatch(args.params.n_systems.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
-            .submit()
-            .expect("RK45 dispatch");
+            .submit()?;
+        Ok(())
     }
 }
 
@@ -239,7 +239,7 @@ impl BatchedOdeRK45F64 {
                 },
             };
 
-            self.kernel.dispatch(&args);
+            self.kernel.dispatch(&args)?;
 
             let errors = self.device.read_buffer_f64(&error_buf, sys_dim)?;
             let max_err = errors.iter().copied().fold(0.0_f64, f64::max).max(1e-15);

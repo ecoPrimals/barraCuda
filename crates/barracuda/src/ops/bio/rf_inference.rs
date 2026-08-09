@@ -12,6 +12,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::compute_pipeline::ComputeDispatch;
+use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
@@ -47,10 +48,9 @@ impl RfBatchInferenceGpu {
     /// * `node_children_buf` — `[n_trees × n_nodes_max × 2]` i32 (left/right or leaf class)
     /// * `features_buf`      — `[n_samples × n_features]` f64 (input features)
     /// * `predictions_buf`   — `[n_samples × n_trees]` u32 (output, written by kernel)
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "dispatch submit is infallible on valid device"
-    )]
+    /// # Errors
+    ///
+    /// Returns [`Err`] if shader compilation or GPU dispatch fails.
     pub fn dispatch(
         &self,
         node_features_buf: &wgpu::Buffer,
@@ -62,7 +62,7 @@ impl RfBatchInferenceGpu {
         n_trees: u32,
         n_nodes_max: u32,
         n_features: u32,
-    ) {
+    ) -> Result<()> {
         let params = RfParams {
             n_samples,
             n_trees,
@@ -93,7 +93,7 @@ impl RfBatchInferenceGpu {
             .storage_read(4, features_buf)
             .storage_rw(5, predictions_buf)
             .dispatch_1d(total)
-            .submit()
-            .expect("RfBatch GPU dispatch failed");
+            .submit()?;
+        Ok(())
     }
 }

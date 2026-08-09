@@ -6,6 +6,13 @@ Prioritized work items, ordered by impact. Updated 2026-08-09.
 
 ## Recently Completed
 
+### Wave 157d — Deep Debt Evolution: Zero-Panic + Decomposition (Aug 9, 2026)
+17 GPU dispatch `.expect()` sites evolved to `?` / `Result` propagation —
+restores zero-panic production guarantee across bio ops (14), MD observables (2),
+and RK45 adaptive (1). `method_descriptor()` 512-line match decomposed into
+10 per-namespace helpers. 3 `#[allow(dead_code)]` → `#[expect]`. 5 AKIDA env
+vars centralized in `env_keys.rs`. 5,031 tests pass. Zero clippy warnings.
+
 ### Wave 157d — Node Atomic Trio Wiring (Aug 9, 2026)
 Tier 2 items: PTXAS/NAK routing + GEMM IPC client.
 

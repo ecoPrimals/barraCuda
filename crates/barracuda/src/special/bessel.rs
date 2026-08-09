@@ -297,7 +297,7 @@ fn bessel_i0_batch(x: &[f64]) -> Vec<f64> {
 ///
 /// With `cpu-shader`, dispatches through `bessel_k0_f64.wgsl` via naga-exec.
 #[cfg(test)]
-#[allow(dead_code)]
+#[expect(dead_code, reason = "test-only batch helper")]
 #[must_use]
 fn bessel_k0_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]

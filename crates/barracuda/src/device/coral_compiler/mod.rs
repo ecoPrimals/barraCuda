@@ -43,8 +43,8 @@ pub use discovery::{
 pub use types::{
     AdapterDescriptor, BufferBinding, CompileCpuRequest, CompileCpuResponse, CoralBinary,
     CoralCapabilitiesResponse, CoralF64Capabilities, ExecuteCpuRequest, ExecuteCpuResponse,
-    ExpectedBinding, HealthResponse, ValidateRequest, ValidateResponse, ValidationMismatch,
-    ValidationTolerance,
+    ExpectedBinding, GemmCompileRequest, HealthResponse, ValidateRequest, ValidateResponse,
+    ValidationMismatch, ValidationTolerance,
 };
 
 /// Synchronous check: can we discover a shader-compiler endpoint (`shader.compile`)?
@@ -120,6 +120,45 @@ impl CoralCompiler {
     ) -> Option<CoralBinary> {
         let spirv_words = wgsl_to_spirv(wgsl)?;
         self.compile_spirv(&spirv_words, arch, fp64_software).await
+    }
+
+    /// Compile a tiled GEMM kernel via `shader.compile.gemm`.
+    ///
+    /// The remote compiler generates architecture-specific PTX with
+    /// `mma.sync` tensor-core instructions (HMMA/WGMMA). Returns a
+    /// native binary ready for sovereign dispatch via toadStool IPC.
+    ///
+    /// Falls back to `None` if no compiler is available or GEMM
+    /// compilation is unsupported (pre-Phase 1 servers).
+    pub async fn compile_gemm(
+        &self,
+        m: u32,
+        n: u32,
+        k: u32,
+        precision: &str,
+        arch: &str,
+    ) -> Option<CoralBinary> {
+        let addr = self.ensure_connected().await?;
+        let request = types::GemmCompileRequest {
+            m,
+            n,
+            k,
+            precision: precision.to_owned(),
+            arch: arch.to_owned(),
+        };
+        match jsonrpc_call::<types::GemmCompileRequest, types::GemmCompileResponse>(
+            &addr,
+            "shader.compile.gemm",
+            &request,
+        )
+        .await
+        {
+            Ok(resp) => Some(resp.into_coral_binary(arch.to_owned())),
+            Err(e) => {
+                tracing::debug!("shader.compile.gemm failed: {e}");
+                None
+            }
+        }
     }
 
     /// Compile pre-assembled SPIR-V words to a native binary.

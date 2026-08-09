@@ -6,6 +6,22 @@ Prioritized work items, ordered by impact. Updated 2026-08-09.
 
 ## Recently Completed
 
+### Wave 157d — Node Atomic Trio Wiring (Aug 9, 2026)
+Tier 2 items: PTXAS/NAK routing + GEMM IPC client.
+
+- **Compiler-aware coralReef routing**: `DeviceCapabilities::compiler_prefers_coral()`
+  detects NAK/PTXAS/RADV codegen defects (probe-first when available, vendor
+  heuristic fallback). `PrecisionBrain::should_bypass_local_compiler()` returns
+  true when local compiler has known bugs AND coralReef is available — superset
+  of `needs_sovereign_compile()`.
+- **`shader.compile.gemm` IPC client**: `CoralCompiler::compile_gemm(m, n, k,
+  precision, arch)` calls coralReef's tiled MMA kernel generator. Wire type
+  `GemmCompileRequest` + `GemmCompileResponse`. Graceful `None` fallback.
+- **Registry cleanup**: `capability_registry.toml` updated — added
+  `shader.compile.gemm` + `shader.compile.spirv` (was used but undeclared),
+  removed dead `shader.compile.module`.
+- **5,031 tests pass.** Zero clippy warnings. Zero failures.
+
 ### Wave 157d — Pattern Abstraction + Deep Debt Evolution (Aug 9, 2026)
 Three "by design" patterns evolved into proper abstractions:
 

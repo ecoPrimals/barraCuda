@@ -115,6 +115,31 @@ pub fn precision_to_coral_strategy(
     }
 }
 
+/// GEMM compilation request (`shader.compile.gemm`).
+///
+/// Requests a tiled MMA kernel from the shader compiler primal.
+/// The compiler generates architecture-specific PTX using `mma.sync`
+/// instructions for tensor-core acceleration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GemmCompileRequest {
+    /// Rows of the output matrix (M dimension).
+    pub m: u32,
+    /// Columns of the output matrix (N dimension).
+    pub n: u32,
+    /// Inner/reduction dimension (K dimension).
+    pub k: u32,
+    /// Precision: `"f16"`, `"f16f32"` (f16 input, f32 accum), `"tf32"`, `"bf16"`.
+    pub precision: String,
+    /// Target GPU architecture (e.g. `"sm_80"`, `"sm_89"`).
+    pub arch: String,
+}
+
+/// GEMM compilation response (`shader.compile.gemm`).
+///
+/// Contains a native GPU binary with tensor-core MMA instructions.
+/// Reuses the standard `CompileResponse` wire format.
+pub(super) type GemmCompileResponse = CompileResponse;
+
 /// Compile response — mirrors `coralreef-core::service::CompileResponse`.
 ///
 /// `binary` deserializes as `Vec<u8>` from JSON but is immediately converted

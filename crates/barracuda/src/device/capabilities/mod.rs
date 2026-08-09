@@ -657,4 +657,17 @@ mod tests {
         let caps = mock_caps(wgpu::DeviceType::DiscreteGpu, 0xBEEF);
         assert_eq!(caps.vendor_name(), "Unknown");
     }
+
+    #[test]
+    fn compiler_prefers_coral_nvidia_without_probe() {
+        let caps = mock_caps(wgpu::DeviceType::DiscreteGpu, VENDOR_NVIDIA);
+        assert!(caps.compiler_prefers_coral());
+    }
+
+    #[test]
+    fn compiler_prefers_coral_false_with_full_f64() {
+        let caps = mock_caps(wgpu::DeviceType::DiscreteGpu, VENDOR_NVIDIA)
+            .with_f64_capabilities(full_f64_caps());
+        assert!(!caps.compiler_prefers_coral());
+    }
 }

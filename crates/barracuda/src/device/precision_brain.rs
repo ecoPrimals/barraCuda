@@ -65,6 +65,8 @@ pub struct PrecisionBrain {
     /// transcendentals fail — coralReef provides software polyfills in the
     /// compiled native binary.
     coral_f64_lowering: bool,
+    /// Whether the local compiler (NAK/PTXAS/ACO) has known codegen defects.
+    compiler_prefers_coral: bool,
 }
 
 impl PrecisionBrain {
@@ -111,6 +113,8 @@ impl PrecisionBrain {
         let route_table = ALL_DOMAINS
             .map(|domain| route_domain(domain, &calibration, hw_native, coral_f64_lowering));
 
+        let compiler_prefers_coral = caps.compiler_prefers_coral();
+
         tracing::info!(
             "PrecisionBrain[{}]: {calibration} (coral_f64_lowering={coral_f64_lowering})",
             calibration.adapter_name
@@ -124,6 +128,7 @@ impl PrecisionBrain {
             route_table,
             hw_native,
             coral_f64_lowering,
+            compiler_prefers_coral,
         }
     }
 
@@ -197,6 +202,20 @@ impl PrecisionBrain {
     #[must_use]
     pub fn has_coral_f64_lowering(&self) -> bool {
         self.coral_f64_lowering
+    }
+
+    /// Whether the local compiler should be bypassed in favor of coralReef.
+    ///
+    /// Returns `true` when BOTH conditions are met:
+    /// 1. The local compiler (NAK/PTXAS/ACO) has known codegen defects
+    /// 2. coralReef sovereign compilation is available
+    ///
+    /// This is a superset of `needs_sovereign_compile()` — it covers
+    /// cases where the hardware supports the precision tier but the
+    /// compiler produces incorrect code.
+    #[must_use]
+    pub fn should_bypass_local_compiler(&self) -> bool {
+        self.compiler_prefers_coral && self.coral_f64_lowering
     }
 
     /// Adapter name.

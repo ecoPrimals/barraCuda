@@ -154,7 +154,7 @@ prefixes = ["ml.", "compute.", "tensor.", "fhe.", "nautilus."]
 description = "Capabilities barraCuda consumes from other primals at runtime"
 
 [consumed.coralreef]
-methods = ["shader.compile.wgsl", "shader.compile.capabilities", "shader.compile.module"]
+methods = ["shader.compile.wgsl", "shader.compile.spirv", "shader.compile.gemm", "shader.compile.capabilities"]
 optional = true
 
 [consumed.toadstool]

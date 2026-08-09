@@ -27,7 +27,7 @@ results.
 ### Key capabilities
 
 - **859 WGSL shaders** spanning scientific compute domains (all with SPDX license headers)
-- **1,208 Rust source files**, 25 integration test harnesses, 5,025 tests passing
+- **1,208 Rust source files**, 25 integration test harnesses, 5,031 tests passing
 - **DF64 emulation** — double-precision arithmetic on GPUs without native f64
 - **FHE on GPU** — Number Theoretic Transform, INTT, pointwise modular
   multiplication via 32-bit emulation of 64-bit modular arithmetic. The only
@@ -54,16 +54,16 @@ results.
 2. **Vendor-agnostic** — same binary, identical results on any GPU
 3. **Sovereign** — zero external SDK dependency for correctness or performance
 4. **Pure Rust** — `#![forbid(unsafe_code)]` in both crates, zero `unsafe` blocks, zero external C dependencies, zero dependencies on any other primal (wire format is the contract, `TransportEndpoint` implemented locally)
-5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; split-lock GPU submission (submit and poll use separate lock acquisitions); fire-and-forget dispatch via `submit_commands` for non-readback ops; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; `GPU_TEST_GUARD` serializes device lifecycle in tests; all 5,025 tests pass at full parallelism on llvmpipe
+5. **Fully concurrent** — `GuardedDeviceHandle` + atomic encoder barrier prevents wgpu-core races without lock contention; split-lock GPU submission (submit and poll use separate lock acquisitions); fire-and-forget dispatch via `submit_commands` for non-readback ops; wgpu 28 `Device`/`Queue` are `Clone` — zero `Arc` overhead for handle sharing; `GPU_TEST_GUARD` serializes device lifecycle in tests; all 5,031 tests pass at full parallelism on llvmpipe
 6. **AGPL-3.0** — free as in freedom
 
 ---
 
 ## Recent
 
-- **Wave 157d: Silicon Fold Absorption (Aug 9)**: 5 new abstractions from strandGate Silicon Fold AAR — `NegotiatedLimits` (hardware-queried buffer limits), `SiliconRouter` trait (cache/vendor-aware workload routing), `TileDecomposer` (cache-aligned N-D domain decomposition), `RiverScheduler` (PCIe/VRAM bandwidth scheduling), `VideoCodec` trait + `device.video_codecs` IPC (101 methods). Release profile: `lto + strip` for binary size. 5,025 tests.
-- **Wave 157a: ComputeDispatch + G68 Compliance (Aug 7)**: All 317 ops migrated from manual BGL→pipeline boilerplate to `ComputeDispatch` builder. P0: 92 WGSL ops (−10,771 LOC). P1: 225 non-WGSL ops (−26,373 LOC). Combined: −37,144 LOC. G68 platform substrate: `platform_link()` module, 0 L2 violations, G68 COMPLIANT. Error Idiom Phase 3, magic number centralization. 5,025 tests.
-- **Wave 155u: Deep Idiom Evolution (Aug 4)**: LazyLock<String> Phase 2 (323 statics → const &str across 310 files). Error constructor helpers (518 call sites migrated). Env var centralization (9 keys into env_keys.rs). Total: -1,488 LOC. 12-axis deep debt scan clean. 5,025 tests.
+- **Wave 157d: Silicon Fold Absorption (Aug 9)**: 5 new abstractions from strandGate Silicon Fold AAR — `NegotiatedLimits` (hardware-queried buffer limits), `SiliconRouter` trait (cache/vendor-aware workload routing), `TileDecomposer` (cache-aligned N-D domain decomposition), `RiverScheduler` (PCIe/VRAM bandwidth scheduling), `VideoCodec` trait + `device.video_codecs` IPC (101 methods). Release profile: `lto + strip` for binary size. 5,031 tests.
+- **Wave 157a: ComputeDispatch + G68 Compliance (Aug 7)**: All 317 ops migrated from manual BGL→pipeline boilerplate to `ComputeDispatch` builder. P0: 92 WGSL ops (−10,771 LOC). P1: 225 non-WGSL ops (−26,373 LOC). Combined: −37,144 LOC. G68 platform substrate: `platform_link()` module, 0 L2 violations, G68 COMPLIANT. Error Idiom Phase 3, magic number centralization. 5,031 tests.
+- **Wave 155u: Deep Idiom Evolution (Aug 4)**: LazyLock<String> Phase 2 (323 statics → const &str across 310 files). Error constructor helpers (518 call sites migrated). Env var centralization (9 keys into env_keys.rs). Total: -1,488 LOC. 12-axis deep debt scan clean. 5,031 tests.
 - **Wave 155p: PRNG Validation + Shader Evolution + Magic Numbers (Aug 3)**: CPU `state_to_f64` and GPU `prng_xoshiro_f64.wgsl` half-range bugs fixed ([0, 0.5) → [0, 1)). 11 PRNG statistical validation tests. 51 `LazyLock<String>` → `const &str` across 18 files (-182 LOC). Protocol version inconsistency unified (`PROTOCOL_ID`). `BTSP_WIRE_VERSION` + `IPC_PROBE_TIMEOUT` centralized. PRNG YELLOW → GREEN.
 - **Wave 155n: Idiom Evolution + Subgroup Fixes (Jul 31–Aug 3)**: RK4 ODE solver zero-alloc inner loop. MD force dead-code collapse. Subgroup reduce entry point fixed. Diversity self-recursion eliminated. SU(3) labels corrected.
 - **Wave 155i: RTX 3090 Profiling + Deep Debt (Jul 29)**: First real GPU compute on strandGate — RTX 3090 + RX 6950 XT both detected. 103.97 TFLOPS FP64, FHE NTT bit-perfect, cdist 65x faster than SciPy CPU. ShaderValidationBackend::CoralReef → SovereignCpu (self-knowledge). 10 batch functions #[deprecated]. Compute Trio silicon utilization AAR. MultiDevicePool wired into primal startup. device.pool IPC method (99th). Zero warnings.
@@ -254,7 +254,7 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings  # lints (p
 cargo deny check                        # license + advisory audit
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps  # documentation (zero warnings)
 cargo build --workspace                 # compilation
-cargo nextest run --workspace --profile ci  # 5,025+ tests via nextest
+cargo nextest run --workspace --profile ci  # 5,031+ tests via nextest
 cargo llvm-cov --workspace --lib        # 80% CI gate (blocking), 90% target (requires GPU hardware)
 ```
 

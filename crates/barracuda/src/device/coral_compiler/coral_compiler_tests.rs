@@ -54,6 +54,18 @@ async fn test_discovery_graceful_without_shader_compiler() {
 }
 
 #[tokio::test]
+async fn compile_gemm_returns_none_without_coral() {
+    let compiler = CoralCompiler::new();
+    let result = compiler
+        .compile_gemm(1024, 1024, 1024, "f16", "sm_80")
+        .await;
+    assert!(
+        result.is_none(),
+        "compile_gemm should return None without coralReef"
+    );
+}
+
+#[tokio::test]
 async fn test_compile_wgsl_graceful_without_coralreef() {
     let cc = CoralCompiler::new();
     let result = cc

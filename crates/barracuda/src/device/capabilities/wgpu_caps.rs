@@ -601,6 +601,25 @@ impl DeviceCapabilities {
         Some(self.max_allocation_size())
     }
 
+    /// Whether the detected local compiler has known codegen defects that
+    /// make coralReef sovereign compilation preferable.
+    ///
+    /// Returns `true` for:
+    /// - NAK (Mesa NVK): crashes on exp(f64), log(f64), imprecise sin/cos
+    /// - PTXAS (NVIDIA proprietary): Ada Lovelace f64 transcendental failures
+    /// - RADV (AMD open-source): fexp2 unimplemented for f64
+    ///
+    /// When this returns `true` and coralReef is available, callers should
+    /// prefer `CoralCompiler::compile_wgsl_direct()` over local wgpu compilation
+    /// for f64-class shaders.
+    #[must_use]
+    pub fn compiler_prefers_coral(&self) -> bool {
+        if let Some(caps) = &self.f64_capabilities {
+            return !caps.basic_f64 || !caps.exp || !caps.log;
+        }
+        matches!(self.vendor, VENDOR_NVIDIA | VENDOR_AMD)
+    }
+
     /// Whether native f64 builtins (exp, log, pow) work on this device.
     ///
     /// Probe-based when available; falls back to the `f64_shaders` flag and

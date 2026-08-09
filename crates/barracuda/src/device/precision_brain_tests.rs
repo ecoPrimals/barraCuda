@@ -212,6 +212,36 @@ fn needs_sovereign_compile_false_without_coral() {
 }
 
 #[test]
+fn should_bypass_local_compiler_when_coral_and_compiler_defective() {
+    let cal = make_cal(true, true, true, true);
+    let brain = PrecisionBrain::from_capabilities_with_coral(cal, &test_caps_volta_full(), true);
+    assert!(
+        brain.should_bypass_local_compiler(),
+        "NVIDIA without probe + coral should bypass local compiler"
+    );
+}
+
+#[test]
+fn should_bypass_local_compiler_false_with_full_f64_probe() {
+    use crate::device::probe::F64BuiltinCapabilities;
+    let cal = make_cal(true, true, true, true);
+    let caps = test_caps_volta_full()
+        .with_f64_capabilities(F64BuiltinCapabilities::full());
+    let brain = PrecisionBrain::from_capabilities_with_coral(cal, &caps, true);
+    assert!(
+        !brain.should_bypass_local_compiler(),
+        "full f64 probe means local compiler is clean"
+    );
+}
+
+#[test]
+fn should_bypass_local_compiler_false_without_coral() {
+    let cal = make_cal(true, true, true, true);
+    let brain = PrecisionBrain::from_capabilities_with_coral(cal, &test_caps_volta_full(), false);
+    assert!(!brain.should_bypass_local_compiler());
+}
+
+#[test]
 fn has_native_f64_true_when_profile_reports_native_paths() {
     let cal = make_cal(true, true, true, true);
     let brain = PrecisionBrain::from_capabilities(cal, &test_caps_volta_full());

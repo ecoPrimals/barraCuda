@@ -215,26 +215,10 @@ impl SiliconProfile {
     }
 }
 
-/// Select the cheapest silicon unit for a workload given a priority ordering.
-///
-/// Returns the first unit in `preferred` that has measured throughput > 0,
-/// or falls back to `fallback`.
-#[must_use]
-pub fn route_workload(
-    profile: &SiliconProfile,
-    preferred: &[SiliconUnit],
-    fallback: SiliconUnit,
-) -> SiliconUnit {
-    preferred
-        .iter()
-        .find(|&&unit| profile.has_unit(unit))
-        .copied()
-        .unwrap_or(fallback)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::device::silicon_router::route_workload;
 
     fn test_profile() -> SiliconProfile {
         let mut units = BTreeMap::new();

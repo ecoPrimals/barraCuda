@@ -4,7 +4,7 @@
 #
 # biomeOS reads this file to discover barraCuda capabilities
 # without requiring the primal to be running.
-# 100 registered methods across 26 semantic namespaces.
+# 101 registered methods across 26 semantic namespaces.
 # Plus 6 required wateringHole aliases (ping, health, status, check,
 # capability.list, stats.eigh) handled in dispatch but not counted.
 
@@ -48,7 +48,7 @@ methods = ["describe"]
 
 [domains.device]
 description = "GPU device enumeration and probing"
-methods = ["list", "probe", "pool"]
+methods = ["list", "probe", "pool", "video_codecs"]
 
 [domains.tolerances]
 description = "Hardware tolerance advisory"

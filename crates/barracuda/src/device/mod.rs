@@ -62,7 +62,10 @@ pub mod probe_throughput;
 pub mod registry;
 mod routing;
 /// Unified `Device` enum routing across CPU, GPU, NPU, and Auto.
+pub mod river_scheduler;
 pub mod silicon_profile;
+pub mod silicon_router;
+pub mod tile_decomposer;
 /// Sovereign device implementation (capability-based IPC dispatch).
 #[cfg(feature = "sovereign-dispatch")]
 pub mod sovereign_device;
@@ -79,6 +82,8 @@ pub mod tensor_context;
 pub mod unified;
 /// Canonical GPU vendor ID constants (single source of truth).
 pub mod vendor;
+/// Hardware video encode/decode abstraction (NVENC, VAAPI, software fallback).
+pub mod video_codec;
 /// Device warm-up (mise en place) — pre-compile pipelines before first use.
 pub mod warmup;
 mod wgpu_backend;

@@ -109,3 +109,25 @@ pub(super) async fn probe(primal: &BarraCudaPrimal, id: Value) -> JsonRpcRespons
         }),
     )
 }
+
+/// `device.video_codecs` — Probe available hardware/software video codec backends.
+pub(super) fn video_codecs(id: Value) -> JsonRpcResponse {
+    use barracuda::device::video_codec::detect_codecs;
+
+    let codecs: Vec<Value> = detect_codecs()
+        .into_iter()
+        .map(|info| {
+            serde_json::json!({
+                "backend": info.backend,
+                "hw_accel": info.hw_accel,
+                "codecs": info.codecs.iter().map(|codec| match codec {
+                    barracuda::device::video_codec::CodecType::H264 => "h264",
+                    barracuda::device::video_codec::CodecType::H265 => "h265",
+                    barracuda::device::video_codec::CodecType::Av1 => "av1",
+                }).collect::<Vec<_>>(),
+            })
+        })
+        .collect();
+
+    JsonRpcResponse::success(id, serde_json::json!({ "codecs": codecs }))
+}

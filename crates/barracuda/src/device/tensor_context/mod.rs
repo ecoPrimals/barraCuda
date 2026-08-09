@@ -27,7 +27,10 @@ mod limits;
 mod pool;
 
 pub use context::{TensorContext, TensorContextStats, clear_global_contexts, get_device_context};
-pub use limits::{high_capacity_limits, science_limits};
+pub use limits::{
+    high_capacity_limits, high_capacity_limits_from_adapter, negotiate_buffer_limits,
+    science_limits, science_limits_from_adapter, NegotiatedLimits,
+};
 pub use pool::{BufferDescriptor, BufferPool, PooledBuffer, SolverBufferSet};
 
 use crate::device::WgpuDevice;
@@ -187,7 +190,7 @@ mod tests {
     fn test_high_capacity_limits() {
         let limits = high_capacity_limits();
         assert_eq!(limits.max_storage_buffer_binding_size, 1 << 30);
-        assert_eq!(limits.max_buffer_size, 1 << 31);
+        assert_eq!(limits.max_buffer_size, (1u64 << 31) - 1);
     }
 
     #[tokio::test]

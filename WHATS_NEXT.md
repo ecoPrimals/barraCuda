@@ -6,6 +6,29 @@ Prioritized work items, ordered by impact. Updated 2026-08-09.
 
 ## Recently Completed
 
+### Wave 157d — Silicon Fold Absorption + Binary Size Fix (Aug 9, 2026)
+- **Buffer limit negotiation** (P1): Static `SCIENCE_MAX_BUFFER_SIZE` evolved to
+  `negotiate_buffer_limits(adapter)` — queries hardware, takes `min(hw, desired)`.
+  New `NegotiatedLimits` struct + `science_limits_from_adapter()` /
+  `high_capacity_limits_from_adapter()`. Existing const functions retained for
+  test-without-adapter backward compat.
+- **SiliconRouter trait**: Free `route_workload()` evolved to trait with
+  `WorkloadRequirements`-based routing. Cache-aware (IC vs L2), F16 vendor-aware
+  (AMD 1.32x native, NVIDIA 0.99x skip), atomic/precision routing. Implemented
+  for `SiliconProfile`.
+- **TileDecomposer**: N-dimensional cache-aligned domain decomposition. Sizes
+  tiles to fit GPU cache (128 MB AMD IC → 16^4, 6 MB NVIDIA L2 → 6^4). Halo
+  width for boundary exchange.
+- **RiverScheduler**: PCIe/VRAM bandwidth as schedulable resource. Double-buffer
+  staging model. Transfer planning with estimated utilization (current: 1.7%,
+  target: 50%+).
+- **VideoCodec trait + IPC**: `VideoCodec` trait (encode/decode), `NullCodec`
+  fallback, `detect_codecs()` ffmpeg probe (NVENC/VAAPI/SW detection).
+  `device.video_codecs` IPC method registered (101 methods total).
+- **Release profile**: Added `lto = true`, `codegen-units = 1`, `strip = true`
+  to address P3 binary size bloat (4.4x on Windows).
+- **5,025 tests pass.** Zero clippy warnings. Zero failures.
+
 ### Wave 157a — Vertebrate Self-Audit (Aug 9, 2026)
 - **RPC surface audit**: 3-way cross-reference — `REGISTERED_METHODS` (code),
   `capability_registry.toml` (biomeOS), and dispatch match arms.

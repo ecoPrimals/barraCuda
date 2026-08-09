@@ -65,6 +65,7 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
     "device.list",
     "device.pool",
     "device.probe",
+    "device.video_codecs",
     "tolerances.get",
     "validate.gpu_stack",
     // ── Precision routing advisory ────────────────────────────────────
@@ -245,6 +246,7 @@ pub async fn dispatch(
         "device.list" => device::list(primal, id).await,
         "device.pool" => device::pool(primal, id).await,
         "device.probe" => device::probe(primal, id).await,
+        "device.video_codecs" => device::video_codecs(id),
         "tolerances.get" => health::tolerances_get(params, id),
         "validate.gpu_stack" => health::validate_gpu_stack(primal, id).await,
         // Precision routing advisory

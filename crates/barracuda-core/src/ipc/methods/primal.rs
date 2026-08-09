@@ -263,6 +263,11 @@ fn method_descriptor(method: &str) -> Value {
             "public",
         ),
         "device.probe" => ("Probe GPU capabilities", serde_json::json!({}), "public"),
+        "device.video_codecs" => (
+            "Probe available video codec backends (NVENC, VAAPI, software)",
+            serde_json::json!({}),
+            "public",
+        ),
         "tolerances.get" => (
             "Get precision tolerances for an operation",
             serde_json::json!({"op": "string (operation name)"}),

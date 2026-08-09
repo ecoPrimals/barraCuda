@@ -186,3 +186,14 @@ rustix = { version = "1.1", features = ["net"] }
 tempfile = "3.8"
 approx = "0.5"
 proptest = "1.4"
+
+# ─── Build profiles ───────────────────────────────────────────────────────
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+codegen-units = 256
+split-debuginfo = "unpacked"

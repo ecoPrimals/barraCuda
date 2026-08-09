@@ -12,6 +12,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::{BindingKind, CachedPipeline};
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -64,8 +65,7 @@ pub struct Dada2DispatchArgs<'a> {
 /// DADA2 E-step: batch log-probability matrix on GPU.
 pub struct Dada2EStepGpu {
     device: Arc<WgpuDevice>,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
+    cached: CachedPipeline,
 }
 
 impl Dada2EStepGpu {
@@ -77,14 +77,22 @@ impl Dada2EStepGpu {
     /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("dada2_e_step"));
-        let bgl = super::snp::make_bgl(&device, &[true, true, true, true, true, false]);
-        let layout = super::snp::make_layout(&device, &bgl, "Dada2EStep");
-        let pipeline = super::snp::make_pipeline(&device, &layout, &module, "e_step", "Dada2EStep");
-        Ok(Self {
-            device,
-            pipeline,
-            bgl,
-        })
+        let cached = CachedPipeline::build(
+            &device,
+            "Dada2EStep",
+            &module,
+            "e_step",
+            &[
+                BindingKind::Uniform,
+                BindingKind::StorageRead,
+                BindingKind::StorageRead,
+                BindingKind::StorageRead,
+                BindingKind::StorageRead,
+                BindingKind::StorageRead,
+                BindingKind::StorageRW,
+            ],
+        );
+        Ok(Self { device, cached })
     }
 
     /// Dispatch E-step computation.
@@ -107,28 +115,19 @@ impl Dada2EStepGpu {
             max_len: args.dimensions.max_len,
             _pad: 0,
         };
-        let pbuf = super::snp::upload_uniform(&self.device, &params);
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: None,
-                layout: &self.bgl,
-                entries: &[
-                    super::snp::bg_entry(0, &pbuf),
-                    super::snp::bg_entry(1, args.buffers.bases),
-                    super::snp::bg_entry(2, args.buffers.quals),
-                    super::snp::bg_entry(3, args.buffers.lengths),
-                    super::snp::bg_entry(4, args.buffers.center_indices),
-                    super::snp::bg_entry(5, args.buffers.log_err),
-                    super::snp::bg_entry(6, args.buffers.scores),
-                ],
-            });
+        let pbuf = self.device.create_uniform_buffer("Dada2Params", &params);
         let total_pairs = args.dimensions.n_seqs * args.dimensions.n_centers;
-        super::snp::submit(
+        self.cached.dispatch(
             &self.device,
-            &self.pipeline,
-            &bg,
+            &[
+                &pbuf,
+                args.buffers.bases,
+                args.buffers.quals,
+                args.buffers.lengths,
+                args.buffers.center_indices,
+                args.buffers.log_err,
+                args.buffers.scores,
+            ],
             total_pairs.div_ceil(WORKGROUP_SIZE_1D),
         );
         Ok(())

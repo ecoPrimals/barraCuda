@@ -43,8 +43,6 @@ use std::sync::Arc;
 
 /// DF64 sum-reduce shader (workgroup shared memory uses f32 pairs).
 const SHADER_DF64: &str = include_str!("../shaders/reduce/sum_reduce_df64.wgsl");
-/// DF64 core arithmetic library (Dekker-pair: `df64_from_f64`, `df64_add`, etc.).
-const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 /// Scalar f64 storage reduction (no workgroup memory — fallback path).
 const SHADER_SCALAR_F64: &str = include_str!("../shaders/reduce/sum_reduce_scalar_f64.wgsl");
 /// Subgroup-accelerated f64 tree reduction (fewest barriers, fastest path).
@@ -86,7 +84,7 @@ fn shader_for_device(device: &WgpuDevice) -> &'static str {
         return SHADER_SCALAR_F64;
     }
     static DF64_COMBINED: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| format!("{DF64_CORE}\n{SHADER_DF64}"));
+        std::sync::LazyLock::new(|| crate::shaders::df64_source(SHADER_DF64));
     &DF64_COMBINED
 }
 

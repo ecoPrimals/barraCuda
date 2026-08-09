@@ -12,6 +12,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
+use crate::device::compute_pipeline::{BindingKind, CachedPipeline};
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -28,8 +29,7 @@ struct DnDsParams {
 /// Batch dN/dS computation on GPU.
 pub struct DnDsBatchF64 {
     device: Arc<WgpuDevice>,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
+    cached: CachedPipeline,
 }
 
 impl DnDsBatchF64 {
@@ -41,14 +41,22 @@ impl DnDsBatchF64 {
     /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("dnds_batch_f64"));
-        let bgl = super::snp::make_bgl(&device, &[true, true, true, false, false, false]);
-        let layout = super::snp::make_layout(&device, &bgl, "DnDsBatch");
-        let pipeline = super::snp::make_pipeline(&device, &layout, &module, "main", "DnDsBatch");
-        Ok(Self {
-            device,
-            pipeline,
-            bgl,
-        })
+        let cached = CachedPipeline::build(
+            &device,
+            "DnDsBatch",
+            &module,
+            "main",
+            &[
+                BindingKind::Uniform,
+                BindingKind::StorageRead,
+                BindingKind::StorageRead,
+                BindingKind::StorageRead,
+                BindingKind::StorageRW,
+                BindingKind::StorageRW,
+                BindingKind::StorageRW,
+            ],
+        );
+        Ok(Self { device, cached })
     }
 
     /// Dispatch dN/dS computation for codon sequence pairs.
@@ -69,27 +77,10 @@ impl DnDsBatchF64 {
         omega_out: &wgpu::Buffer,
     ) -> Result<()> {
         let params = DnDsParams { n_pairs, n_codons };
-        let pbuf = super::snp::upload_uniform(&self.device, &params);
-        let bg = self
-            .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: None,
-                layout: &self.bgl,
-                entries: &[
-                    super::snp::bg_entry(0, &pbuf),
-                    super::snp::bg_entry(1, seq_a),
-                    super::snp::bg_entry(2, seq_b),
-                    super::snp::bg_entry(3, genetic_code),
-                    super::snp::bg_entry(4, dn_out),
-                    super::snp::bg_entry(5, ds_out),
-                    super::snp::bg_entry(6, omega_out),
-                ],
-            });
-        super::snp::submit(
+        let pbuf = self.device.create_uniform_buffer("DnDsParams", &params);
+        self.cached.dispatch(
             &self.device,
-            &self.pipeline,
-            &bg,
+            &[&pbuf, seq_a, seq_b, genetic_code, dn_out, ds_out, omega_out],
             n_pairs.div_ceil(WORKGROUP_SIZE_COMPACT),
         );
         Ok(())

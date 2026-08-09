@@ -17,11 +17,11 @@ use crate::device::capabilities::{DeviceCapabilities, Fp64Strategy};
 use crate::device::pipeline_cache::{BindGroupLayoutSignature, create_f64_data_pipeline};
 use crate::device::tensor_context::get_device_context;
 use crate::error::{BarracudaError, Result};
+use crate::shaders::DF64_CORE;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
 const SHADER: &str = include_str!("../shaders/math/cosine_similarity_f64.wgsl");
-const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 
 /// Select shader based on FP64 strategy: native f64 or DF64 auto-rewrite.
 ///

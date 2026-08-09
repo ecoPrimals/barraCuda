@@ -242,13 +242,12 @@ pub fn bessel_k0(x: f64) -> f64 {
     }
 }
 
-/// Compute J₀ for a batch of values.
+/// Compute J₀ for a batch of values (test-only utility).
 ///
 /// With `cpu-shader`, dispatches through `bessel_j0_f64.wgsl` via naga-exec.
-/// The native Rust fallback is deprecated and will be removed in 0.5.0.
-#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
+#[cfg(test)]
 #[must_use]
-pub fn bessel_j0_batch(x: &[f64]) -> Vec<f64> {
+fn bessel_j0_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
     {
         let wgsl = include_str!("../shaders/special/bessel_j0_f64.wgsl");
@@ -260,13 +259,12 @@ pub fn bessel_j0_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| bessel_j0(v)).collect()
 }
 
-/// Compute J₁ for a batch of values.
+/// Compute J₁ for a batch of values (test-only utility).
 ///
 /// With `cpu-shader`, dispatches through `bessel_j1_f64.wgsl` via naga-exec.
-/// The native Rust fallback is deprecated and will be removed in 0.5.0.
-#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
+#[cfg(test)]
 #[must_use]
-pub fn bessel_j1_batch(x: &[f64]) -> Vec<f64> {
+fn bessel_j1_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
     {
         let wgsl = include_str!("../shaders/special/bessel_j1_f64.wgsl");
@@ -278,13 +276,12 @@ pub fn bessel_j1_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| bessel_j1(v)).collect()
 }
 
-/// Compute I₀ for a batch of values.
+/// Compute I₀ for a batch of values (test-only utility).
 ///
 /// With `cpu-shader`, dispatches through `bessel_i0_f64.wgsl` via naga-exec.
-/// The native Rust fallback is deprecated and will be removed in 0.5.0.
-#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
+#[cfg(test)]
 #[must_use]
-pub fn bessel_i0_batch(x: &[f64]) -> Vec<f64> {
+fn bessel_i0_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
     {
         let wgsl = include_str!("../shaders/special/bessel_i0_f64.wgsl");
@@ -296,13 +293,13 @@ pub fn bessel_i0_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| bessel_i0(v)).collect()
 }
 
-/// Compute K₀ for a batch of values.
+/// Compute K₀ for a batch of values (test-only utility).
 ///
 /// With `cpu-shader`, dispatches through `bessel_k0_f64.wgsl` via naga-exec.
-/// The native Rust fallback is deprecated and will be removed in 0.5.0.
-#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
+#[cfg(test)]
+#[allow(dead_code)]
 #[must_use]
-pub fn bessel_k0_batch(x: &[f64]) -> Vec<f64> {
+fn bessel_k0_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
     {
         let wgsl = include_str!("../shaders/special/bessel_k0_f64.wgsl");
@@ -406,10 +403,6 @@ mod tests {
     }
 
     #[test]
-    #[expect(
-        deprecated,
-        reason = "testing deprecated batch functions until 0.5.0 removal"
-    )]
     fn test_batch_functions() {
         let x = vec![0.0, 1.0, 2.0];
 

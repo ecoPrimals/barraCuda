@@ -17,12 +17,8 @@ use super::complex_f64::WGSL_COMPLEX64;
 /// or prepend `WGSL_COMPLEX64` manually.
 pub const WGSL_SU3: &str = include_str!("../../shaders/math/su3.wgsl");
 
-/// Raw WGSL source for the DF64 (f32-pair) arithmetic library.
-pub const WGSL_DF64_CORE: &str = include_str!("../../shaders/math/df64_core.wgsl");
-
-/// Raw WGSL source for DF64 transcendental functions (exp, log, sqrt, sin, cos, etc.)
-pub const WGSL_DF64_TRANSCENDENTALS: &str =
-    include_str!("../../shaders/math/df64_transcendentals.wgsl");
+pub use crate::shaders::DF64_CORE as WGSL_DF64_CORE;
+pub use crate::shaders::DF64_TRANSCENDENTALS as WGSL_DF64_TRANSCENDENTALS;
 
 /// Raw WGSL source for DF64 SU(3) matrix algebra (complex + matrix ops).
 ///

@@ -17,9 +17,9 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use std::sync::Arc;
 
-const WGSL_DF64_CORE: &str = include_str!("../../../shaders/math/df64_core.wgsl");
-const WGSL_DF64_TRANSCENDENTALS: &str =
-    include_str!("../../../shaders/math/df64_transcendentals.wgsl");
+use crate::shaders::{
+    DF64_CORE as WGSL_DF64_CORE, DF64_TRANSCENDENTALS as WGSL_DF64_TRANSCENDENTALS,
+};
 const LJ_SHADER_DF64: &str = include_str!("lennard_jones_df64.wgsl");
 
 /// f64 Lennard-Jones force computation

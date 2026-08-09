@@ -19,7 +19,6 @@ use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
 const SHADER: &str = include_str!("../shaders/reduce/weighted_dot_f64.wgsl");
-const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 const DF64_SHADER: &str = include_str!("../shaders/reduce/weighted_dot_df64.wgsl");
 
 /// Select shader based on FP64 strategy: native f64 or hand-written DF64.
@@ -33,7 +32,7 @@ fn shader_for_device(device: &WgpuDevice) -> Result<&'static str> {
         Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => Ok(SHADER),
         Fp64Strategy::Hybrid => {
             static DF64_COMBINED: std::sync::LazyLock<String> =
-                std::sync::LazyLock::new(|| format!("enable f64;\n{DF64_CORE}\n{DF64_SHADER}"));
+                std::sync::LazyLock::new(|| crate::shaders::df64_f64_source(DF64_SHADER));
             Ok(&DF64_COMBINED)
         }
     }

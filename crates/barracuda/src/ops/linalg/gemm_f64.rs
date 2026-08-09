@@ -22,7 +22,7 @@ use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
-const WGSL_DF64_CORE: &str = include_str!("../../shaders/math/df64_core.wgsl");
+use crate::shaders::DF64_CORE as WGSL_DF64_CORE;
 const GEMM_SHADER_DF64: &str = include_str!("../../shaders/linalg/gemm_df64.wgsl");
 
 /// Parameters for GEMM shader (must match WGSL struct layout)

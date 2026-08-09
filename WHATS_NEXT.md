@@ -6,25 +6,36 @@ Prioritized work items, ordered by impact. Updated 2026-08-09.
 
 ## Recently Completed
 
-### Wave 157d — Fmt Cleanup + Deep Debt Verification (Aug 9, 2026)
-- **142-file `cargo fmt` correction** — formatting drift from Silicon Fold absorption
-  and accumulated ops edits. Net −177 lines.
-- **sourdough validate ecobin**: PASS (primal structure, UniBin, ecoBin pure Rust,
-  deny.toml ring+OpenSSL ban, zero clippy warnings). Only advisory: no `[[bin]]`
-  section (bin defined in barracuda-core).
-- **12-axis deep debt re-scan**: all green. Zero files >800L, zero unsafe, zero
-  `TODO/FIXME`, zero `#[allow(`, zero `println!` in lib code, zero hardcoded primal
-  names, zero `Result<T, String>` in production. 13 `#[deprecated]` items are
-  intentional migration guidance (BTSP env vars + WGSL-migrated CPU fallbacks).
-- **coralReef IPC wire verified complete**: `CoralCompiler` already calls
-  `shader.compile.wgsl` via `GLOBAL_CORAL.compile_wgsl_direct()` and
-  `compile_wgsl_with_advice()`. `SovereignDevice::live_compile()` uses the full
-  precision-routed path. `WgpuDevice::compile_shader_f64/df64` fires
-  `spawn_coral_compile_for_adapter()` for background native binary caching.
-  Discovery, health, capabilities, CPU compilation, validation — all wired.
-- **G68 compliant**: all `std::os::unix` usage is `#[cfg(unix)]`-gated or in
-  `platform_substrate.rs` (the G68 abstraction layer).
+### Wave 157d — Pattern Abstraction + Deep Debt Evolution (Aug 9, 2026)
+Three "by design" patterns evolved into proper abstractions:
+
+- **DF64 source centralization**: `DF64_CORE` and `DF64_TRANSCENDENTALS` centralized
+  in `shaders/mod.rs` as public constants. 21 `include_str!` duplicates removed from
+  production code. `df64_source()` and `df64_f64_source()` helpers replace 5 identical
+  `format!` patterns. `LazyLock<String>` caching retained (irreducible — caches
+  runtime concat).
+- **Deprecated batch functions evolved**: 10 `_batch()` functions (`relu_batch`,
+  `sigmoid_batch`, `gelu_batch`, `swish_batch`, `erf_batch`, `erfc_batch`,
+  `bessel_j0_batch`, `bessel_j1_batch`, `bessel_i0_batch`, `bessel_k0_batch`)
+  had zero production callers — removed from public API, moved to `#[cfg(test)]`.
+  Re-exports removed from `lib.rs`.
+- **BEARDOG env aliases evolved**: `env_with_deprecated_fallback()` helper in
+  `env_keys.rs` replaces 3 repeated fallback-chain patterns across `btsp.rs`,
+  `btsp_client.rs`, `btsp_discovery.rs`. 3 `#[deprecated]` constants retained
+  for test backward compat only.
+- **CachedPipeline abstraction**: New `CachedPipeline` + `BindingKind` in
+  `compute_pipeline.rs` — build once, dispatch many. 4 bio genomics ops migrated
+  from ad-hoc `snp.rs` helpers. 6 `pub(super)` helpers deleted from `snp.rs`.
+  `create_bind_group_layout` now zero in ops/ (was 3).
+- **coralReef IPC wire verified complete**: Full pipeline already wired —
+  `CoralCompiler` → `shader.compile.wgsl` via `compile_wgsl_direct()` +
+  `compile_wgsl_with_advice()`. `SovereignDevice::live_compile()` uses
+  precision-routed path. No stubs remaining.
 - **5,025 tests pass.** Zero clippy warnings. Zero failures.
+
+### Wave 157d — Fmt Cleanup (Aug 9, 2026)
+- 142-file `cargo fmt` correction (−177 net lines).
+- `sourdough validate ecobin` PASS.
 
 ### Wave 157d — Silicon Fold Absorption + Binary Size Fix (Aug 9, 2026)
 - **Buffer limit negotiation** (P1): Static `SCIENCE_MAX_BUFFER_SIZE` evolved to

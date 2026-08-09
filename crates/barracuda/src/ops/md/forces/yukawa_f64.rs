@@ -17,9 +17,9 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 
-const WGSL_DF64_CORE: &str = include_str!("../../../shaders/math/df64_core.wgsl");
-const WGSL_DF64_TRANSCENDENTALS: &str =
-    include_str!("../../../shaders/math/df64_transcendentals.wgsl");
+use crate::shaders::{
+    DF64_CORE as WGSL_DF64_CORE, DF64_TRANSCENDENTALS as WGSL_DF64_TRANSCENDENTALS,
+};
 const YUKAWA_SHADER_DF64: &str = include_str!("yukawa_df64.wgsl");
 
 /// f64 Yukawa force with PBC minimum-image and potential energy accumulation

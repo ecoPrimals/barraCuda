@@ -121,7 +121,7 @@ pub fn erfc(x: f64) -> f64 {
     }
 }
 
-#[cfg(feature = "cpu-shader")]
+#[cfg(all(test, feature = "cpu-shader"))]
 const ERF_F64_WGSL: &str = r"
 @group(0) @binding(0) var<storage, read> input: array<f64>;
 @group(0) @binding(1) var<storage, read_write> output: array<f64>;
@@ -143,13 +143,12 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 ";
 
-/// Compute erf for a batch of values.
+/// Compute erf for a batch of values (test-only utility).
 ///
 /// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
-/// The native Rust fallback is deprecated and will be removed in 0.5.0.
-#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
+#[cfg(test)]
 #[must_use]
-pub fn erf_batch(x: &[f64]) -> Vec<f64> {
+fn erf_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
     {
         if let Ok(out) = crate::unified_hardware::shader_batch_unary_f64(ERF_F64_WGSL, "main", x) {
@@ -159,7 +158,8 @@ pub fn erf_batch(x: &[f64]) -> Vec<f64> {
     x.iter().map(|&v| erf(v)).collect()
 }
 
-#[cfg(feature = "cpu-shader")]
+#[cfg(all(test, feature = "cpu-shader"))]
+#[allow(dead_code)]
 const ERFC_F64_WGSL: &str = r"
 @group(0) @binding(0) var<storage, read> input: array<f64>;
 @group(0) @binding(1) var<storage, read_write> output: array<f64>;
@@ -189,13 +189,13 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 ";
 
-/// Compute erfc for a batch of values.
+/// Compute erfc for a batch of values (test-only utility).
 ///
 /// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
-/// The native Rust fallback is deprecated and will be removed in 0.5.0.
-#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
+#[cfg(test)]
+#[allow(dead_code)]
 #[must_use]
-pub fn erfc_batch(x: &[f64]) -> Vec<f64> {
+fn erfc_batch(x: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
     {
         if let Ok(out) = crate::unified_hardware::shader_batch_unary_f64(ERFC_F64_WGSL, "main", x) {
@@ -266,10 +266,6 @@ mod tests {
     }
 
     #[test]
-    #[expect(
-        deprecated,
-        reason = "testing deprecated batch function until 0.5.0 removal"
-    )]
     fn test_erf_batch() {
         let x = vec![0.0, 0.5, 1.0, 1.5, 2.0];
         let result = erf_batch(&x);

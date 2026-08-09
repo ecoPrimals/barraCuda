@@ -50,8 +50,6 @@ const FMR_MAX_SINGLE_PASS_WORKGROUPS: usize = 256;
 const SHADER_NATIVE: &str = include_str!("../shaders/reduce/fused_map_reduce_f64.wgsl");
 /// DF64 fused-map-reduce shader (workgroup shared memory uses f32 pairs).
 const SHADER_DF64: &str = include_str!("../shaders/reduce/fused_map_reduce_df64.wgsl");
-/// DF64 core arithmetic library.
-const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 
 /// Select the fused-map-reduce shader based on the device's FP64 strategy.
 ///
@@ -63,7 +61,7 @@ fn shader_for_device(device: &WgpuDevice) -> &'static str {
         Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_NATIVE,
         Fp64Strategy::Hybrid => {
             static DF64_COMBINED: std::sync::LazyLock<String> =
-                std::sync::LazyLock::new(|| format!("enable f64;\n{DF64_CORE}\n{SHADER_DF64}"));
+                std::sync::LazyLock::new(|| crate::shaders::df64_f64_source(SHADER_DF64));
             &DF64_COMBINED
         }
     }

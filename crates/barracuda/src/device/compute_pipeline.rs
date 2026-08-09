@@ -411,3 +411,136 @@ impl BglBuilder {
         })
     }
 }
+
+/// Reusable compute pipeline for ops that compile once and dispatch many times.
+///
+/// Unlike [`ComputeDispatch`] (one-shot builder), `CachedPipeline` separates
+/// pipeline creation from dispatch. The pipeline and bind group layout are
+/// compiled once in [`build`], then [`dispatch`] is called repeatedly with
+/// different buffer bindings.
+///
+/// # Example
+///
+/// ```ignore
+/// let cached = CachedPipeline::build(
+///     &device,
+///     "MyOp",
+///     &device.compile_shader_f64(SHADER, Some("my_op")),
+///     "main",
+///     &[BindingKind::Uniform, BindingKind::StorageRead, BindingKind::StorageRW],
+/// );
+///
+/// // Dispatch repeatedly with different buffers:
+/// cached.dispatch(&device, &[&params_buf, &input_buf, &output_buf], workgroups);
+/// ```
+pub struct CachedPipeline {
+    pipeline: wgpu::ComputePipeline,
+    bgl: wgpu::BindGroupLayout,
+}
+
+/// Binding type for [`CachedPipeline::build`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BindingKind {
+    /// Uniform buffer (read-only, small).
+    Uniform,
+    /// Storage buffer (read-only).
+    StorageRead,
+    /// Storage buffer (read-write).
+    StorageRW,
+}
+
+impl CachedPipeline {
+    /// Compile a pipeline from a binding pattern and shader module.
+    ///
+    /// The `bindings` slice describes the type of each binding (0-indexed).
+    /// The pipeline and BGL are compiled once and can be reused across
+    /// many [`dispatch`] calls with different buffer arguments.
+    #[must_use]
+    pub fn build(
+        device: &WgpuDevice,
+        label: &str,
+        shader: &wgpu::ShaderModule,
+        entry_point: &str,
+        bindings: &[BindingKind],
+    ) -> Self {
+        let entries: Vec<wgpu::BindGroupLayoutEntry> = bindings
+            .iter()
+            .enumerate()
+            .map(|(i, kind)| match kind {
+                BindingKind::Uniform => uniform_bgl_entry(i as u32),
+                BindingKind::StorageRead => storage_bgl_entry(i as u32, true),
+                BindingKind::StorageRW => storage_bgl_entry(i as u32, false),
+            })
+            .collect();
+
+        let bgl = device
+            .device
+            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some(label),
+                entries: &entries,
+            });
+
+        let pl = device
+            .device
+            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some(label),
+                bind_group_layouts: &[&bgl],
+                immediate_size: 0,
+            });
+
+        let pipeline = device
+            .device
+            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some(label),
+                layout: Some(&pl),
+                module: shader,
+                entry_point: Some(entry_point),
+                cache: None,
+                compilation_options: Default::default(),
+            });
+
+        Self { pipeline, bgl }
+    }
+
+    /// Dispatch the cached pipeline with the given buffers.
+    ///
+    /// `buffers` must have the same length as the `bindings` slice passed to [`build`].
+    /// Each buffer is bound at its corresponding index.
+    pub fn dispatch(&self, device: &WgpuDevice, buffers: &[&wgpu::Buffer], workgroups: u32) {
+        let entries: Vec<wgpu::BindGroupEntry<'_>> = buffers
+            .iter()
+            .enumerate()
+            .map(|(i, buf)| wgpu::BindGroupEntry {
+                binding: i as u32,
+                resource: buf.as_entire_binding(),
+            })
+            .collect();
+
+        let bg = device.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &self.bgl,
+            entries: &entries,
+        });
+
+        let mut enc = device.create_encoder_guarded(&Default::default());
+        {
+            let mut pass = enc.begin_compute_pass(&Default::default());
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, Some(&bg), &[]);
+            pass.dispatch_workgroups(workgroups, 1, 1);
+        }
+        device.submit_commands(Some(enc.finish()));
+    }
+
+    /// Access the bind group layout (for ops that need custom bind group creation).
+    #[must_use]
+    pub fn bind_group_layout(&self) -> &wgpu::BindGroupLayout {
+        &self.bgl
+    }
+
+    /// Access the underlying pipeline.
+    #[must_use]
+    pub fn pipeline(&self) -> &wgpu::ComputePipeline {
+        &self.pipeline
+    }
+}

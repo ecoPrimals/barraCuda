@@ -562,24 +562,26 @@ async fn security_provider_rpc<S: tokio::io::AsyncRead + tokio::io::AsyncWrite +
 /// to recover raw key bytes, so we must encode the env string's bytes.
 #[cfg(unix)]
 fn resolve_family_seed_raw() -> Option<String> {
-    let preferred = std::env::var(crate::env_keys::BTSP_FAMILY_SEED)
-        .or_else(|_| std::env::var(crate::env_keys::FAMILY_SEED))
-        .or_else(|_| std::env::var(crate::env_keys::BIOMEOS_FAMILY_SEED))
+    let raw = std::env::var(crate::env_keys::BTSP_FAMILY_SEED)
         .ok()
-        .filter(|s| !s.is_empty());
-
-    let raw = if let Some(val) = preferred {
-        val
-    } else {
-        #[expect(
-            deprecated,
-            reason = "intentional legacy fallback with deprecation warning"
-        )]
-        let legacy_key = crate::env_keys::BEARDOG_FAMILY_SEED;
-        let legacy = std::env::var(legacy_key).ok().filter(|s| !s.is_empty())?;
-        tracing::warn!("BEARDOG_FAMILY_SEED is deprecated — migrate to BTSP_FAMILY_SEED");
-        legacy
-    };
+        .filter(|s| !s.is_empty())
+        .or_else(|| {
+            std::env::var(crate::env_keys::FAMILY_SEED)
+                .ok()
+                .filter(|s| !s.is_empty())
+        })
+        .or_else(|| {
+            std::env::var(crate::env_keys::BIOMEOS_FAMILY_SEED)
+                .ok()
+                .filter(|s| !s.is_empty())
+        })
+        .or_else(|| {
+            #[expect(deprecated, reason = "legacy env key passed to migration helper")]
+            crate::env_keys::env_with_deprecated_fallback(
+                crate::env_keys::BTSP_FAMILY_SEED,
+                crate::env_keys::BEARDOG_FAMILY_SEED,
+            )
+        })?;
 
     use base64ct::{Base64, Encoding};
     Some(Base64::encode_string(raw.trim().as_bytes()))

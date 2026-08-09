@@ -88,13 +88,12 @@ pub fn leaky_relu(x: f64, alpha: f64) -> f64 {
 // WGSL via naga-exec — the same shader that runs on GPU. Falls back to
 // scalar Rust if the shader fails or the feature is disabled.
 
-/// Apply `ReLU` element-wise to a slice.
+/// Apply `ReLU` element-wise to a slice (test-only utility).
 ///
 /// With `cpu-shader`, dispatches through `relu_f64.wgsl` via naga-exec.
-/// The native Rust fallback is deprecated and will be removed in 0.5.0.
-#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
+#[cfg(test)]
 #[must_use]
-pub fn relu_batch(input: &[f64]) -> Vec<f64> {
+fn relu_batch(input: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
     {
         let wgsl = include_str!("shaders/activation/relu_f64.wgsl");
@@ -105,7 +104,7 @@ pub fn relu_batch(input: &[f64]) -> Vec<f64> {
     input.iter().map(|&x| relu(x)).collect()
 }
 
-#[cfg(feature = "cpu-shader")]
+#[cfg(all(test, feature = "cpu-shader"))]
 const SIGMOID_F64_WGSL: &str = r"
 @group(0) @binding(0) var<storage, read> input: array<f64>;
 @group(0) @binding(1) var<storage, read_write> output: array<f64>;
@@ -124,13 +123,12 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 ";
 
-/// Apply sigmoid element-wise to a slice.
+/// Apply sigmoid element-wise to a slice (test-only utility).
 ///
 /// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
-/// The native Rust fallback is deprecated and will be removed in 0.5.0.
-#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
+#[cfg(test)]
 #[must_use]
-pub fn sigmoid_batch(input: &[f64]) -> Vec<f64> {
+fn sigmoid_batch(input: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
     {
         if let Ok(out) =
@@ -142,7 +140,7 @@ pub fn sigmoid_batch(input: &[f64]) -> Vec<f64> {
     input.iter().map(|&x| sigmoid(x)).collect()
 }
 
-#[cfg(feature = "cpu-shader")]
+#[cfg(all(test, feature = "cpu-shader"))]
 const GELU_F64_WGSL: &str = r"
 @group(0) @binding(0) var<storage, read> input: array<f64>;
 @group(0) @binding(1) var<storage, read_write> output: array<f64>;
@@ -158,13 +156,12 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 ";
 
-/// Apply GELU element-wise to a slice.
+/// Apply GELU element-wise to a slice (test-only utility).
 ///
 /// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
-/// The native Rust fallback is deprecated and will be removed in 0.5.0.
-#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
+#[cfg(test)]
 #[must_use]
-pub fn gelu_batch(input: &[f64]) -> Vec<f64> {
+fn gelu_batch(input: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
     {
         if let Ok(out) =
@@ -176,7 +173,7 @@ pub fn gelu_batch(input: &[f64]) -> Vec<f64> {
     input.iter().map(|&x| gelu(x)).collect()
 }
 
-#[cfg(feature = "cpu-shader")]
+#[cfg(all(test, feature = "cpu-shader"))]
 const SWISH_F64_WGSL: &str = r"
 @group(0) @binding(0) var<storage, read> input: array<f64>;
 @group(0) @binding(1) var<storage, read_write> output: array<f64>;
@@ -191,13 +188,12 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 ";
 
-/// Apply swish element-wise to a slice.
+/// Apply swish element-wise to a slice (test-only utility).
 ///
 /// With `cpu-shader`, dispatches through inline WGSL via naga-exec.
-/// The native Rust fallback is deprecated and will be removed in 0.5.0.
-#[deprecated(since = "0.4.1", note = "use WGSL shader path (cpu-shader feature)")]
+#[cfg(test)]
 #[must_use]
-pub fn swish_batch(input: &[f64]) -> Vec<f64> {
+fn swish_batch(input: &[f64]) -> Vec<f64> {
     #[cfg(feature = "cpu-shader")]
     {
         if let Ok(out) =
@@ -265,10 +261,6 @@ mod tests {
     }
 
     #[test]
-    #[expect(
-        deprecated,
-        reason = "testing deprecated batch functions until 0.5.0 removal"
-    )]
     fn batch_lengths() {
         let input = vec![1.0, -1.0, 0.0, 2.0];
         assert_eq!(relu_batch(&input).len(), 4);

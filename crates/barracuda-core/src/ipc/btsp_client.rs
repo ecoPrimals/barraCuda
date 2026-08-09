@@ -385,20 +385,12 @@ pub async fn try_connect_with_btsp(
 /// Resolution chain: `BTSP_STRICT_MODE=1` (preferred) → `BEARDOG_UDS_REQUIRE_BTSP=1` (deprecated).
 pub fn btsp_strict_mode_expected() -> bool {
     use crate::env_keys;
-    let preferred = std::env::var(env_keys::BTSP_STRICT_MODE).is_ok_and(|v| v.trim() == "1");
-    if preferred {
-        return true;
-    }
-    #[expect(
-        deprecated,
-        reason = "intentional legacy fallback with deprecation warning"
-    )]
-    let legacy_key = env_keys::BEARDOG_UDS_REQUIRE_BTSP;
-    let legacy = std::env::var(legacy_key).is_ok_and(|v| v.trim() == "1");
-    if legacy {
-        tracing::warn!("BEARDOG_UDS_REQUIRE_BTSP is deprecated — migrate to BTSP_STRICT_MODE");
-    }
-    legacy
+    #[expect(deprecated, reason = "legacy env key passed to migration helper")]
+    env_keys::env_with_deprecated_fallback(
+        env_keys::BTSP_STRICT_MODE,
+        env_keys::BEARDOG_UDS_REQUIRE_BTSP,
+    )
+    .is_some_and(|v| v.trim() == "1")
 }
 
 /// Perform the bootstrap BTSP handshake using LOCAL HMAC-SHA256.

@@ -17,8 +17,6 @@ use std::sync::Arc;
 const SHADER_FUSED: &str = include_str!("../shaders/reduce/mean_variance_f64.wgsl");
 /// DF64 variant — same Welford algorithm, DF64 core-streaming arithmetic.
 const SHADER_FUSED_DF64: &str = include_str!("../shaders/reduce/mean_variance_df64.wgsl");
-/// DF64 core arithmetic library (f32-pair).
-const DF64_CORE: &str = include_str!("../shaders/math/df64_core.wgsl");
 
 /// Select the fused shader based on the device's FP64 strategy.
 ///
@@ -29,9 +27,8 @@ fn fused_shader_for_device(device: &WgpuDevice) -> &'static str {
     match caps.fp64_strategy() {
         Fp64Strategy::Sovereign | Fp64Strategy::Native | Fp64Strategy::Concurrent => SHADER_FUSED,
         Fp64Strategy::Hybrid => {
-            static DF64_COMBINED: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-                format!("enable f64;\n{DF64_CORE}\n{SHADER_FUSED_DF64}")
-            });
+            static DF64_COMBINED: std::sync::LazyLock<String> =
+                std::sync::LazyLock::new(|| crate::shaders::df64_f64_source(SHADER_FUSED_DF64));
             &DF64_COMBINED
         }
     }

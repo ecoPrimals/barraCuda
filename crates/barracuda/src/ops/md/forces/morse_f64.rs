@@ -17,9 +17,9 @@ use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use std::sync::Arc;
 
-const WGSL_DF64_CORE: &str = include_str!("../../../shaders/math/df64_core.wgsl");
-const WGSL_DF64_TRANSCENDENTALS: &str =
-    include_str!("../../../shaders/math/df64_transcendentals.wgsl");
+use crate::shaders::{
+    DF64_CORE as WGSL_DF64_CORE, DF64_TRANSCENDENTALS as WGSL_DF64_TRANSCENDENTALS,
+};
 const MORSE_SHADER_DF64: &str = include_str!("morse_df64.wgsl");
 
 /// f64 Morse force calculation for bonded interactions

@@ -222,9 +222,7 @@ impl WgpuDevice {
     /// runs in arithmetic-only mode.
     #[must_use]
     pub fn compile_shader_df64(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
-        const DF64_CORE: &str = include_str!("../../shaders/math/df64_core.wgsl");
-        const DF64_TRANSCENDENTALS: &str =
-            include_str!("../../shaders/math/df64_transcendentals.wgsl");
+        use crate::shaders::{DF64_CORE, DF64_TRANSCENDENTALS};
 
         let caps = crate::device::capabilities::DeviceCapabilities::from_device(self);
         let naga_poisoned = caps.has_df64_spir_v_poisoning();

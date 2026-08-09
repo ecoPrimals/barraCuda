@@ -91,3 +91,22 @@ pub const BARRACUDA_TARPC_SOCKET: &str = "BARRACUDA_TARPC_SOCKET";
 /// **Deprecated** — use [`BTSP_STRICT_MODE`]. Retained for migration grace period.
 #[deprecated(since = "0.4.1", note = "use BTSP_STRICT_MODE")]
 pub const BEARDOG_UDS_REQUIRE_BTSP: &str = "BEARDOG_UDS_REQUIRE_BTSP";
+
+/// Read an environment variable with deprecated-name fallback.
+///
+/// Tries `preferred` first. If absent, tries `deprecated_name` and logs
+/// a migration warning if found.
+pub fn env_with_deprecated_fallback(preferred: &str, deprecated_name: &str) -> Option<String> {
+    std::env::var(preferred)
+        .ok()
+        .filter(|s| !s.is_empty())
+        .or_else(|| {
+            let val = std::env::var(deprecated_name)
+                .ok()
+                .filter(|s| !s.is_empty());
+            if val.is_some() {
+                tracing::warn!("{deprecated_name} is deprecated — migrate to {preferred}");
+            }
+            val
+        })
+}

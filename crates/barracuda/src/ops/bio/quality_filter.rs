@@ -12,6 +12,7 @@
 
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::{BindingKind, CachedPipeline};
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -34,8 +35,7 @@ struct QualityFilterParams {
 /// GPU-parallel quality trimming for FASTQ reads (leading, trailing, sliding window).
 pub struct QualityFilterGpu {
     device: Arc<WgpuDevice>,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
+    cached: CachedPipeline,
 }
 
 /// Configuration for quality filtering.
@@ -77,15 +77,20 @@ impl QualityFilterGpu {
     /// readback fails (e.g. device lost or out of memory).
     pub fn new(device: Arc<WgpuDevice>) -> Result<Self> {
         let module = device.compile_shader_f64(SHADER, Some("quality_filter"));
-        let bgl = super::snp::make_bgl(&device, &[true, true, true, false]);
-        let layout = super::snp::make_layout(&device, &bgl, "QualityFilter");
-        let pipeline =
-            super::snp::make_pipeline(&device, &layout, &module, "quality_filter", "QualityFilter");
-        Ok(Self {
-            device,
-            pipeline,
-            bgl,
-        })
+        let cached = CachedPipeline::build(
+            &device,
+            "QualityFilter",
+            &module,
+            "quality_filter",
+            &[
+                BindingKind::Uniform,
+                BindingKind::StorageRead,
+                BindingKind::StorageRead,
+                BindingKind::StorageRead,
+                BindingKind::StorageRW,
+            ],
+        );
+        Ok(Self { device, cached })
     }
 
     /// Dispatch quality filter kernel with given config and buffers.
@@ -113,25 +118,12 @@ impl QualityFilterGpu {
             phred_offset: config.phred_offset,
             _pad: 0,
         };
-        let pbuf = super::snp::upload_uniform(&self.device, &params);
-        let bg = self
+        let pbuf = self
             .device
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: None,
-                layout: &self.bgl,
-                entries: &[
-                    super::snp::bg_entry(0, &pbuf),
-                    super::snp::bg_entry(1, qual_data),
-                    super::snp::bg_entry(2, read_offsets),
-                    super::snp::bg_entry(3, read_lengths),
-                    super::snp::bg_entry(4, results),
-                ],
-            });
-        super::snp::submit(
+            .create_uniform_buffer("QualityFilterParams", &params);
+        self.cached.dispatch(
             &self.device,
-            &self.pipeline,
-            &bg,
+            &[&pbuf, qual_data, read_offsets, read_lengths, results],
             n_reads.div_ceil(WORKGROUP_SIZE_1D),
         );
         Ok(())

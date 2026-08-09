@@ -4,7 +4,9 @@
 #
 # biomeOS reads this file to discover barraCuda capabilities
 # without requiring the primal to be running.
-# 100 registered methods across 25 semantic namespaces.
+# 100 registered methods across 26 semantic namespaces.
+# Plus 6 required wateringHole aliases (ping, health, status, check,
+# capability.list, stats.eigh) handled in dispatch but not counted.
 
 [primal]
 name = "barracuda"
@@ -39,6 +41,10 @@ methods = ["get"]
 [domains.primal]
 description = "Primal lifecycle and capability advertisement"
 methods = ["info", "capabilities", "announce"]
+
+[domains.method]
+description = "Runtime method introspection"
+methods = ["describe"]
 
 [domains.device]
 description = "GPU device enumeration and probing"
@@ -86,6 +92,7 @@ methods = ["detect_peaks", "bandpass", "derivative"]
 [domains.linalg]
 description = "Linear algebra (CPU inline-data)"
 methods = ["solve", "eigenvalues", "batched_tridiag_eigh", "svd", "qr", "graph_laplacian"]
+aliases = { "stats.eigh" = "linalg.eigenvalues" }
 
 [domains.ode]
 description = "Numerical ODE integration (CPU)"
@@ -276,6 +283,10 @@ stability = "stable"
 
 [operations."graph.belief_propagation"]
 cost = "high"
+stability = "stable"
+
+[operations."method.describe"]
+cost = "low"
 stability = "stable"
 
 [operations."nautilus.create"]

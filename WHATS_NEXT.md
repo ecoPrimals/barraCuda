@@ -1,10 +1,25 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-08-07.
+Prioritized work items, ordered by impact. Updated 2026-08-09.
 
 ---
 
 ## Recently Completed
+
+### Wave 157a — Vertebrate Self-Audit (Aug 9, 2026)
+- **RPC surface audit**: 3-way cross-reference — `REGISTERED_METHODS` (code),
+  `capability_registry.toml` (biomeOS), and dispatch match arms.
+- **2 gaps found and fixed**: `method.describe` and `stats.eigh` alias missing
+  from capability_registry.toml. Now documented with `[domains.method]` and
+  `aliases` entry.
+- **Zero phantom APIs**: every registered method dispatches to a real handler.
+  Unknown methods return `METHOD_NOT_FOUND` (not health stubs).
+- **2 new tests**: `every_registered_method_dispatches` (runtime proof no
+  phantom APIs) and `registry_toml_covers_registered_methods` (compile-time
+  proof TOML matches code). 4,996 tests pass.
+- **12-axis deep debt re-scan**: all green. Zero files >800L, zero unsafe,
+  zero `TODO/FIXME`, zero production `unwrap()`, zero `Result<T, String>` in
+  production, zero hardcoded primal names.
 
 ### Wave 157a — G68 Platform Substrate Compliance (Aug 7, 2026)
 - New `platform_substrate` module in barracuda-core following sourDough
@@ -12,7 +27,7 @@ Prioritized work items, ordered by impact. Updated 2026-08-07.
   and `is_symlink()` helper.
 - `server.rs::create_legacy_symlink()` evolved from raw
   `std::os::unix::fs::symlink` to `platform_link()`.
-- 4 new tests. 4,994 tests pass. Windows cross-compile clean.
+- 4 new tests. 4,996 tests pass (incl. 2 vertebrate self-audit tests). Windows cross-compile clean.
 - **0 L2 violations remaining.** barraCuda is G68 compliant.
 
 ### Wave 157a — ComputeDispatch P1 Migration (Aug 7, 2026)

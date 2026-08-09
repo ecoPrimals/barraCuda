@@ -111,3 +111,49 @@ fn normalize_legacy_prefix_accepted() {
     let resp_method = normalize_method(&legacy);
     assert_eq!(resp_method, "device.list");
 }
+
+/// Vertebrate self-audit: every REGISTERED_METHOD must appear in the dispatch
+/// match arms. If a method is registered but not dispatched, consumers will get
+/// `METHOD_NOT_FOUND` — exactly the phantom API pattern westGate exposed.
+#[tokio::test]
+async fn every_registered_method_dispatches() {
+    let (primal, _guard) = crate::test_util::start_primal_guarded().await;
+
+    for method in REGISTERED_METHODS {
+        let resp = dispatch(
+            &primal,
+            method,
+            &serde_json::json!({}),
+            serde_json::json!(1),
+        )
+        .await;
+        let error_code = resp
+            .error
+            .as_ref()
+            .map(|e| e.code);
+        assert_ne!(
+            error_code,
+            Some(-32601), // METHOD_NOT_FOUND
+            "Registered method {method} returned METHOD_NOT_FOUND — phantom API!"
+        );
+    }
+}
+
+/// Every REGISTERED_METHOD must also exist in capability_registry.toml
+/// (or be a documented alias). Prevents silent divergence.
+#[test]
+fn registry_toml_covers_registered_methods() {
+    let toml_content =
+        include_str!("../../../../../config/capability_registry.toml");
+
+    for method in REGISTERED_METHODS {
+        // Aliases are documented in the TOML as aliases = { "stats.eigh" = ... }
+        // so searching for the quoted method name covers both methods and aliases.
+        let quoted = format!("\"{method}\"");
+        let bare_name = method.rsplit('.').next().unwrap_or(method);
+        assert!(
+            toml_content.contains(&quoted) || toml_content.contains(bare_name),
+            "REGISTERED_METHOD {method} not found in capability_registry.toml"
+        );
+    }
+}

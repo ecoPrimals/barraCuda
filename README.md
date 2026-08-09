@@ -44,7 +44,7 @@ results.
 - **Sovereign shader compilation** — naga 28 IR optimizer, SPIR-V passthrough
 - **NagaExecutor** — CPU interpreter for naga IR, executes WGSL compute shaders without GPU (f32+f64 native, shared memory, barriers, atomics)
 - **coralReef IPC contract** — sovereign CPU compilation (`shader.compile.cpu`, `shader.execute.cpu`) and validation (`shader.validate`) via JSON-RPC
-- **JSON-RPC 2.0 + tarpc** — G65 single-socket protocol negotiation (clients send `PROTOCOLS: tarpc,jsonrpc\n`) with C2 dual-socket backward compat; 100 semantic `{domain}.{operation}` methods; Wire Standard L2 compliant, Neural API announce, BTSP Phase 3 encryption, full ML pipeline (train→save→load→infer), mesh trust validation, runtime method introspection (`method.describe`)
+- **JSON-RPC 2.0 + tarpc** — G65 single-socket protocol negotiation (clients send `PROTOCOLS: tarpc,jsonrpc\n`) with C2 dual-socket backward compat; 101 semantic `{domain}.{operation}` methods; Wire Standard L2 compliant, Neural API announce, BTSP Phase 3 encryption, full ML pipeline (train→save→load→infer), mesh trust validation, runtime method introspection (`method.describe`)
 - **Transport self-knowledge** — local `TransportEndpoint` wire format implementation, `TRANSPORT_ENDPOINT` env var for launcher injection, zero cross-primal dependencies
 - **UniBin CLI** — single `barracuda` binary with `server --port <PORT>`, `service`, `doctor`, `validate`, `version`
 

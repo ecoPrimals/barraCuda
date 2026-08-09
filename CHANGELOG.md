@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **G65 peek evolved from `libc` to `rustix`** (Wave 156p) — `TransportStream::peek()` for Unix sockets evolved from raw `libc::recv(MSG_PEEK)` with `#[allow(unsafe_code)]` to safe `rustix::net::recv(RecvFlags::PEEK)`. Eliminates all `unsafe` code in barracuda-core; `#![forbid(unsafe_code)]` restored (was briefly `deny` during initial G65 implementation). Aligns with nestGate's G65 reference pattern.
 - **Dead `OdeFunction` type alias removed** — `Box<dyn Fn(f64, &[f64]) -> Vec<f64>>` type alias was orphaned after `RkIntegrator` methods evolved to `&impl Fn` generics. Removed from `rk_stage.rs` and `ops/mod.rs` re-export.
 - **`mul_add` evolution** — 2 test helper functions in `rng.rs` evolved to use `mul_add` for FMA precision.
-- **100 IPC methods** — `method.describe` brings total to 100.
+- **101 IPC methods** — `method.describe` + `device.video_codecs` brings total to 101.
 - **Subgroup reduction entry point fix** (Wave 155n) — `sum_reduce_subgroup_f64.wgsl` had `fn main()` but Rust dispatches `"sum_reduce_f64"`. Pipeline creation silently failed on SM100+ (Blackwell), returning 0.0 for all scalar readbacks. Blocks hotSpring QCD production on biomeGate.
 - **Diversity shader self-recursion fix** (Wave 155n) — inline `log_f64()` in `diversity_f64.wgsl` caused infinite recursion when `compile_shader_f64` rewrites `log()` → `log_f64()`. Removed inline definition; native `log()` with auto-injected polyfill is correct.
 - **SU(3) gauge group disambiguation** (Wave 155n) — 6 docs that said "lattice QCD" without specifying gauge group now explicitly say "SU(3) lattice QCD". Code confirmed SU(3) throughout with zero SU(2) references.

@@ -127,10 +127,7 @@ async fn every_registered_method_dispatches() {
             serde_json::json!(1),
         )
         .await;
-        let error_code = resp
-            .error
-            .as_ref()
-            .map(|e| e.code);
+        let error_code = resp.error.as_ref().map(|e| e.code);
         assert_ne!(
             error_code,
             Some(-32601), // METHOD_NOT_FOUND
@@ -143,8 +140,7 @@ async fn every_registered_method_dispatches() {
 /// (or be a documented alias). Prevents silent divergence.
 #[test]
 fn registry_toml_covers_registered_methods() {
-    let toml_content =
-        include_str!("../../../../../config/capability_registry.toml");
+    let toml_content = include_str!("../../../../../config/capability_registry.toml");
 
     for method in REGISTERED_METHODS {
         // Aliases are documented in the TOML as aliases = { "stats.eigh" = ... }

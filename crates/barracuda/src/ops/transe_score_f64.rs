@@ -102,10 +102,7 @@ impl TranseScoreF64<'_> {
             });
 
         ComputeDispatch::new(device, "transe_score_f64")
-            .shader(
-                include_str!("../shaders/bio/transe_score_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/bio/transe_score_f64.wgsl"), "main")
             .f64()
             .storage_read(0, &ent_buf)
             .storage_read(1, &rel_buf)

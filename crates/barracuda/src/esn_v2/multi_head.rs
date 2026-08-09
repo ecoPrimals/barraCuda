@@ -304,15 +304,12 @@ impl MultiHeadEsn {
         let head = self.heads.get(head_idx).ok_or_else(|| {
             BarracudaError::invalid_input(format!("Head index {head_idx} out of range"))
         })?;
-        let w_out = head
-            .w_out
-            .as_ref()
-            .ok_or_else(|| {
-                BarracudaError::invalid_op(
-                    "MultiHeadEsn::predict_head",
-                    format!("Head {head_idx} not trained"),
-                )
-            })?;
+        let w_out = head.w_out.as_ref().ok_or_else(|| {
+            BarracudaError::invalid_op(
+                "MultiHeadEsn::predict_head",
+                format!("Head {head_idx} not trained"),
+            )
+        })?;
         w_out.transpose()?.matmul(state)
     }
 

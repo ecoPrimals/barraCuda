@@ -10,8 +10,8 @@
 //!
 //! Provenance: wetSpring handoff v5 → `ToadStool` absorption.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
 
@@ -47,7 +47,10 @@ impl RfBatchInferenceGpu {
     /// * `node_children_buf` — `[n_trees × n_nodes_max × 2]` i32 (left/right or leaf class)
     /// * `features_buf`      — `[n_samples × n_features]` f64 (input features)
     /// * `predictions_buf`   — `[n_samples × n_trees]` u32 (output, written by kernel)
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(
         &self,
         node_features_buf: &wgpu::Buffer,

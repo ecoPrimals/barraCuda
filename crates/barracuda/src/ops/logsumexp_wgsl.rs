@@ -24,8 +24,6 @@ impl LogsumexpWgsl {
         Self { input }
     }
 
-
-
     /// Execute log-sum-exp on GPU. Returns a scalar tensor.
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
@@ -42,16 +40,11 @@ impl LogsumexpWgsl {
             size: u32,
         }
 
-        let metadata = Metadata {
-            size: size as u32
-        };
+        let metadata = Metadata { size: size as u32 };
         let metadata_buffer = device.create_uniform_buffer("Logsumexp Metadata", &metadata);
 
         ComputeDispatch::new(device, "logsumexpwgsl")
-            .shader(
-                include_str!("../shaders/math/logsumexp.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/math/logsumexp.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &metadata_buffer)
@@ -67,7 +60,6 @@ impl LogsumexpWgsl {
 }
 
 impl Tensor {
-
     /// Compute log(sum(exp(x))) numerically stably.
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer

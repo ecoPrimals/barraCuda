@@ -90,7 +90,10 @@ impl ReplicationPad {
         let workgroups_y = (out_height as u32).div_ceil(optimal_wg_size);
 
         ComputeDispatch::new(device, "ReplicationPad")
-            .shader(include_str!("../shaders/tensor/replication_pad_f64.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/tensor/replication_pad_f64.wgsl"),
+                "main",
+            )
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)

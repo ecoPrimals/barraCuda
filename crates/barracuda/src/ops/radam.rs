@@ -196,10 +196,7 @@ impl RAdam {
             });
 
         ComputeDispatch::new(device, "RAdam")
-            .shader(
-                include_str!("../shaders/optimizer/radam_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/optimizer/radam_f64.wgsl"), "main")
             .uniform(0, &params_buffer)
             .storage_read(1, &parameters_buffer)
             .storage_read(2, self.gradients.buffer())

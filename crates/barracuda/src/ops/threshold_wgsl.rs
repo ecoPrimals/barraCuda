@@ -64,7 +64,10 @@ impl Threshold {
         let params_buffer = device.create_uniform_buffer("Threshold Params", &params);
 
         ComputeDispatch::new(device, "Threshold")
-            .shader(include_str!("../shaders/activation/threshold_f64.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/activation/threshold_f64.wgsl"),
+                "main",
+            )
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)

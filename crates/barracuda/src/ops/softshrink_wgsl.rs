@@ -24,8 +24,6 @@ impl Softshrink {
         Self { input }
     }
 
-
-
     /// Execute the softshrink operation
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
@@ -69,7 +67,6 @@ impl Softshrink {
 }
 
 impl Tensor {
-
     /// Compute softshrink element-wise
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer

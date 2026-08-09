@@ -134,7 +134,10 @@ impl GriffinLim {
             });
 
         ComputeDispatch::new(device, "GriffinLim")
-            .shader(include_str!("../shaders/audio/griffin_lim_f64.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/audio/griffin_lim_f64.wgsl"),
+                "main",
+            )
             .storage_read(0, magnitude_buffer)
             .storage_rw(1, &phase_buffer)
             .storage_rw(2, &output_buffer)

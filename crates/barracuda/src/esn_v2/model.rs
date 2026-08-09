@@ -466,15 +466,12 @@ impl ESN {
         let state = self.update(&input_tensor).await?;
         let raw_state = state.to_vec()?;
 
-        let w_out =
-            self.w_out
-                .as_ref()
-                .ok_or_else(|| {
-                    crate::error::BarracudaError::invalid_op(
-                        "ESN::predict_return_state",
-                        "ESN has not been trained yet — call train() first",
-                    )
-                })?;
+        let w_out = self.w_out.as_ref().ok_or_else(|| {
+            crate::error::BarracudaError::invalid_op(
+                "ESN::predict_return_state",
+                "ESN has not been trained yet — call train() first",
+            )
+        })?;
         let output = w_out.transpose()?.matmul(&state)?;
 
         Ok((output.to_vec()?, raw_state))
@@ -526,15 +523,12 @@ impl ESN {
     /// Returns [`Err`] if the ESN has not been trained yet, or if reading
     /// readout weights to host fails.
     pub fn to_npu_weights(&self) -> BarracudaResult<NpuReadoutWeights> {
-        let w_out =
-            self.w_out
-                .as_ref()
-                .ok_or_else(|| {
-                    crate::error::BarracudaError::invalid_op(
-                        "ESN::to_npu_weights",
-                        "ESN has not been trained yet — call train() first",
-                    )
-                })?;
+        let w_out = self.w_out.as_ref().ok_or_else(|| {
+            crate::error::BarracudaError::invalid_op(
+                "ESN::to_npu_weights",
+                "ESN has not been trained yet — call train() first",
+            )
+        })?;
 
         let w_out_f32 = w_out.to_vec()?;
         let w_out_f64: Vec<f64> = w_out_f32.iter().map(|&x| f64::from(x)).collect();

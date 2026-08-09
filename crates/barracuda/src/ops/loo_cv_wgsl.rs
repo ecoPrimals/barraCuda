@@ -55,7 +55,10 @@ impl LooCv {
         let params_buffer = device.create_uniform_buffer("LOO-CV Params", &params);
 
         ComputeDispatch::new(device, "LOO-CV")
-            .shader(include_str!("../shaders/interpolation/loo_cv_f64.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/interpolation/loo_cv_f64.wgsl"),
+                "main",
+            )
             .storage_read(0, self.hat_matrix.buffer())
             .storage_read(1, self.y.buffer())
             .storage_read(2, self.predictions.buffer())

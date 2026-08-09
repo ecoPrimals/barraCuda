@@ -31,10 +31,7 @@ impl Trunc {
         let params_buffer = device.create_uniform_buffer("Trunc Params", &params);
 
         ComputeDispatch::new(device, "trunc")
-            .shader(
-                include_str!("../shaders/math/trunc_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/math/trunc_f64.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)

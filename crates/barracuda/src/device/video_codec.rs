@@ -28,7 +28,11 @@ pub trait VideoCodec: Send + Sync {
     ///
     /// # Errors
     /// Returns `CodecError` if decoding fails or is not available.
-    fn decode(&self, compressed: &[u8], config: &DecodeConfig) -> Result<Vec<FrameData>, CodecError>;
+    fn decode(
+        &self,
+        compressed: &[u8],
+        config: &DecodeConfig,
+    ) -> Result<Vec<FrameData>, CodecError>;
     /// Name of this codec backend.
     fn backend_name(&self) -> &str;
     /// Estimated compression ratio (e.g. 61.0 for NVENC on lattice data).
@@ -159,7 +163,10 @@ impl VideoCodec for NullCodec {
         ))
     }
 
-    #[expect(clippy::unnecessary_literal_bound, reason = "trait constrains return lifetime")]
+    #[expect(
+        clippy::unnecessary_literal_bound,
+        reason = "trait constrains return lifetime"
+    )]
     fn backend_name(&self) -> &str {
         "null"
     }
@@ -202,11 +209,7 @@ fn which_ffmpeg() -> Option<String> {
     }
 
     let path = String::from_utf8_lossy(&output.stdout).trim().to_owned();
-    if path.is_empty() {
-        None
-    } else {
-        Some(path)
-    }
+    if path.is_empty() { None } else { Some(path) }
 }
 
 fn probe_ffmpeg_encoders(ffmpeg: &str) -> Vec<CodecInfo> {
@@ -227,7 +230,9 @@ fn probe_ffmpeg_encoders(ffmpeg: &str) -> Vec<CodecInfo> {
     let listing = String::from_utf8_lossy(&output.stdout);
     let mut codecs = Vec::new();
 
-    if listing.contains("h264_nvenc") || listing.contains("hevc_nvenc") || listing.contains("av1_nvenc")
+    if listing.contains("h264_nvenc")
+        || listing.contains("hevc_nvenc")
+        || listing.contains("av1_nvenc")
     {
         let mut nvenc_codecs = Vec::new();
         if listing.contains("h264_nvenc") {
@@ -248,7 +253,9 @@ fn probe_ffmpeg_encoders(ffmpeg: &str) -> Vec<CodecInfo> {
         }
     }
 
-    if listing.contains("h264_vaapi") || listing.contains("hevc_vaapi") || listing.contains("av1_vaapi")
+    if listing.contains("h264_vaapi")
+        || listing.contains("hevc_vaapi")
+        || listing.contains("av1_vaapi")
     {
         let mut vaapi_codecs = Vec::new();
         if listing.contains("h264_vaapi") {

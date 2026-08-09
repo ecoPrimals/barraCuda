@@ -11,8 +11,8 @@
 //!
 //! **Note**: f32 precision. For f64, use manual computation with `weighted_dot_f64`.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;

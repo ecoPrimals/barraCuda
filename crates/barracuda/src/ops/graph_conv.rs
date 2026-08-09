@@ -120,10 +120,7 @@ impl GraphConv {
             });
 
         ComputeDispatch::new(device, "GraphConv")
-            .shader(
-                include_str!("../shaders/gnn/graph_conv_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/gnn/graph_conv_f64.wgsl"), "main")
             .storage_read(0, self.node_features.buffer())
             .storage_read(1, self.adj_matrix.buffer())
             .storage_read(2, self.weight.buffer())

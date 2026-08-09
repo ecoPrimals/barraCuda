@@ -319,13 +319,14 @@ impl SpinOrbitGpu {
         let n_workgroups = n_threads.div_ceil(WORKGROUP_SIZE_COMPACT as usize);
 
         if let Some(dens) = density {
-            let density_buffer = self.device.device.create_buffer_init(
-                &wgpu::util::BufferInitDescriptor {
-                    label: Some("SpinOrbit density"),
-                    contents: bytemuck::cast_slice(dens),
-                    usage: wgpu::BufferUsages::STORAGE,
-                },
-            );
+            let density_buffer =
+                self.device
+                    .device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("SpinOrbit density"),
+                        contents: bytemuck::cast_slice(dens),
+                        usage: wgpu::BufferUsages::STORAGE,
+                    });
             ComputeDispatch::new(self.device.as_ref(), "SpinOrbit")
                 .shader(Self::wgsl_shader(), entry_point)
                 .f64()

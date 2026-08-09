@@ -24,8 +24,6 @@ impl Frac {
         Self { input }
     }
 
-
-
     /// Execute the frac operation
     ///
     /// # Errors
@@ -44,16 +42,11 @@ impl Frac {
             size: u32,
         }
 
-        let params = Params {
-            size: size as u32
-        };
+        let params = Params { size: size as u32 };
         let params_buffer = device.create_uniform_buffer("Frac Params", &params);
 
         ComputeDispatch::new(device, "frac")
-            .shader(
-                include_str!("../shaders/math/frac_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/math/frac_f64.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
@@ -69,7 +62,6 @@ impl Frac {
 }
 
 impl Tensor {
-
     /// Compute frac element-wise
     ///
     /// # Errors

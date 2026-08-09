@@ -55,8 +55,8 @@ impl ClipGradNorm {
 
         let input_buffer = self.gradients.buffer();
 
-        let num_workgroups = size.div_ceil(crate::device::capabilities::WORKGROUP_SIZE_1D as usize)
-            as u32;
+        let num_workgroups =
+            size.div_ceil(crate::device::capabilities::WORKGROUP_SIZE_1D as usize) as u32;
         let norm_buffer_size = num_workgroups.max(1) as usize;
         let norm_buffer = device.create_buffer_f32(norm_buffer_size)?;
 

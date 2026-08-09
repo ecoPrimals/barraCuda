@@ -60,12 +60,11 @@ pub mod probe;
 pub mod probe_throughput;
 /// Physical device registry with backend preference ordering.
 pub mod registry;
-mod routing;
 /// Unified `Device` enum routing across CPU, GPU, NPU, and Auto.
 pub mod river_scheduler;
+mod routing;
 pub mod silicon_profile;
 pub mod silicon_router;
-pub mod tile_decomposer;
 /// Sovereign device implementation (capability-based IPC dispatch).
 #[cfg(feature = "sovereign-dispatch")]
 pub mod sovereign_device;
@@ -79,6 +78,7 @@ mod sovereign_dispatch_wire;
 pub mod substrate;
 /// Zero-overhead tensor context with buffer pooling.
 pub mod tensor_context;
+pub mod tile_decomposer;
 pub mod unified;
 /// Canonical GPU vendor ID constants (single source of truth).
 pub mod vendor;

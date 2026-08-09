@@ -31,10 +31,7 @@ impl Sqrt {
         let params_buffer = device.create_uniform_buffer("Sqrt Params", &params);
 
         ComputeDispatch::new(device, "sqrt")
-            .shader(
-                include_str!("../shaders/math/sqrt_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/math/sqrt_f64.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)

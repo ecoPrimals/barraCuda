@@ -68,7 +68,10 @@ impl VacfBatchGpu {
     /// `vel_ring_buf` must hold `[n_frames × n_particles × 3]` f64 values.
     /// Returns a buffer of `[n_particles]` f64 values (per-particle C(lag)),
     /// ready for reduction via `ReduceScalarPipeline`.
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(
         &self,
         vel_ring_buf: &wgpu::Buffer,
@@ -128,7 +131,10 @@ impl StressVirialGpu {
     /// `vel_buf`:  `[N×3]` f64 — particle velocities
     /// `out_buf`:  `[N]`   f64 — per-particle `σ_xy` contribution
     /// `params`:   simulation parameters packed as `[8]` f64
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(
         &self,
         pos_buf: &wgpu::Buffer,

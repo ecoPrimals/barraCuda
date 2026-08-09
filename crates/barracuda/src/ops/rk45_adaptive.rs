@@ -91,7 +91,10 @@ impl Rk45AdaptiveGpu {
     /// `buffers.new_state_buf`: `[n_systems × dim]` f64 — output state (5th order)
     /// `buffers.error_buf`:     `[n_systems × dim]` f64 — per-variable absolute error
     /// `buffers.scratch_buf`:   `[n_systems × dim × 8]` f64 — k-stage + tmp workspace
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(&self, args: &Rk45DispatchArgs<'_>) {
         let d = self.device.device();
 

@@ -104,7 +104,10 @@ impl RepeatInterleave {
             });
 
         ComputeDispatch::new(device, "RepeatInterleave")
-            .shader(include_str!("../shaders/tensor/repeat_interleave_f64.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/tensor/repeat_interleave_f64.wgsl"),
+                "main",
+            )
             .uniform(0, &params_buffer)
             .storage_read(1, self.input.buffer())
             .storage_rw(2, &output_buffer)

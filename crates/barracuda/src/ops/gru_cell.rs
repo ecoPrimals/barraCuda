@@ -122,10 +122,7 @@ impl GRUCell {
             });
 
         ComputeDispatch::new(device, "GRUCell")
-            .shader(
-                include_str!("../shaders/rnn/gru_cell_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/rnn/gru_cell_f64.wgsl"), "main")
             .storage_read(0, self.input.buffer())
             .storage_read(1, self.weight_ih.buffer())
             .storage_read(2, self.weight_hh.buffer())

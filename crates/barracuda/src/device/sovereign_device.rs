@@ -493,9 +493,10 @@ impl GpuBackend for SovereignDevice {
 
     #[cfg(feature = "sovereign-dispatch")]
     fn download(&self, buffer: &SovereignBuffer, _size: u64) -> Result<bytes::Bytes> {
-        let staged = self.staged_buffers.lock().map_err(|e| {
-            BarracudaError::device_ctx("SovereignDevice: staged lock poisoned", e)
-        })?;
+        let staged = self
+            .staged_buffers
+            .lock()
+            .map_err(|e| BarracudaError::device_ctx("SovereignDevice: staged lock poisoned", e))?;
         // `copy_from_slice` is required here: staged buffers remain mutable
         // (`BytesMut`) for future `upload()` calls, so we cannot `freeze()`
         // in-place. The copy is bounded by buffer size and only occurs on
@@ -528,9 +529,10 @@ impl GpuBackend for SovereignDevice {
         desc.shader_source.hash(&mut hasher);
         let key = hasher.finish();
 
-        let mut cache = self.binary_cache.lock().map_err(|e| {
-            BarracudaError::device_ctx("SovereignDevice: cache lock poisoned", e)
-        })?;
+        let mut cache = self
+            .binary_cache
+            .lock()
+            .map_err(|e| BarracudaError::device_ctx("SovereignDevice: cache lock poisoned", e))?;
 
         let cached = match cache.entry(key) {
             Entry::Occupied(e) => {

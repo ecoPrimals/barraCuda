@@ -11,8 +11,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 
 /// WGSL shader for k-mer histogram computation (atomic increments).
 pub const WGSL_KMER_HISTOGRAM: &str = include_str!("../../shaders/bio/kmer_histogram.wgsl");
@@ -42,7 +42,10 @@ impl KmerHistogramGpu {
     ///
     /// `kmers_buf`: `[n_kmers]` u32 — encoded k-mer hashes (each < 4^k)
     /// `histogram_buf`: `[4^k]` u32 — output histogram (must be zeroed before dispatch)
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(
         &self,
         kmers_buf: &wgpu::Buffer,

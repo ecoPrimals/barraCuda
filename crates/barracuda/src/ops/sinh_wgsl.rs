@@ -24,8 +24,6 @@ impl Sinh {
         Self { input }
     }
 
-
-
     /// Execute hyperbolic sine on GPU.
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
@@ -42,16 +40,11 @@ impl Sinh {
             size: u32,
         }
 
-        let metadata = Metadata {
-            size: size as u32
-        };
+        let metadata = Metadata { size: size as u32 };
         let metadata_buffer = device.create_uniform_buffer("SINH Metadata", &metadata);
 
         ComputeDispatch::new(device, "sinh")
-            .shader(
-                include_str!("../shaders/math/sinh_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/math/sinh_f64.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &metadata_buffer)
@@ -67,7 +60,6 @@ impl Sinh {
 }
 
 impl Tensor {
-
     /// Compute element-wise hyperbolic sine.
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer

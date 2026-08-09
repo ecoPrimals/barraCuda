@@ -174,7 +174,10 @@ pub(super) fn activation_gelu(params: &Value, id: Value) -> JsonRpcResponse {
     let Some(data) = extract_f64_array(params, "data") else {
         return JsonRpcResponse::error(id, INVALID_PARAMS, "Missing required param: data (array)");
     };
-    let result: Vec<f64> = data.iter().map(|&x| barracuda::activations::gelu(x)).collect();
+    let result: Vec<f64> = data
+        .iter()
+        .map(|&x| barracuda::activations::gelu(x))
+        .collect();
     JsonRpcResponse::success(id, serde_json::json!({ "result": result }))
 }
 

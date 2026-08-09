@@ -25,9 +25,9 @@
 //! - Kogut & Susskind, PRD 11, 395 (1975)
 //! - Gattringer & Lang, "QCD on the Lattice" (2010), Ch. 5
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;

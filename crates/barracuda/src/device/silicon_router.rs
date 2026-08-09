@@ -142,7 +142,11 @@ fn route_f16(profile: &SiliconProfile, requirements: &WorkloadRequirements) -> S
         }
         GpuVendorTag::Nvidia => {
             if profile.has_tensor_cores() {
-                choice(profile, SiliconUnit::TensorCore, requirements.arithmetic_intensity)
+                choice(
+                    profile,
+                    SiliconUnit::TensorCore,
+                    requirements.arithmetic_intensity,
+                )
             } else {
                 route_fp32(profile, requirements)
             }
@@ -151,37 +155,36 @@ fn route_f16(profile: &SiliconProfile, requirements: &WorkloadRequirements) -> S
     }
 }
 
-fn route_f64(
-    profile: &SiliconProfile,
-    requirements: &WorkloadRequirements,
-) -> SubstrateChoice {
+fn route_f64(profile: &SiliconProfile, requirements: &WorkloadRequirements) -> SubstrateChoice {
     if profile.has_unit(SiliconUnit::Fp64Alu) && profile.fp64_fp32_ratio() >= 0.1 {
-        choice(profile, SiliconUnit::Fp64Alu, requirements.arithmetic_intensity)
+        choice(
+            profile,
+            SiliconUnit::Fp64Alu,
+            requirements.arithmetic_intensity,
+        )
     } else {
         route_df64(profile, requirements)
     }
 }
 
-fn route_df64(
-    profile: &SiliconProfile,
-    requirements: &WorkloadRequirements,
-) -> SubstrateChoice {
+fn route_df64(profile: &SiliconProfile, requirements: &WorkloadRequirements) -> SubstrateChoice {
     if profile.df64_tflops > 0.0 && profile.has_unit(SiliconUnit::Fp32Alu) {
         SubstrateChoice {
             unit: SiliconUnit::Fp32Alu,
             expected_throughput_gflops: profile.df64_tflops * 1000.0,
         }
     } else if profile.has_unit(SiliconUnit::Fp64Alu) {
-        choice(profile, SiliconUnit::Fp64Alu, requirements.arithmetic_intensity)
+        choice(
+            profile,
+            SiliconUnit::Fp64Alu,
+            requirements.arithmetic_intensity,
+        )
     } else {
         route_fp32(profile, requirements)
     }
 }
 
-fn route_fp32(
-    profile: &SiliconProfile,
-    requirements: &WorkloadRequirements,
-) -> SubstrateChoice {
+fn route_fp32(profile: &SiliconProfile, requirements: &WorkloadRequirements) -> SubstrateChoice {
     if requirements.arithmetic_intensity < MEMORY_BOUND_AI_THRESHOLD {
         if profile.has_unit(SiliconUnit::MemoryBandwidth) {
             return choice(
@@ -208,9 +211,17 @@ fn route_fp32(
     }
 
     if profile.has_unit(SiliconUnit::Fp32Alu) {
-        choice(profile, SiliconUnit::Fp32Alu, requirements.arithmetic_intensity)
+        choice(
+            profile,
+            SiliconUnit::Fp32Alu,
+            requirements.arithmetic_intensity,
+        )
     } else if profile.has_unit(SiliconUnit::Fp64Alu) {
-        choice(profile, SiliconUnit::Fp64Alu, requirements.arithmetic_intensity)
+        choice(
+            profile,
+            SiliconUnit::Fp64Alu,
+            requirements.arithmetic_intensity,
+        )
     } else {
         choice(
             profile,
@@ -300,8 +311,8 @@ pub fn route_workload(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::silicon_profile::UnitThroughput;
+    use super::*;
     use std::collections::BTreeMap;
 
     fn nvidia_profile() -> SiliconProfile {
@@ -468,14 +479,18 @@ mod tests {
         let profile = nvidia_profile();
         let substrates = profile.available_substrates();
         assert_eq!(substrates.len(), 9);
-        assert!(substrates
-            .iter()
-            .find(|s| s.unit == SiliconUnit::Fp32Alu)
-            .is_some_and(|s| s.available));
-        assert!(substrates
-            .iter()
-            .find(|s| s.unit == SiliconUnit::SharedMemory)
-            .is_some_and(|s| !s.available));
+        assert!(
+            substrates
+                .iter()
+                .find(|s| s.unit == SiliconUnit::Fp32Alu)
+                .is_some_and(|s| s.available)
+        );
+        assert!(
+            substrates
+                .iter()
+                .find(|s| s.unit == SiliconUnit::SharedMemory)
+                .is_some_and(|s| !s.available)
+        );
     }
 
     #[test]

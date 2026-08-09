@@ -158,7 +158,10 @@ impl TriangularSolveF64 {
         );
 
         ComputeDispatch::new(&device, "TriangularSolve F64 Transpose")
-            .shader(TriangularSolve::wgsl_shader_f64(), "triangular_solve_transpose_f64")
+            .shader(
+                TriangularSolve::wgsl_shader_f64(),
+                "triangular_solve_transpose_f64",
+            )
             .f64()
             .storage_read(0, &matrix_buffer)
             .storage_read(1, &rhs_buffer)

@@ -153,10 +153,7 @@ impl SGDW {
             });
 
         ComputeDispatch::new(device, "SGDW")
-            .shader(
-                include_str!("../shaders/optimizer/sgdw_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/optimizer/sgdw_f64.wgsl"), "main")
             .uniform(0, &params_buffer)
             .storage_read(1, &parameters_buffer)
             .storage_read(2, self.gradients.buffer())

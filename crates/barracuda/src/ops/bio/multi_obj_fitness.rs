@@ -11,8 +11,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 
 /// WGSL source for multi-objective fitness (f32).
 pub const WGSL_MULTI_OBJ_FITNESS: &str = include_str!("../../shaders/bio/multi_obj_fitness.wgsl");
@@ -46,7 +46,10 @@ impl MultiObjFitnessGpu {
     ///
     /// `genotypes_buf`: `[pop × genome_len]` f64
     /// `fitness_buf`: `[pop × n_obj]` f64
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(
         &self,
         genotypes_buf: &wgpu::Buffer,

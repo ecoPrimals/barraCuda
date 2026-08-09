@@ -13,8 +13,8 @@
 //! Absorbed from neuralSpring `metalForge/shaders/wright_fisher_step.wgsl`
 //! (Papers 024/025 — pangenome selection, meta-population dynamics).
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -155,7 +155,10 @@ impl WrightFisherF32 {
             });
 
         ComputeDispatch::new(dev, "WrightFisher")
-            .shader(include_str!("../shaders/science/wright_fisher_step_f32.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/science/wright_fisher_step_f32.wgsl"),
+                "main",
+            )
             .storage_read(0, &freq_buf)
             .storage_read(1, &sel_buf)
             .storage_rw(2, &out_buf)
@@ -194,7 +197,6 @@ fn splitmix32(mut z: u32) -> u32 {
     z = (z ^ (z >> 13)).wrapping_mul(0xC2B2_AE35);
     z ^ (z >> 16)
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -24,8 +24,6 @@ impl Reciprocal {
         Self { input }
     }
 
-
-
     /// Execute the reciprocal operation
     ///
     /// # Errors
@@ -44,16 +42,11 @@ impl Reciprocal {
             size: u32,
         }
 
-        let params = Params {
-            size: size as u32
-        };
+        let params = Params { size: size as u32 };
         let params_buffer = device.create_uniform_buffer("Reciprocal Params", &params);
 
         ComputeDispatch::new(device, "reciprocal")
-            .shader(
-                include_str!("../shaders/math/reciprocal_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/math/reciprocal_f64.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
@@ -69,7 +62,6 @@ impl Reciprocal {
 }
 
 impl Tensor {
-
     /// Compute reciprocal element-wise
     ///
     /// # Errors

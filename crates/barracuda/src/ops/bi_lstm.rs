@@ -121,10 +121,7 @@ impl BiLSTM {
             });
 
         ComputeDispatch::new(device, "BiLSTM")
-            .shader(
-                include_str!("../shaders/rnn/bi_lstm_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/rnn/bi_lstm_f64.wgsl"), "main")
             .storage_read(0, self.input.buffer())
             .storage_read(1, self.weight_ih.buffer())
             .storage_read(2, self.weight_hh.buffer())

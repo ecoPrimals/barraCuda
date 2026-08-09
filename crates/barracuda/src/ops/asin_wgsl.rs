@@ -24,8 +24,6 @@ impl Asin {
         Self { input }
     }
 
-
-
     /// Execute arcsin on GPU.
     ///
     /// # Errors
@@ -44,16 +42,11 @@ impl Asin {
             size: u32,
         }
 
-        let metadata = Metadata {
-            size: size as u32
-        };
+        let metadata = Metadata { size: size as u32 };
         let metadata_buffer = device.create_uniform_buffer("Asin Metadata", &metadata);
 
         ComputeDispatch::new(device, "asin")
-            .shader(
-                include_str!("../shaders/math/asin_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/math/asin_f64.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &metadata_buffer)
@@ -69,7 +62,6 @@ impl Asin {
 }
 
 impl Tensor {
-
     /// Element-wise arcsine (inverse sine).
     ///
     /// # Errors

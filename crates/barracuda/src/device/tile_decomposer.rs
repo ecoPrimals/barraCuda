@@ -46,11 +46,7 @@ impl TileDecomposer {
 
     /// Create a decomposer with explicit grid rank (number of dimensions).
     #[must_use]
-    pub fn from_profile_with_rank(
-        profile: &SiliconProfile,
-        element_bytes: u32,
-        rank: u32,
-    ) -> Self {
+    pub fn from_profile_with_rank(profile: &SiliconProfile, element_bytes: u32, rank: u32) -> Self {
         let cache_bytes = profile.l2_bytes.max(profile.infinity_cache_bytes);
         let tile_shape = compute_tile_shape(cache_bytes, element_bytes, rank);
         Self {
@@ -83,7 +79,14 @@ impl TileDecomposer {
 
         let mut offsets = vec![0u32; rank];
         let mut tiles = Vec::new();
-        decompose_recursive(grid_shape, &tile_dims, &mut offsets, 0, &mut tiles, self.halo_width);
+        decompose_recursive(
+            grid_shape,
+            &tile_dims,
+            &mut offsets,
+            0,
+            &mut tiles,
+            self.halo_width,
+        );
         tiles
     }
 
@@ -109,9 +112,8 @@ fn compute_tile_shape(cache_bytes: u64, element_bytes: u32, rank: u32) -> Vec<u3
         return vec![1; rank as usize];
     }
 
-    let usable_cache = cache_bytes
-        .saturating_mul(CACHE_USABLE_NUMERATOR)
-        / CACHE_USABLE_DENOMINATOR;
+    let usable_cache =
+        cache_bytes.saturating_mul(CACHE_USABLE_NUMERATOR) / CACHE_USABLE_DENOMINATOR;
     let elements_per_tile = usable_cache / u64::from(element_bytes);
     if elements_per_tile == 0 {
         return vec![1; rank as usize];
@@ -273,6 +275,9 @@ mod tests {
         let profile = profile_with_cache(GpuVendorTag::Amd, 0, 128 * 1024 * 1024);
         let decomposer = TileDecomposer::from_profile_with_rank(&profile, 4, 3);
         let grid = [32u32, 32, 32];
-        assert_eq!(decomposer.decompose(&grid).len(), decomposer.tile_count(&grid));
+        assert_eq!(
+            decomposer.decompose(&grid).len(),
+            decomposer.tile_count(&grid)
+        );
     }
 }

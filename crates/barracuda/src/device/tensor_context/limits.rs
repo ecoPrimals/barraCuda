@@ -124,7 +124,8 @@ pub fn high_capacity_limits() -> wgpu::Limits {
     wgpu::Limits {
         max_storage_buffer_binding_size: DESIRED_HIGH_CAPACITY_MAX_STORAGE_BUFFER_BINDING_SIZE,
         max_buffer_size: DESIRED_HIGH_CAPACITY_MAX_BUFFER_SIZE,
-        max_storage_buffers_per_shader_stage: DESIRED_HIGH_CAPACITY_MAX_STORAGE_BUFFERS_PER_SHADER_STAGE,
+        max_storage_buffers_per_shader_stage:
+            DESIRED_HIGH_CAPACITY_MAX_STORAGE_BUFFERS_PER_SHADER_STAGE,
         ..wgpu::Limits::default()
     }
 }
@@ -145,7 +146,11 @@ pub fn high_capacity_limits_from_adapter(adapter: &wgpu::Adapter) -> wgpu::Limit
 mod tests {
     use super::*;
 
-    fn hardware_limits(max_buffer: u64, max_binding: u32, max_storage_buffers: u32) -> wgpu::Limits {
+    fn hardware_limits(
+        max_buffer: u64,
+        max_binding: u32,
+        max_storage_buffers: u32,
+    ) -> wgpu::Limits {
         wgpu::Limits {
             max_buffer_size: max_buffer,
             max_storage_buffer_binding_size: max_binding,
@@ -230,6 +235,9 @@ mod tests {
             limits.max_storage_buffer_binding_size,
             DESIRED_HIGH_CAPACITY_MAX_STORAGE_BUFFER_BINDING_SIZE
         );
-        assert_eq!(limits.max_buffer_size, DESIRED_HIGH_CAPACITY_MAX_BUFFER_SIZE);
+        assert_eq!(
+            limits.max_buffer_size,
+            DESIRED_HIGH_CAPACITY_MAX_BUFFER_SIZE
+        );
     }
 }

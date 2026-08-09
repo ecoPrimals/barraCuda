@@ -260,9 +260,7 @@ fn mean_gpu(data: &[f64], device: &Arc<WgpuDevice>) -> Result<f64> {
     let t = Tensor::from_data(&data_f32, vec![n], device.clone())
         .map_err(|e| BarracudaError::gpu_ctx("mean upload", e))?;
 
-    let m = t
-        .mean()
-        .map_err(|e| BarracudaError::gpu_ctx("mean", e))?;
+    let m = t.mean().map_err(|e| BarracudaError::gpu_ctx("mean", e))?;
 
     let result = m
         .to_vec()

@@ -28,8 +28,8 @@ mod pool;
 
 pub use context::{TensorContext, TensorContextStats, clear_global_contexts, get_device_context};
 pub use limits::{
-    high_capacity_limits, high_capacity_limits_from_adapter, negotiate_buffer_limits,
-    science_limits, science_limits_from_adapter, NegotiatedLimits,
+    NegotiatedLimits, high_capacity_limits, high_capacity_limits_from_adapter,
+    negotiate_buffer_limits, science_limits, science_limits_from_adapter,
 };
 pub use pool::{BufferDescriptor, BufferPool, PooledBuffer, SolverBufferSet};
 

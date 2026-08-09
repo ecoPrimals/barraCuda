@@ -148,10 +148,7 @@ impl Tile {
             });
 
         ComputeDispatch::new(device, "Tile")
-            .shader(
-                include_str!("../shaders/tensor/tile_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/tensor/tile_f64.wgsl"), "main")
             .uniform(0, &params_buffer)
             .storage_read(1, input_buffer)
             .storage_read(2, &input_shape_buffer)

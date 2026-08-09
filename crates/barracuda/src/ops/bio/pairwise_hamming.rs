@@ -12,8 +12,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 
 const WGSL_PAIRWISE_HAMMING: &str = include_str!("../../shaders/math/pairwise_hamming_f64.wgsl");
 
@@ -40,7 +40,10 @@ impl PairwiseHammingGpu {
     ///
     /// `sequences_buf`: `[n_seqs × seq_len]` u32 (nucleotide codes)
     /// `distances_buf`: `[n_seqs*(n_seqs-1)/2]` f32 (normalized distances)
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(
         &self,
         sequences_buf: &wgpu::Buffer,

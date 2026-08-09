@@ -26,8 +26,6 @@ impl Hardswish {
         Self { input }
     }
 
-
-
     /// Execute the hardswish operation
     ///
     /// # Errors
@@ -46,9 +44,7 @@ impl Hardswish {
             size: u32,
         }
 
-        let params = Params {
-            size: size as u32
-        };
+        let params = Params { size: size as u32 };
         let params_buffer = device.create_uniform_buffer("Hardswish Params", &params);
 
         ComputeDispatch::new(device, "hardswish")
@@ -71,7 +67,6 @@ impl Hardswish {
 }
 
 impl Tensor {
-
     /// Compute hardswish element-wise
     ///
     /// # Errors

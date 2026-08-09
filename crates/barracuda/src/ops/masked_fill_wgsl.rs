@@ -82,7 +82,10 @@ impl MaskedFill {
         let params_buffer = device.create_uniform_buffer("MaskedFill Params", &params);
 
         ComputeDispatch::new(device, "MaskedFill")
-            .shader(include_str!("../shaders/tensor/masked_fill_f64.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/tensor/masked_fill_f64.wgsl"),
+                "main",
+            )
             .storage_read(0, input_buffer)
             .storage_read(1, &mask_buffer)
             .storage_rw(2, &output_buffer)

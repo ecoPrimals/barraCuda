@@ -81,7 +81,10 @@ impl FakeQuantize {
             .write_buffer(&params_buffer, 0, bytemuck::bytes_of(&params));
 
         ComputeDispatch::new(device, "FakeQuantize")
-            .shader(include_str!("../shaders/misc/fake_quantize_f64.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/misc/fake_quantize_f64.wgsl"),
+                "main",
+            )
             .storage_read(0, self.input.buffer())
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)

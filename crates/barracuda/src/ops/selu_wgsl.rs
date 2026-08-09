@@ -24,8 +24,6 @@ impl SELU {
         Self { input }
     }
 
-
-
     /// Execute the selu operation
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
@@ -42,16 +40,11 @@ impl SELU {
             size: u32,
         }
 
-        let params = Params {
-            size: size as u32
-        };
+        let params = Params { size: size as u32 };
         let params_buffer = device.create_uniform_buffer("SELU Params", &params);
 
         ComputeDispatch::new(device, "selu")
-            .shader(
-                include_str!("../shaders/activation/selu_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/activation/selu_f64.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
@@ -67,7 +60,6 @@ impl SELU {
 }
 
 impl Tensor {
-
     /// Compute selu element-wise
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer

@@ -23,9 +23,9 @@
 //!    i. p = r + β·p  (xpay)
 //!    j. Check convergence: `new_rr` < tol² × `b_norm²`
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::pipeline::ReduceScalarPipeline;
 use std::sync::Arc;

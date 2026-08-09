@@ -15,8 +15,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 
 const WGSL_PAIRWISE_JACCARD: &str = include_str!("../../shaders/math/pairwise_jaccard_f64.wgsl");
 
@@ -43,7 +43,10 @@ impl PairwiseJaccardGpu {
     ///
     /// `pa_buf`: `[n_genes × n_genomes]` f32, column-major (1.0 = present, 0.0 = absent)
     /// `distances_buf`: `[n_genomes*(n_genomes-1)/2]` f32
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(
         &self,
         pa_buf: &wgpu::Buffer,

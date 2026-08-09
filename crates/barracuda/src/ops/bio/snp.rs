@@ -10,8 +10,8 @@
 //!
 //! wetSpring handoff v6, `snp_calling_f64.wgsl` — 5/5 GPU checks PASS.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -31,7 +31,7 @@ pub struct SnpCallingF64 {
 }
 
 impl SnpCallingF64 {
-     /// Create SNP calling pipeline.
+    /// Create SNP calling pipeline.
     ///
     /// # Errors
     ///

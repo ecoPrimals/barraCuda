@@ -136,10 +136,7 @@ impl SearchSorted {
         )?;
         batch.push(
             ComputeDispatch::new(device, "SearchSorted Convert")
-                .shader(
-                    include_str!("../shaders/misc/u32_to_f32_f64.wgsl"),
-                    "main",
-                )
+                .shader(include_str!("../shaders/misc/u32_to_f32_f64.wgsl"), "main")
                 .uniform(0, &convert_params_buffer)
                 .storage_read(1, &output_buffer)
                 .storage_rw(2, &indices_f32_buffer)

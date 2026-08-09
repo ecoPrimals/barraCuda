@@ -18,8 +18,8 @@
 //! Uses bilinear interpolation for smooth sampling
 //! ```
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
@@ -92,8 +92,7 @@ impl GridSample {
         let params_buffer = device.create_uniform_buffer("Params", &params_data);
 
         let caps = DeviceCapabilities::from_device(device);
-        let (workgroups_x, workgroups_y) =
-            caps.dispatch_2d(out_width as u32, out_height as u32);
+        let (workgroups_x, workgroups_y) = caps.dispatch_2d(out_width as u32, out_height as u32);
 
         ComputeDispatch::new(device, "GridSample")
             .shader(include_str!("../shaders/misc/grid_sample_f64.wgsl"), "main")

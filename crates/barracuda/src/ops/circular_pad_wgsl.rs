@@ -8,8 +8,8 @@
 //! - Complete implementation: Production-ready, no mocks
 //! - Hardware-agnostic: Pure WGSL for universal compute
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::DeviceCapabilities;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use crate::tensor::Tensor;
 
@@ -92,7 +92,10 @@ impl CircularPad {
         let (workgroups_x, workgroups_y) = caps.dispatch_2d(out_width as u32, out_height as u32);
 
         ComputeDispatch::new(device, "CircularPad")
-            .shader(include_str!("../shaders/tensor/circular_pad_f64.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/tensor/circular_pad_f64.wgsl"),
+                "main",
+            )
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)

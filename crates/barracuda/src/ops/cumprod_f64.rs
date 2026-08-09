@@ -16,9 +16,9 @@
 //! - Zero unsafe code
 //! - Self-contained (no external dependencies)
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use crate::tensor::Tensor;
 use bytemuck::{Pod, Zeroable};
@@ -168,7 +168,10 @@ impl CumprodF64 {
         let workgroups = total_pairs.div_ceil(WORKGROUP_SIZE_1D);
 
         ComputeDispatch::new(device, "CumprodF64")
-            .shader(include_str!("../shaders/reduce/cumprod_f64.wgsl"), self.entry_point())
+            .shader(
+                include_str!("../shaders/reduce/cumprod_f64.wgsl"),
+                self.entry_point(),
+            )
             .f64()
             .storage_read(0, self.input.buffer())
             .storage_rw(1, &output_buffer)

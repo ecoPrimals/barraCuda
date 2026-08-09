@@ -17,8 +17,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 
 /// f64 canonical — f32 derived via `downcast_f64_to_f32` when needed.
 pub const WGSL_WRIGHT_FISHER_F64: &str =
@@ -51,7 +51,10 @@ impl WrightFisherGpu {
     /// `selection_buf`:  `[n_loci]` f64 — selection coefficients
     /// `freq_out_buf`:   `[n_pops × n_loci]` f64 — output frequencies
     /// `prng_state_buf`: `[n_pops × n_loci × 4]` u32 — PRNG state
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(
         &self,
         freq_in_buf: &wgpu::Buffer,

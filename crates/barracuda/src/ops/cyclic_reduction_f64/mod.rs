@@ -282,13 +282,14 @@ impl CyclicReductionF64 {
                 phase: 0,
                 _pad: 0,
             };
-            let params_buf = self.device.device.create_buffer_init(
-                &wgpu::util::BufferInitDescriptor {
-                    label: Some("Params"),
-                    contents: bytemuck::bytes_of(&params),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                },
-            );
+            let params_buf =
+                self.device
+                    .device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Params"),
+                        contents: bytemuck::bytes_of(&params),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    });
             let n_threads = n_padded >> (step + 1);
             let n_workgroups = n_threads.div_ceil(workgroup_size as usize);
             ComputeDispatch::new(self.device.as_ref(), "Cyclic Reduction")
@@ -310,13 +311,14 @@ impl CyclicReductionF64 {
                 phase: 1,
                 _pad: 0,
             };
-            let params_buf = self.device.device.create_buffer_init(
-                &wgpu::util::BufferInitDescriptor {
-                    label: Some("Params"),
-                    contents: bytemuck::bytes_of(&params),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                },
-            );
+            let params_buf =
+                self.device
+                    .device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Params"),
+                        contents: bytemuck::bytes_of(&params),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    });
             let n_threads = n_padded >> (step + 1);
             let n_workgroups = n_threads.div_ceil(workgroup_size as usize);
             ComputeDispatch::new(self.device.as_ref(), "Cyclic Substitution")

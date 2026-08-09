@@ -123,7 +123,10 @@ impl CyclicalLr {
             .write_buffer(&params_buffer, 0, bytemuck::bytes_of(&params));
 
         ComputeDispatch::new(device, "CyclicalLr")
-            .shader(include_str!("../shaders/optimizer/cyclical_lr_f64.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/optimizer/cyclical_lr_f64.wgsl"),
+                "main",
+            )
             .storage_rw(0, &output_buffer)
             .uniform(1, &params_buffer)
             .dispatch(1, 1, 1)

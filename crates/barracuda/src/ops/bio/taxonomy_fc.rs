@@ -12,8 +12,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 
 /// WGSL shader for taxonomy naive Bayes fully-connected classification.
 pub const WGSL_TAXONOMY_FC: &str = include_str!("../../shaders/bio/taxonomy_fc.wgsl");
@@ -45,7 +45,10 @@ impl TaxonomyFcGpu {
     /// `log_priors_buf`: `[n_taxa]` f64 — log prior probabilities
     /// `features_buf`: `[n_queries × n_features]` u32 — binary feature vectors
     /// `scores_buf`: `[n_queries × n_taxa]` f64 — output log-posterior scores
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(
         &self,
         log_probs_buf: &wgpu::Buffer,

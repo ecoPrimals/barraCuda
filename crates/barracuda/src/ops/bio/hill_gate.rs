@@ -61,7 +61,10 @@ impl HillGateGpu {
 
     /// Compute Hill gate. Mode 0: paired (output[i] = f(a[i], b[i])).
     /// Mode 1: grid (output[ix*`n_b` + iy] = f(a[ix], b[iy])).
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(
         &self,
         input_a: &wgpu::Buffer,

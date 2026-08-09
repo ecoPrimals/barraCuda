@@ -24,8 +24,6 @@ impl LogSigmoid {
         Self { input }
     }
 
-
-
     /// Execute the logsigmoid operation
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
@@ -42,9 +40,7 @@ impl LogSigmoid {
             size: u32,
         }
 
-        let params = Params {
-            size: size as u32
-        };
+        let params = Params { size: size as u32 };
         let params_buffer = device.create_uniform_buffer("LogSigmoid Params", &params);
 
         ComputeDispatch::new(device, "logsigmoid")
@@ -67,7 +63,6 @@ impl LogSigmoid {
 }
 
 impl Tensor {
-
     /// Compute logsigmoid element-wise
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer

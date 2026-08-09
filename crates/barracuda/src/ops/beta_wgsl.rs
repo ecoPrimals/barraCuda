@@ -35,10 +35,7 @@ impl Beta {
         let params_buffer = device.create_uniform_buffer("Beta Params", &params);
 
         ComputeDispatch::new(device, "beta")
-            .shader(
-                include_str!("../shaders/special/beta.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/special/beta.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)

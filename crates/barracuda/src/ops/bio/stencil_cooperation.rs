@@ -16,8 +16,8 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 
 /// WGSL source for stencil cooperation (f32).
 pub const WGSL_STENCIL_COOPERATION: &str =
@@ -57,7 +57,10 @@ impl StencilCooperationGpu {
     /// `new_strategies_buf`: `[grid_size²]` u32 — output strategies
     /// `kappa`:              selection intensity (temperature)
     /// `step`:               current generation (for neighbor rotation)
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(
         &self,
         strategies_buf: &wgpu::Buffer,

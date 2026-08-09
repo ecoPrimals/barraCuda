@@ -48,7 +48,10 @@ impl BatchFitnessGpu {
     /// `population_buf`: `[pop_size × genome_len]` f64 (row-major genotypes)
     /// `weights_buf`:    `[genome_len]` f64
     /// `fitness_buf`:    `[pop_size]` f64 (output)
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(
         &self,
         population_buf: &wgpu::Buffer,

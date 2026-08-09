@@ -47,8 +47,8 @@ async fn main() {
     }
     println!();
 
-    let selected =
-        std::env::var(barracuda::env_keys::BARRACUDA_GPU_ADAPTER).unwrap_or_else(|_| "auto".to_string());
+    let selected = std::env::var(barracuda::env_keys::BARRACUDA_GPU_ADAPTER)
+        .unwrap_or_else(|_| "auto".to_string());
     println!("BARRACUDA_GPU_ADAPTER = {selected}\n");
 
     let device = match WgpuDevice::from_env().await {

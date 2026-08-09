@@ -20,8 +20,8 @@
 //! - Chains with `cyclic_reduction` for the tridiagonal solve
 //! - Safe Rust wrapper (no unsafe code)
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;

@@ -129,16 +129,12 @@ pub(super) fn submit_dispatch(
 
             tokio::io::AsyncWriteExt::write_all(&mut stream, http_request.as_bytes())
                 .await
-                .map_err(|e| {
-                    BarracudaError::device_ctx("SovereignDevice: dispatch write", e)
-                })?;
+                .map_err(|e| BarracudaError::device_ctx("SovereignDevice: dispatch write", e))?;
 
             let mut response_buf = Vec::new();
             tokio::io::AsyncReadExt::read_to_end(&mut stream, &mut response_buf)
                 .await
-                .map_err(|e| {
-                    BarracudaError::device_ctx("SovereignDevice: dispatch read", e)
-                })?;
+                .map_err(|e| BarracudaError::device_ctx("SovereignDevice: dispatch read", e))?;
 
             let response_str = String::from_utf8_lossy(&response_buf);
             let json_start = response_str.find('{').ok_or_else(|| {
@@ -146,9 +142,7 @@ pub(super) fn submit_dispatch(
             })?;
 
             let rpc_response: serde_json::Value = serde_json::from_str(&response_str[json_start..])
-                .map_err(|e| {
-                    BarracudaError::device_ctx("SovereignDevice: parse response", e)
-                })?;
+                .map_err(|e| BarracudaError::device_ctx("SovereignDevice: parse response", e))?;
 
             if let Some(error) = rpc_response.get("error") {
                 let msg = error

@@ -68,7 +68,10 @@ impl SwarmNnGpu {
     /// `weights_buf`: `[n_controllers × weights_per_ctrl]` f64
     /// `inputs_buf`: `[n_controllers × n_evals × input_dim]` f64
     /// `actions_buf`: `[n_controllers × n_evals]` u32
-    #[expect(clippy::missing_panics_doc, reason = "dispatch submit is infallible on valid device")]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "dispatch submit is infallible on valid device"
+    )]
     pub fn dispatch(
         &self,
         weights_buf: &wgpu::Buffer,

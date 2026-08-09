@@ -24,8 +24,6 @@ impl GeluApproximate {
         Self { input }
     }
 
-
-
     /// Execute the `gelu_approximate` operation
     ///
     /// # Errors
@@ -44,9 +42,7 @@ impl GeluApproximate {
             size: u32,
         }
 
-        let params = Params {
-            size: size as u32
-        };
+        let params = Params { size: size as u32 };
         let params_buffer = device.create_uniform_buffer("GeluApproximate Params", &params);
 
         ComputeDispatch::new(device, "geluapproximate")
@@ -69,7 +65,6 @@ impl GeluApproximate {
 }
 
 impl Tensor {
-
     /// Compute `gelu_approximate` element-wise
     ///
     /// # Errors

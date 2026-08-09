@@ -15,9 +15,9 @@ use std::sync::Arc;
 
 use wgpu::util::DeviceExt;
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
+use crate::device::compute_pipeline::ComputeDispatch;
 
 /// WGSL source for `UniFrac` tree propagation (leaf init + `propagate_level`).
 pub const WGSL_UNIFRAC_PROPAGATE: &str = include_str!("../../shaders/bio/unifrac_propagate.wgsl");

@@ -31,10 +31,7 @@ impl Sign {
         let params_buffer = device.create_uniform_buffer("Sign Params", &params);
 
         ComputeDispatch::new(device, "sign")
-            .shader(
-                include_str!("../shaders/math/sign_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/math/sign_f64.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)

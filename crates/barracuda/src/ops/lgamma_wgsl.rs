@@ -24,8 +24,6 @@ impl Lgamma {
         Self { input }
     }
 
-
-
     /// Execute log-gamma on GPU.
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
@@ -42,16 +40,11 @@ impl Lgamma {
             size: u32,
         }
 
-        let metadata = Metadata {
-            size: size as u32
-        };
+        let metadata = Metadata { size: size as u32 };
         let metadata_buffer = device.create_uniform_buffer("LGAMMA Metadata", &metadata);
 
         ComputeDispatch::new(device, "lgamma")
-            .shader(
-                include_str!("../shaders/math/lgamma_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/math/lgamma_f64.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &metadata_buffer)
@@ -67,7 +60,6 @@ impl Lgamma {
 }
 
 impl Tensor {
-
     /// Compute element-wise ln(Γ(x)).
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer

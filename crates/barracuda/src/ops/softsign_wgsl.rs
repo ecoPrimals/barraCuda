@@ -26,8 +26,6 @@ impl Softsign {
         Self { input }
     }
 
-
-
     /// Execute the softsign operation
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
@@ -44,9 +42,7 @@ impl Softsign {
             size: u32,
         }
 
-        let params = Params {
-            size: size as u32
-        };
+        let params = Params { size: size as u32 };
         let params_buffer = device.create_uniform_buffer("Softsign Params", &params);
 
         ComputeDispatch::new(device, "softsign")
@@ -69,7 +65,6 @@ impl Softsign {
 }
 
 impl Tensor {
-
     /// Compute softsign element-wise
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer

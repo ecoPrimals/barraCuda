@@ -29,10 +29,7 @@ impl Unsqueeze {
         let output_buffer = device.create_buffer_f32(size)?;
 
         ComputeDispatch::new(device, "Unsqueeze")
-            .shader(
-                include_str!("../shaders/tensor/unsqueeze_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/tensor/unsqueeze_f64.wgsl"), "main")
             .storage_read(0, self.input.buffer())
             .storage_rw(1, &output_buffer)
             .dispatch_1d(size as u32)

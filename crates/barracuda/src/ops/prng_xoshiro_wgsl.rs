@@ -80,7 +80,10 @@ impl PrngXoshiro {
         let params_buffer = device.create_uniform_buffer("PRNG Xoshiro Params", &params);
 
         ComputeDispatch::new(device, "PRNG Xoshiro")
-            .shader(include_str!("../shaders/misc/prng_xoshiro_f64.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/misc/prng_xoshiro_f64.wgsl"),
+                "main",
+            )
             .f64()
             .storage_read(0, &seeds_buffer)
             .storage_rw(1, &output_buffer)

@@ -90,10 +90,7 @@ impl SparseGemmF64<'_> {
             });
 
         ComputeDispatch::new(device, "spmm_f64")
-            .shader(
-                include_str!("../shaders/sparse/spmm_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/sparse/spmm_f64.wgsl"), "main")
             .f64()
             .storage_read(0, &values_buf)
             .storage_read(1, &col_buf)

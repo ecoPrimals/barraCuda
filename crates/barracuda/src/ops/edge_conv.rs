@@ -104,10 +104,7 @@ impl EdgeConv {
             });
 
         ComputeDispatch::new(device, "EdgeConv")
-            .shader(
-                include_str!("../shaders/gnn/edge_conv_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/gnn/edge_conv_f64.wgsl"), "main")
             .storage_read(0, self.node_features.buffer())
             .storage_read(1, self.edge_offsets.buffer())
             .storage_read(2, self.edge_targets.buffer())

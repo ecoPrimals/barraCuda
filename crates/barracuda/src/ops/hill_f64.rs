@@ -12,8 +12,8 @@
 //!
 //! Set `emax = 1.0` for the normalized Hill activation in \[0, 1\].
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::{BarracudaError, Result};
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;

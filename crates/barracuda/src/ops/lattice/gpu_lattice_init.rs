@@ -3,9 +3,9 @@
 //!
 //! Replaces CPU-only `wilson.rs` `cold_start/hot_start` with GPU shaders.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
 use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use std::sync::Arc;
 
@@ -67,7 +67,14 @@ impl GpuLatticeInit {
         volume: u32,
         epsilon: f64,
     ) -> Result<()> {
-        self.dispatch(links_buf, rng_buf, volume, epsilon, "hot_start", "hot_start")
+        self.dispatch(
+            links_buf,
+            rng_buf,
+            volume,
+            epsilon,
+            "hot_start",
+            "hot_start",
+        )
     }
 
     fn dispatch(

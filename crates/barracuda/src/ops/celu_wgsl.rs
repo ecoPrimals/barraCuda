@@ -24,8 +24,6 @@ impl CELU {
         Self { input }
     }
 
-
-
     /// Execute the celu operation
     ///
     /// # Errors
@@ -52,10 +50,7 @@ impl CELU {
         let params_buffer = device.create_uniform_buffer("CELU Params", &params);
 
         ComputeDispatch::new(device, "celu")
-            .shader(
-                include_str!("../shaders/activation/celu_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/activation/celu_f64.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
@@ -71,7 +66,6 @@ impl CELU {
 }
 
 impl Tensor {
-
     /// Compute celu element-wise
     ///
     /// # Errors

@@ -108,12 +108,7 @@ impl RiverScheduler {
 
     /// Plan a single transfer between memory tiers.
     #[must_use]
-    pub fn plan_transfer(
-        &self,
-        size_bytes: u64,
-        src: MemoryTier,
-        dst: MemoryTier,
-    ) -> TransferPlan {
+    pub fn plan_transfer(&self, size_bytes: u64, src: MemoryTier, dst: MemoryTier) -> TransferPlan {
         let bandwidth = self.path_bandwidth_bytes_sec(src, dst);
         let estimated_time_us = transfer_time_us(size_bytes, bandwidth);
         TransferPlan {
@@ -144,8 +139,8 @@ impl RiverScheduler {
         let achieved_bps = (total_bytes as f64) / (total_time_us as f64 / 1_000_000.0);
         let raw = achieved_bps / self.pcie_bandwidth_bytes_sec as f64;
 
-        let pipelining_factor =
-            (self.num_staging_buffers as f64).min(2.0) * (TARGET_PCIE_UTILIZATION / BASELINE_PCIE_UTILIZATION);
+        let pipelining_factor = (self.num_staging_buffers as f64).min(2.0)
+            * (TARGET_PCIE_UTILIZATION / BASELINE_PCIE_UTILIZATION);
         (raw * pipelining_factor).min(1.0)
     }
 
@@ -155,9 +150,9 @@ impl RiverScheduler {
 
         match (src, dst) {
             (Host, StagingBuffer(_)) | (StagingBuffer(_), Host) => self.pcie_bandwidth_bytes_sec,
-            (StagingBuffer(_), Vram) | (Vram, StagingBuffer(_)) => {
-                self.pcie_bandwidth_bytes_sec.min(self.vram_bandwidth_bytes_sec)
-            }
+            (StagingBuffer(_), Vram) | (Vram, StagingBuffer(_)) => self
+                .pcie_bandwidth_bytes_sec
+                .min(self.vram_bandwidth_bytes_sec),
             (Host, Vram) | (Vram, Host) => self.pcie_bandwidth_bytes_sec,
             (Vram, InfinityCache) | (InfinityCache, Vram) => {
                 self.vram_bandwidth_bytes_sec.min(INFINITY_CACHE_BYTES_SEC)
@@ -181,7 +176,8 @@ fn transfer_time_us(size_bytes: u64, bandwidth_bytes_sec: u64) -> u64 {
     if bandwidth_bytes_sec == 0 {
         return u64::MAX;
     }
-    let transfer_us = ((size_bytes as f64 / bandwidth_bytes_sec as f64) * 1_000_000.0).ceil() as u64;
+    let transfer_us =
+        ((size_bytes as f64 / bandwidth_bytes_sec as f64) * 1_000_000.0).ceil() as u64;
     transfer_us.saturating_add(DMA_LATENCY_US)
 }
 
@@ -274,11 +270,7 @@ mod tests {
     #[test]
     fn plan_transfer_host_to_vram_uses_pcie() {
         let scheduler = RiverScheduler::from_profile(&nvidia_like_profile());
-        let plan = scheduler.plan_transfer(
-            64 * 1024 * 1024,
-            MemoryTier::Host,
-            MemoryTier::Vram,
-        );
+        let plan = scheduler.plan_transfer(64 * 1024 * 1024, MemoryTier::Host, MemoryTier::Vram);
         assert_eq!(plan.source, MemoryTier::Host);
         assert_eq!(plan.destination, MemoryTier::Vram);
         assert!(plan.estimated_time_us > DMA_LATENCY_US);
@@ -296,8 +288,16 @@ mod tests {
     fn double_buffering_increases_utilization_vs_single() {
         let scheduler = RiverScheduler::new(DEFAULT_PCIE_BYTES_SEC, DEFAULT_VRAM_BYTES_SEC, 2);
         let plans = vec![
-            scheduler.plan_transfer(128 * 1024 * 1024, MemoryTier::Host, MemoryTier::StagingBuffer(0)),
-            scheduler.plan_transfer(128 * 1024 * 1024, MemoryTier::StagingBuffer(0), MemoryTier::Vram),
+            scheduler.plan_transfer(
+                128 * 1024 * 1024,
+                MemoryTier::Host,
+                MemoryTier::StagingBuffer(0),
+            ),
+            scheduler.plan_transfer(
+                128 * 1024 * 1024,
+                MemoryTier::StagingBuffer(0),
+                MemoryTier::Vram,
+            ),
         ];
         let util = scheduler.estimated_utilization(&plans);
         assert!(util > BASELINE_PCIE_UTILIZATION);

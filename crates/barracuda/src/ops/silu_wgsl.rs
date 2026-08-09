@@ -24,8 +24,6 @@ impl SILU {
         Self { input }
     }
 
-
-
     /// Execute the silu operation
     ///
     /// # Errors
@@ -44,16 +42,11 @@ impl SILU {
             size: u32,
         }
 
-        let params = Params {
-            size: size as u32
-        };
+        let params = Params { size: size as u32 };
         let params_buffer = device.create_uniform_buffer("SILU Params", &params);
 
         ComputeDispatch::new(device, "silu")
-            .shader(
-                include_str!("../shaders/activation/silu_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/activation/silu_f64.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
@@ -69,7 +62,6 @@ impl SILU {
 }
 
 impl Tensor {
-
     /// Compute silu element-wise
     ///
     /// # Errors

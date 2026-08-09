@@ -9,8 +9,8 @@
 //!
 //! wetSpring handoff v6, `ani_batch_f64.wgsl` — 7/7 GPU checks PASS.
 
-use crate::device::compute_pipeline::ComputeDispatch;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
@@ -69,10 +69,7 @@ impl AniBatchF64 {
             .write_buffer(&params_buf, 0, bytemuck::bytes_of(&params));
 
         ComputeDispatch::new(&self.device, "AniBatch")
-            .shader(
-                include_str!("../../shaders/bio/ani_batch_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../../shaders/bio/ani_batch_f64.wgsl"), "main")
             .f64()
             .uniform(0, &params_buf)
             .storage_read(1, seq_a)

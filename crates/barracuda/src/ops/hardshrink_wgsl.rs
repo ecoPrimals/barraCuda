@@ -26,8 +26,6 @@ impl Hardshrink {
         Self { input }
     }
 
-
-
     /// Execute the hardshrink operation
     ///
     /// # Errors
@@ -73,7 +71,6 @@ impl Hardshrink {
 }
 
 impl Tensor {
-
     /// Compute hardshrink element-wise
     ///
     /// # Errors

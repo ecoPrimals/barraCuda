@@ -164,10 +164,7 @@ impl GatherNd {
             });
 
         ComputeDispatch::new(device, "GatherNd")
-            .shader(
-                include_str!("../shaders/tensor/gather_nd_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/tensor/gather_nd_f64.wgsl"), "main")
             .uniform(0, &params_buffer)
             .storage_read(1, input_buffer)
             .storage_read(2, indices_buffer)

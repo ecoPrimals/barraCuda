@@ -24,8 +24,6 @@ impl Swish {
         Self { input }
     }
 
-
-
     /// Execute the Swish operation
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer
@@ -42,16 +40,11 @@ impl Swish {
             size: u32,
         }
 
-        let params = Params {
-            size: size as u32
-        };
+        let params = Params { size: size as u32 };
         let params_buffer = device.create_uniform_buffer("Swish Params", &params);
 
         ComputeDispatch::new(device, "swish")
-            .shader(
-                include_str!("../shaders/activation/swish_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/activation/swish_f64.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
@@ -67,7 +60,6 @@ impl Swish {
 }
 
 impl Tensor {
-
     /// Apply Swish (`SiLU`) activation: f(x) = x * sigmoid(x)
     /// # Errors
     /// Returns [`Err`] if buffer allocation, GPU dispatch, or buffer

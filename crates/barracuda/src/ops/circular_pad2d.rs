@@ -110,7 +110,10 @@ impl CircularPad2d {
         let workgroups_z = (batch_size * channels) as u32;
 
         ComputeDispatch::new(device, "CircularPad2d")
-            .shader(include_str!("../shaders/tensor/circular_pad2d_f64.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/tensor/circular_pad2d_f64.wgsl"),
+                "main",
+            )
             .storage_read(0, self.input.buffer())
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)

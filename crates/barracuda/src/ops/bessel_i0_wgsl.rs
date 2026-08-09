@@ -20,8 +20,6 @@ impl BesselI0 {
         Self { input }
     }
 
-
-
     /// Execute Bessel I0 on GPU.
     ///
     /// # Errors
@@ -40,16 +38,11 @@ impl BesselI0 {
             size: u32,
         }
 
-        let metadata = Metadata {
-            size: size as u32
-        };
+        let metadata = Metadata { size: size as u32 };
         let metadata_buffer = device.create_uniform_buffer("BESSEL_I0 Metadata", &metadata);
 
         ComputeDispatch::new(device, "besseli0")
-            .shader(
-                include_str!("../shaders/special/bessel_i0.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/special/bessel_i0.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &metadata_buffer)
@@ -65,7 +58,6 @@ impl BesselI0 {
 }
 
 impl Tensor {
-
     /// Compute element-wise I₀(x). I₀(0) = 1.
     ///
     /// # Errors

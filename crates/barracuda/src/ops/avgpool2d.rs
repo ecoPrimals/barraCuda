@@ -94,7 +94,10 @@ impl AvgPool2D {
         let workgroups_y = (output_height as u32).div_ceil(16);
 
         ComputeDispatch::new(device, "AvgPool2D")
-            .shader(include_str!("../shaders/pooling/avgpool2d_f64.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/pooling/avgpool2d_f64.wgsl"),
+                "main",
+            )
             .storage_read(0, self.input.buffer())
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)

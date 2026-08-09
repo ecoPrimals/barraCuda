@@ -113,7 +113,10 @@ impl PixelShuffle {
         let workgroups_z = (batch_size * out_channels) as u32;
 
         ComputeDispatch::new(device, "PixelShuffle")
-            .shader(include_str!("../shaders/misc/pixel_shuffle_f64.wgsl"), "main")
+            .shader(
+                include_str!("../shaders/misc/pixel_shuffle_f64.wgsl"),
+                "main",
+            )
             .storage_read(0, self.input.buffer())
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)

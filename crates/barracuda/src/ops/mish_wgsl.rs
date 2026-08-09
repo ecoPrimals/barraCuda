@@ -24,8 +24,6 @@ impl Mish {
         Self { input }
     }
 
-
-
     /// Execute the mish operation
     ///
     /// # Errors
@@ -44,16 +42,11 @@ impl Mish {
             size: u32,
         }
 
-        let params = Params {
-            size: size as u32
-        };
+        let params = Params { size: size as u32 };
         let params_buffer = device.create_uniform_buffer("Mish Params", &params);
 
         ComputeDispatch::new(device, "mish")
-            .shader(
-                include_str!("../shaders/activation/mish_f64.wgsl"),
-                "main",
-            )
+            .shader(include_str!("../shaders/activation/mish_f64.wgsl"), "main")
             .storage_read(0, input_buffer)
             .storage_rw(1, &output_buffer)
             .uniform(2, &params_buffer)
@@ -69,7 +62,6 @@ impl Mish {
 }
 
 impl Tensor {
-
     /// Compute mish element-wise
     ///
     /// # Errors

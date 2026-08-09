@@ -17,8 +17,8 @@
 //!
 //! Absorbed from hotSpring lattice QCD (Mar 2026), rewritten to barraCuda patterns.
 
-use crate::device::compute_pipeline::BglBuilder;
 use crate::device::WgpuDevice;
+use crate::device::compute_pipeline::BglBuilder;
 use crate::error::Result;
 use crate::pipeline::ReduceScalarPipeline;
 use std::sync::Arc;

@@ -141,6 +141,7 @@ mod btsp_wire;
 pub mod ipc_protocol;
 pub mod jsonrpc;
 pub mod method_gate;
+pub mod gossip;
 pub mod methods;
 pub mod neural_announce;
 pub mod protocol_negotiation;

@@ -183,7 +183,7 @@ optional = false
 [gossip]
 description = "Events barraCuda injects into the swarmVine gossip mesh"
 inject_via = "gossip.inject"
-status = "documented — injection hooks pending swarmVine UDS wiring"
+status = "wired — gossip.inject client in barracuda-core/src/ipc/gossip.rs, fires at startup"
 
 # ── Device lifecycle ─────────────────────────────────────────────────────────
 

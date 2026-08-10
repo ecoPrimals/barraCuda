@@ -378,6 +378,15 @@ impl PrimalLifecycle for BarraCudaPrimal {
         }
 
         self.state = PrimalState::Running;
+
+        let has_gpu = self.compute.is_some();
+        if let Some(ref dev) = self.compute {
+            let pool_count = self.gpu_pool.as_ref().map_or(1, |p| p.device_count());
+            crate::ipc::gossip::inject_device_created(&dev.name(), pool_count);
+        }
+        crate::ipc::gossip::inject_endpoint_alive(env!("CARGO_PKG_VERSION"));
+        crate::ipc::gossip::inject_readiness_changed(true, has_gpu);
+
         Ok(())
     }
 

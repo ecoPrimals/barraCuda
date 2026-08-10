@@ -6,6 +6,18 @@ Prioritized work items, ordered by impact. Updated 2026-08-10.
 
 ## Recently Completed
 
+### Wave 157g — Gossip Client + G72 Dep Audit (Aug 10, 2026)
+Fire-and-forget `gossip.inject` client wired in `barracuda-core/src/ipc/gossip.rs`.
+Injects `compute.device.created`, `tower.endpoint.alive`, and
+`tower.health.readiness_changed` at primal startup. 5 public injection helpers
+cover device lifecycle, health, and capacity events. Socket discovery:
+`SWARMVINE_SOCKET` env → `$XDG_RUNTIME_DIR/biomeos/swarmvine.sock` → silent no-op.
+7 new tests (5,038 total). G72 Dependency Pandemic Tier 1 audit confirms barraCuda
+is already clean: zero `pollster`, tokio features already trimmed (not `["full"]`),
+all 19 direct deps actively used, wgpu 28 canonical, `deny.toml` bans C crypto.
+231 transitive deps — duplicate chains (tarpc→rand 0.8, wgpu→hashbrown) are
+transitive and uncontrollable.
+
 ### Wave 157e — Sovereign GEMM Executor + Gossip Injection Points (Aug 10, 2026)
 Sovereign executor bridge wired: `SovereignDevice::compile_gemm(m, n, k, precision)` →
 `GLOBAL_CORAL.compile_gemm()` IPC with binary caching → `dispatch_gemm()` combines
@@ -298,6 +310,9 @@ Older completions (Waves 44–128, Mar–Jun 2026) documented in `CHANGELOG.md`.
 
 ## Near-term (P2)
 
+- **Gossip injection expansion**: 5/20 events wired at startup (device.created,
+  endpoint.alive, readiness_changed, device.lost, capacity). Remaining 15 need
+  runtime injection at compilation, OOM, precision routing, and error sites.
 - **Test coverage to 90%**: Currently 80.54% line on llvmpipe. CI 80% gate blocking.
   Evolve to 90 with real GPU hardware. Remaining gaps are GPU-dependent code paths.
 - **Kokkos GPU parity benchmarks**: Publish comparison data on matching hardware.

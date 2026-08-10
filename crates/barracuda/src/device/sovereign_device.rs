@@ -111,7 +111,7 @@ pub struct SovereignDevice {
 /// carried so the dispatch primal can configure hardware descriptors (QMD/PM4).
 #[cfg(feature = "sovereign-dispatch")]
 #[derive(Clone)]
-struct CachedBinary {
+pub struct CachedBinary {
     binary: bytes::Bytes,
     gpr_count: u32,
     workgroup: [u32; 3],
@@ -379,6 +379,114 @@ impl SovereignDevice {
                 })
             })
         })
+    }
+
+    /// Compile a tiled GEMM kernel via the `shader.compile.gemm` IPC.
+    ///
+    /// Caches the compiled binary for reuse. Returns `Err` if no shader
+    /// compiler primal is available or GEMM compilation fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if no tokio runtime is available, the compiler is
+    /// unreachable, target selection fails, or GEMM compilation fails.
+    #[cfg(feature = "sovereign-dispatch")]
+    pub fn compile_gemm(
+        &self,
+        m: u32,
+        n: u32,
+        k: u32,
+        precision: &str,
+    ) -> Result<CachedBinary> {
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        m.hash(&mut hasher);
+        n.hash(&mut hasher);
+        k.hash(&mut hasher);
+        precision.hash(&mut hasher);
+        let key = hasher.finish();
+
+        if let Ok(cache) = self.binary_cache.lock()
+            && let Some(cached) = cache.get(&key)
+        {
+            return Ok(cached.clone());
+        }
+
+        let handle = tokio::runtime::Handle::try_current().map_err(|_| {
+            BarracudaError::device("SovereignDevice: no tokio runtime for GEMM compilation")
+        })?;
+
+        tokio::task::block_in_place(|| {
+            handle.block_on(async {
+                use crate::device::coral_compiler::GLOBAL_CORAL;
+
+                let archs = GLOBAL_CORAL.supported_archs().await.ok_or_else(|| {
+                    BarracudaError::device("SovereignDevice: compiler unreachable for GEMM")
+                })?;
+
+                let target = self.select_target(&archs)?;
+
+                let binary = GLOBAL_CORAL
+                    .compile_gemm(m, n, k, precision, &target)
+                    .await
+                    .ok_or_else(|| {
+                        BarracudaError::device(format!(
+                            "SovereignDevice: GEMM compilation failed (m={m}, n={n}, k={k}, precision={precision}, target={target})"
+                        ))
+                    })?;
+
+                let cached = CachedBinary {
+                    binary: binary.binary,
+                    gpr_count: binary.gpr_count.unwrap_or(*GPR_COUNT),
+                    workgroup: binary.workgroup.unwrap_or(*RESOLVED_DEFAULT_WORKGROUP),
+                    shared_mem_bytes: binary.shared_mem_bytes.unwrap_or(0),
+                    barrier_count: binary.barrier_count.unwrap_or(0),
+                };
+
+                if let Ok(mut cache) = self.binary_cache.lock() {
+                    cache.insert(key, cached.clone());
+                }
+
+                Ok(cached)
+            })
+        })
+    }
+
+    /// Compile and dispatch a tiled GEMM kernel via sovereign IPC.
+    ///
+    /// Combines `compile_gemm()` with `submit_dispatch()` for a complete
+    /// tensor-core matmul execution path. The compiled binary is cached
+    /// for subsequent dispatches with the same dimensions and precision.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if compilation fails, no dispatch endpoint is available,
+    /// or the dispatch request fails.
+    #[cfg(feature = "sovereign-dispatch")]
+    pub fn dispatch_gemm(
+        &self,
+        m: u32,
+        n: u32,
+        k: u32,
+        precision: &str,
+        workgroups: (u32, u32, u32),
+        bindings: &[IpcBufferBinding],
+    ) -> Result<()> {
+        let cached = self.compile_gemm(m, n, k, precision)?;
+
+        self.submit_dispatch(
+            &cached.binary,
+            workgroups,
+            bindings,
+            super::backend::HardwareHint::TensorCore,
+            ShaderDispatchInfo {
+                gpr_count: cached.gpr_count,
+                workgroup: cached.workgroup,
+                shared_mem_bytes: cached.shared_mem_bytes,
+                barrier_count: cached.barrier_count,
+            },
+        )
     }
 
     /// Submit a dispatch request to the compute.dispatch primal via JSON-RPC.

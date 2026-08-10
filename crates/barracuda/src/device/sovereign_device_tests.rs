@@ -108,3 +108,14 @@ fn query_dispatch_arch_no_endpoint() {
     };
     assert!(dev.query_dispatch_arch().is_none());
 }
+
+#[cfg(feature = "sovereign-dispatch")]
+#[test]
+fn compile_gemm_returns_err_without_coral() {
+    let device = SovereignDevice::new();
+    let result = device.compile_gemm(1024, 1024, 1024, "f16");
+    assert!(
+        result.is_err(),
+        "compile_gemm should fail gracefully without coralReef"
+    );
+}

@@ -25,7 +25,7 @@ pub(super) struct ShaderDispatchInfo {
 
 /// Serialisable buffer binding descriptor for IPC compute dispatch.
 #[derive(Debug, Clone)]
-pub(super) struct IpcBufferBinding {
+pub struct IpcBufferBinding {
     pub index: u32,
     pub buffer_id: u64,
     pub size: u64,

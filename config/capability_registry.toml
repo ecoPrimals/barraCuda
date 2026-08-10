@@ -169,6 +169,202 @@ optional = false
 methods = ["discovery.register", "discovery.peers", "capability.call"]
 optional = false
 
+# ─── Gossip Injection Points (swarmVine mesh) ───────────────────────────────
+#
+# Events barraCuda PRODUCES into the epidemic gossip mesh via local
+# swarmVine `gossip.inject`. Keys follow swarmVine Phase 4 conventions:
+#   Tower  — capability/endpoint discovery
+#   Compute — scheduling hints, device state, compilation telemetry
+#
+# Injection wiring is planned (Wave 157+); this registry documents WHERE
+# and WHEN each event should fire so biomeOS and peer primals can subscribe.
+# See: wateringHole SPOREGATE_WAVE157A_SWARMVINE_BUDDING_AAR (GossipTopic enum)
+
+[gossip]
+description = "Events barraCuda injects into the swarmVine gossip mesh"
+inject_via = "gossip.inject"
+status = "documented — injection hooks pending swarmVine UDS wiring"
+
+# ── Device lifecycle ─────────────────────────────────────────────────────────
+
+[gossip.events."compute.device.created"]
+swarmvine_domain = "Compute"
+topic_key = "compute.device.created:{gate}:barracuda"
+trigger = "Primary compute device discovered at startup or multi-GPU pool initialized"
+payload = "{ adapter, vendor, device_type, backend, dispatch_tier (wgpu|sovereign), f64_shaders, pool_device_count }"
+source = "BarraCudaPrimal::start (crates/barracuda-core/src/lib.rs), Auto::new (crates/barracuda/src/device/mod.rs), MultiDevicePool::new (crates/barracuda/src/multi_gpu/multi_device_pool.rs)"
+consumers = "biomeOS capability.resolve, toadStool compute.route.multi_unit, hotSpring fleet validation"
+
+[gossip.events."compute.device.lost"]
+swarmvine_domain = "Compute"
+topic_key = "compute.device.lost:{gate}:barracuda"
+trigger = "WgpuDevice lost flag set — wgpu uncaptured error handler, poll/submit panic recovery, or buffer op pre-check"
+payload = "{ device_name, adapter, context (poll_safe|submit_commands|create_buffer), message, retriable: true }"
+source = "WgpuDevice::install_error_handler (crates/barracuda/src/device/wgpu_device/creation.rs), poll_safe/handle_device_lost_panic (crates/barracuda/src/device/wgpu_device/submission.rs), is_lost guards (buffers.rs, async_submit.rs)"
+consumers = "toadStool ember.device.recover, biomeOS mesh failover, multi-GPU pool exclusion"
+
+[gossip.events."compute.device.recovered"]
+swarmvine_domain = "Compute"
+topic_key = "compute.device.recovered:{gate}:barracuda"
+trigger = "Fresh WgpuDevice created after device-lost recovery (test pool recreate, pool re-probe, or post-reset re-init)"
+payload = "{ device_name, adapter, recovery_context, previous_lost_duration_ms }"
+source = "test_pool device recreate (crates/barracuda/src/device/test_pool/mod.rs), MultiDevicePool re-acquire after migration"
+consumers = "biomeOS health aggregation, toadStool sovereign.warm_status"
+
+[gossip.events."compute.device.oom"]
+swarmvine_domain = "Compute"
+topic_key = "compute.device.oom:{gate}:barracuda"
+trigger = "GPU driver reports OOM — wgpu uncaptured error handler, BarracudaError::is_oom(), or MultiDevicePool migration marks device"
+payload = "{ device_name, adapter, message, pool_index, migration_attempt }"
+source = "WgpuDevice::install_error_handler/set_oom (creation.rs, mod.rs), MultiDevicePool::execute_with_migration (crates/barracuda/src/multi_gpu/multi_device_pool.rs)"
+consumers = "toadStool compute.route.multi_unit, biomeOS workload rerouting, peer barracuda instances (pool migration)"
+
+[gossip.events."compute.device.tier_fallback"]
+swarmvine_domain = "Compute"
+topic_key = "compute.device.tier_fallback:{gate}:barracuda"
+trigger = "Auto discovery exhausts wgpu GPU tier and falls back to CPU software rasterizer or SovereignDevice IPC"
+payload = "{ from_tier, to_tier (wgpu_gpu|wgpu_cpu|sovereign_ipc), reason, coral_available, dispatch_available }"
+source = "Auto::new fallback chain (crates/barracuda/src/device/mod.rs), SovereignDevice::new discovery (crates/barracuda/src/device/sovereign_device.rs)"
+consumers = "hotSpring s_sovereign_dispatch scenario, biomeOS dispatch_path routing"
+
+# ── Shader compilation ─────────────────────────────────────────────────────────
+
+[gossip.events."compute.shader.cache_hit"]
+swarmvine_domain = "Compute"
+topic_key = "compute.shader.cache_hit:{gate}:barracuda"
+trigger = "SovereignDevice binary cache hit, coral NATIVE_BINARY_CACHE hit, or in-process binary_cache Occupied entry during dispatch_compute"
+payload = "{ shader_hash, target_arch, cache_tier (sovereign|coral|native), binary_bytes, workgroup }"
+source = "SovereignDevice::dispatch_compute (crates/barracuda/src/device/sovereign_device.rs), cached_native_binary (crates/barracuda/src/device/coral_compiler/cache.rs)"
+consumers = "coralReef compile telemetry, biomeOS build.queue scheduling"
+
+[gossip.events."compute.shader.cache_miss"]
+swarmvine_domain = "Compute"
+topic_key = "compute.shader.cache_miss:{gate}:barracuda"
+trigger = "dispatch_compute Vacant cache entry with no coral cache — triggers live_compile or spawn_coral_compile_for_adapter"
+payload = "{ shader_hash, target_arch, has_precision_advice, f64_shader, df64_shader }"
+source = "SovereignDevice::dispatch_compute live_compile path (sovereign_device.rs), spawn_coral_compile_for_adapter (crates/barracuda/src/device/coral_compiler/mod.rs)"
+consumers = "coralReef build.queue depth, biomeOS compile capacity planning"
+
+[gossip.events."compute.shader.compile_success"]
+swarmvine_domain = "Compute"
+topic_key = "compute.shader.compile_success:{gate}:barracuda"
+trigger = "live_compile, compile_gemm, CoralCompiler::compile_wgsl_direct/with_advice, or background spawn_coral_compile completes"
+payload = "{ shader_hash, target_arch, binary_bytes, gpr_count, workgroup, shared_mem_bytes, barrier_count, compile_path (wgsl_direct|wgsl_advice|gemm|spirv) }"
+source = "SovereignDevice::live_compile/compile_gemm (sovereign_device.rs), CoralCompiler IPC methods (crates/barracuda/src/device/coral_compiler/mod.rs)"
+consumers = "coralReef compile.status, nestGate depot.manifest (binary provenance)"
+
+[gossip.events."compute.shader.compile_failure"]
+swarmvine_domain = "Compute"
+topic_key = "compute.shader.compile_failure:{gate}:barracuda"
+trigger = "live_compile returns Err, compile_gemm fails, coral compiler unreachable, or ShaderCompilation BarracudaError from wgpu path"
+payload = "{ shader_hash, target_arch, error_kind (compiler_unreachable|compile_failed|shader_compilation), message, fallback_available (wgpu_local|none) }"
+source = "SovereignDevice::live_compile (sovereign_device.rs), CoralCompiler connection state Unavailable (coral_compiler/mod.rs), ops returning BarracudaError::ShaderCompilation"
+consumers = "coralReef health.check, biomeOS capability.resolve (compiler dependency degradation)"
+
+[gossip.events."compute.compiler.peer_status"]
+swarmvine_domain = "Compute"
+topic_key = "compute.compiler.peer_status:{gate}:barracuda"
+trigger = "is_coral_available() result changes at startup or CoralCompiler discovery/connect/reset"
+payload = "{ coral_available, compiler_addr, supported_archs, health_ok }"
+source = "is_coral_available, CoralCompiler::discover_shader_compiler, GLOBAL_CORAL.health (crates/barracuda/src/device/coral_compiler/mod.rs)"
+consumers = "coralReef endpoint.alive, precision.route callers (hotSpring, wetSpring)"
+
+# ── Health state ───────────────────────────────────────────────────────────────
+
+[gossip.events."tower.endpoint.alive"]
+swarmvine_domain = "Tower"
+topic_key = "endpoint.alive:{gate}:barracuda"
+trigger = "Primal startup complete (post-start), periodic heartbeat, or health.liveness probe served"
+payload = "{ status: alive, version, transport (uds|tcp), protocol: jsonrpc-2.0 }"
+source = "BarraCudaPrimal::start completion (crates/barracuda-core/src/lib.rs), health_liveness handler (crates/barracuda-core/src/ipc/methods/health.rs), neural_announce push (crates/barracuda-core/src/ipc/neural_announce.rs)"
+consumers = "songBird mesh connectivity, biomeOS composition graph executor"
+
+[gossip.events."tower.health.readiness_changed"]
+swarmvine_domain = "Tower"
+topic_key = "health.readiness:{gate}:barracuda"
+trigger = "PrimalState transitions (Created→Running→Stopped), compute device gained/lost, or sovereign IPC availability changes"
+payload = "{ status (ready|not_ready), gpu_available, sovereign_ipc, health_status (healthy|degraded|unknown), reason }"
+source = "health_readiness handler (health.rs), PrimalHealth::health_status (crates/barracuda-core/src/lib.rs), start/stop lifecycle"
+consumers = "biomeOS load balancers, nestGate gate orchestration, systemd Type=notify readiness"
+
+[gossip.events."tower.health.degraded"]
+swarmvine_domain = "Tower"
+topic_key = "health.degraded:{gate}:barracuda"
+trigger = "Running without compute device (cpu-shader only), GPU probe skipped (BARRACUDA_NO_GPU_PROBE), or validate.gpu_stack partial_fail"
+payload = "{ reason, gpu_available: false, tests_failed, dispatch_path: unavailable }"
+source = "health_status Degraded branch (lib.rs), should_skip_gpu_probe (lib.rs), validate_gpu_stack (health.rs)"
+consumers = "biomeOS degraded-routing policy, hotSpring preflight warnings"
+
+# ── Capacity and load ──────────────────────────────────────────────────────────
+
+[gossip.events."compute.capacity"]
+swarmvine_domain = "Compute"
+topic_key = "compute.capacity:{gate}:barracuda"
+trigger = "Startup pool init, device.pool IPC query, or periodic capacity refresh (VRAM usage, allocation counts)"
+payload = "ComputeCapacity schema — { device_count, devices[{ name, vram_gb, allocated_bytes, usage_percent, f64_builtins, is_discrete, is_oom, is_lost }], pool_summary, estimated_gflops_total }"
+source = "device.pool handler (crates/barracuda-core/src/ipc/methods/device.rs), MultiDevicePool summary (multi_device_pool.rs), device.probe limits"
+consumers = "toadStool compute.route.multi_unit, biomeOS resources.validate_availability, swarmVine scheduling hints"
+
+[gossip.events."compute.quota.exceeded"]
+swarmvine_domain = "Compute"
+topic_key = "compute.quota.exceeded:{gate}:barracuda"
+trigger = "QuotaTracker::try_allocate rejects, DeviceCapabilities::check_allocation_safe returns DeviceLimitExceeded, or ResourceExhausted"
+payload = "{ requested_bytes, safe_limit_bytes, quota_max_vram_bytes, device_name, operation }"
+source = "QuotaTracker (crates/barracuda/src/resource_quota.rs), check_allocation_safe (crates/barracuda/src/device/capabilities/wgpu_caps.rs), WgpuDevice buffer creation with quota"
+consumers = "biomeOS toadstool.resources.validate_availability, workload downscaling"
+
+[gossip.events."compute.oom.migration"]
+swarmvine_domain = "Compute"
+topic_key = "compute.oom.migration:{gate}:barracuda"
+trigger = "MultiDevicePool::execute_with_migration retries workload on next device after OOM"
+payload = "{ attempt, excluded_devices, from_device, to_device, workload_hint }"
+source = "MultiDevicePool::execute_with_migration (crates/barracuda/src/multi_gpu/multi_device_pool.rs)"
+consumers = "toadStool multi-GPU fleet, biomeOS cross-gate dispatch failover"
+
+[gossip.events."compute.dispatch.stall"]
+swarmvine_domain = "Compute"
+topic_key = "compute.dispatch.stall:{gate}:barracuda"
+trigger = "poll_safe times out waiting for GPU queue (driver stall, TDR pressure, instrumentation overhead)"
+payload = "{ timeout_secs, context, device_name, retriable: true }"
+source = "WgpuDevice::poll_safe (crates/barracuda/src/device/wgpu_device/submission.rs)"
+consumers = "toadStool sovereign.watchdog_status, biomeOS health aggregation"
+
+# ── Precision routing ──────────────────────────────────────────────────────────
+
+[gossip.events."compute.precision.route"]
+swarmvine_domain = "Compute"
+topic_key = "compute.precision.route:{gate}:barracuda"
+trigger = "PrecisionBrain selects tier for domain at dispatch time (live_compile advice) or precision.route IPC advisory served"
+payload = "{ domain, recommended_tier, fma_safe, requires_compiler, hardware_hint, dispatch_path (wgpu|sovereign|unavailable), adapter, needs_sovereign_compile, rationale }"
+source = "PrecisionBrain::route/route_advice/compile (crates/barracuda/src/device/precision_brain.rs), precision_route handler (crates/barracuda-core/src/ipc/methods/precision.rs), SovereignDevice::build_precision_advice (sovereign_device.rs)"
+consumers = "hotSpring Tier 2 Science API, wetSpring precision_route client, coralReef compile lowering decisions"
+
+[gossip.events."compute.precision.tier_degraded"]
+swarmvine_domain = "Compute"
+topic_key = "compute.precision.tier_degraded:{gate}:barracuda"
+trigger = "Hardware probe forces DF64 over native F64, f64 workgroup shared memory poisoned, or coral_f64_lowering enables tier that hardware alone cannot serve"
+payload = "{ domain, requested_tier, actual_tier, reason (probe_failed|df64_poisoned|coral_lowering|no_f64_feature), adapter }"
+source = "Device probe f64 WGSL failure (crates/barracuda/src/device/probe/mod.rs), PrecisionBrain::from_capabilities_with_coral (precision_brain.rs), f64_shmem_poisoned (wgpu_caps.rs)"
+consumers = "coralReef f64 lowering pipeline, hotSpring validation tolerances"
+
+# ── Systemic errors ────────────────────────────────────────────────────────────
+
+[gossip.events."compute.error.retriable_exhausted"]
+swarmvine_domain = "Compute"
+topic_key = "compute.error.retriable_exhausted:{gate}:barracuda"
+trigger = "OOM migration exhausts all pool devices, or repeated device_lost with no recovery path"
+payload = "{ error_kind (oom_migration|device_lost), attempts, devices_tried, last_message }"
+source = "MultiDevicePool::execute_with_migration final Err (multi_device_pool.rs), BarracudaError::is_retriable checks (crates/barracuda/src/error.rs)"
+consumers = "biomeOS alert routing, toadStool device.resurrect escalation"
+
+[gossip.events."compute.error.systemic"]
+swarmvine_domain = "Compute"
+topic_key = "compute.error.systemic:{gate}:barracuda"
+trigger = "Non-retriable BarracudaError at IPC boundary indicating fleet-wide issue — Internal, NoAvailableExecutor, repeated ShaderCompilation at scale"
+payload = "{ error_variant, message, method, retriable: false, is_device_lost, is_oom }"
+source = "BarracudaError taxonomy (crates/barracuda/src/error.rs), IPC handler error responses (crates/barracuda-core/src/ipc/methods/)"
+consumers = "skunkBat security.audit_log, biomeOS incident graph"
+
 # ─── Hardware Requirements ───────────────────────────────────────────────────
 
 [hardware]

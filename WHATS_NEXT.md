@@ -1,10 +1,21 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-08-09.
+Prioritized work items, ordered by impact. Updated 2026-08-10.
 
 ---
 
 ## Recently Completed
+
+### Wave 157e — Sovereign GEMM Executor + Gossip Injection Points (Aug 10, 2026)
+Sovereign executor bridge wired: `SovereignDevice::compile_gemm(m, n, k, precision)` →
+`GLOBAL_CORAL.compile_gemm()` IPC with binary caching → `dispatch_gemm()` combines
+compilation + `submit_dispatch()` with `HardwareHint::TensorCore`. Completes the
+`KernelRouter::Sovereign` → `shader.compile.gemm` → dispatch pipeline that was P2 from
+Wave 157d. 20 gossip injection points documented in `capability_registry.toml` across 6
+categories (device lifecycle, shader compilation, health state, capacity/load, precision
+routing, systemic errors) — pending swarmVine UDS wiring for actual injection hooks.
+Deep debt scan confirmed clean: 0 production `unwrap()`/`expect()`, 0 files >800L, 0 stale
+TODOs, 5,031 tests pass, zero clippy warnings.
 
 ### Wave 157d — Deep Debt Evolution: Zero-Panic + Decomposition (Aug 9, 2026)
 17 GPU dispatch `.expect()` sites evolved to `?` / `Result` propagation —
@@ -279,8 +290,9 @@ Older completions (Waves 44–128, Mar–Jun 2026) documented in `CHANGELOG.md`.
   (Wave 155i). DF64 at 91.89 TFLOPS on strandGate. Remaining: Yukawa force kernels
   through coralReef-compiled ISA on physical hardware.
 - **Tensor core GEMM codegen**: `kernel_router` routes F16/BF16/TF32 `DenseMatmul` to
-  `KernelTarget::Sovereign` with `HardwareHint::TensorCore` (Sprint 64). Next: coralReef
-  HMMA/WGMMA emission for eigensolvers/preconditioners via mixed-precision iterative refinement.
+  `KernelTarget::Sovereign` with `HardwareHint::TensorCore` (Sprint 64). `dispatch_gemm()`
+  bridge wired (Wave 157e): `compile_gemm()` → `GLOBAL_CORAL.compile_gemm()` IPC → binary
+  cache → `submit_dispatch()`. Next: coralReef HMMA/WGMMA emission.
 - **Kokkos parity validation**: SciPy cdist 65x faster on RTX 3090. Remaining: document
   `sarkas_gpu` PPPM shader comparison numbers.
 

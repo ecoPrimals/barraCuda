@@ -1,7 +1,7 @@
 +++
 title = "barraCuda Validation Summary"
-description = "GPU-accelerated scientific computing engine — 5,031 tests, 101 IPC methods, 15-tier precision ladder, pure safe Rust, A+ grade"
-date = 2026-08-07
+description = "GPU-accelerated scientific computing engine — 5,054 tests, 101 IPC methods, 15-tier precision ladder, pure safe Rust, A+ grade"
+date = 2026-08-11
 
 [taxonomies]
 primals = ["barracuda"]
@@ -10,7 +10,7 @@ springs = ["hotspring", "primalspring", "wetspring", "airspring"]
 
 ## Status
 
-- **5,031 tests** (cargo test --workspace), 0 failed, 80.54% line / 83.45% function coverage
+- **5,054 tests** (cargo test --workspace), 0 failed, 80.54% line / 83.45% function coverage
 - **101 registered IPC methods** across 26 semantic namespaces (includes `device.pool` multi-GPU diagnostics, `device.video_codecs`, `method.describe` introspection)
 - **1,208 Rust source files**, zero unsafe in production (`#![forbid(unsafe_code)]`)
 - **v0.4.0** — stadial gate cleared, all checklist items green

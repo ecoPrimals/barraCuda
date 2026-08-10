@@ -23,8 +23,8 @@ traits are fully internalized.
 - **Architecture:** 4-crate workspace (barracuda, barracuda-core, barracuda-spirv, barracuda-naga-exec)
 - **Communication:** JSON-RPC 2.0 + tarpc over Unix socket and TCP. G65 single-socket protocol negotiation (`PROTOCOLS: tarpc,jsonrpc\n`) with C2 dual-socket backward compat
 - **License:** AGPL-3.0-or-later (scyBorg provenance trio)
-- **Tests:** 5,031 passing (cargo test --workspace)
-- **Wave 157d Evolution:** ComputeDispatch full migration (317 ops, −37,144 LOC). G68 platform substrate COMPLIANT. Silicon Fold absorption (5 device abstractions). Pattern abstraction evolution (DF64 centralized, CachedPipeline, env fallback helper). 12-axis clean.
+- **Tests:** 5,054 passing (cargo test --workspace)
+- **Wave 157g Evolution:** Full gossip enmeshment (19 events wired across device-lost, OOM, shader compilation, quota, precision routing). G72 Dependency Pandemic Tier 1 clean. Sovereign GEMM executor bridge. Deep debt scan clean across all 12 axes.
 - **Coverage:** 80.54% line on llvmpipe (80% CI gate, 90% target with GPU hardware)
 - **MSRV:** 1.92
 - **Crate count:** 4 workspace crates
@@ -52,25 +52,28 @@ traits are fully internalized.
 | `identity.*` | `get` |
 | `primal.*` | `info`, `capabilities`, `announce` |
 | `capabilities.*` | `list` |
-| `device.*` | `list`, `probe`, `pool` |
+| `protocols.*` | `list` |
+| `method.*` | `describe` |
+| `device.*` | `list`, `probe`, `pool`, `video_codecs` |
 | `tolerances.*` | `get` |
 | `validate.*` | `gpu_stack` |
 | `precision.*` | `route` |
-| `compute.*` | `dispatch` |
+| `compute.*` | `dispatch`, `dispatch.capabilities`, `dispatch.submit`, `dispatch.result` |
 | `math.*` | `sigmoid`, `log2` |
 | `activation.*` | `fitts`, `hick`, `softmax`, `gelu` |
 | `stats.*` | `mean`, `std_dev`, `variance`, `correlation`, `pearson`, `spearman`, `covariance`, `weighted_mean`, `chi_squared`, `anova_oneway`, `shannon`, `entropy`, `fit_linear`, `fit_quadratic`, `fit_exponential`, `fit_logarithmic`, `empirical_spectral_density`, `simpson`, `bray_curtis`, `hill`, `rarefaction_curve`, `gamma_fit`, `gamma_cdf` |
 | `signal.*` | `detect_peaks`, `bandpass`, `derivative` |
-| `linalg.*` | `solve`, `eigenvalues`, `svd`, `qr`, `graph_laplacian` |
+| `linalg.*` | `solve`, `eigenvalues`, `batched_tridiag_eigh`, `svd`, `qr`, `graph_laplacian` |
 | `ode.*` | `step` |
 | `graph.*` | `belief_propagation` |
 | `spectral.*` | `fft`, `power_spectrum`, `stft` |
-| `ml.*` | `mlp_forward`, `mlp_train`, `attention`, `esn_predict` |
+| `ml.*` | `mlp_forward`, `mlp_train`, `mlp_infer`, `mlp_save`, `mlp_load`, `perceptron_train`, `attention`, `esn_predict` |
 | `nautilus.*` | `create`, `observe`, `train`, `predict`, `export`, `import` |
 | `noise.*` | `perlin2d`, `perlin3d` |
 | `rng.*` | `uniform` |
 | `tensor.*` | `create`, `matmul`, `matmul_inline`, `add`, `scale`, `clamp`, `reduce`, `sigmoid`, `batch.submit` |
 | `fhe.*` | `ntt`, `pointwise_mul` |
+| `mesh.*` | `trust_verify`, `health` |
 | `btsp.*` | `negotiate`, `capabilities` |
 
 101 methods following wateringHole `{domain}.{operation}` Semantic Method Naming Standard. Wire Standard L2 compliant. Neural API announce on startup. BTSP Phase 3 encryption.

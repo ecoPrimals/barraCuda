@@ -343,6 +343,7 @@ impl Auto {
         }
         if let Ok(dev) = WgpuDevice::new_cpu_relaxed().await {
             tracing::info!("GPU unavailable, using CPU software rasterizer");
+            crate::gossip::inject_tier_fallback("wgpu_gpu", "wgpu_cpu", "GPU adapter unavailable");
             return Ok(DiscoveredDevice::Wgpu(Arc::new(dev)));
         }
         #[cfg(feature = "sovereign-dispatch")]
@@ -351,6 +352,11 @@ impl Auto {
         {
             tracing::info!(
                 "wgpu unavailable, using sovereign IPC dispatch via shader.compile+compute.dispatch peers"
+            );
+            crate::gossip::inject_tier_fallback(
+                "wgpu_cpu",
+                "sovereign_ipc",
+                "wgpu GPU and CPU both unavailable",
             );
             return Ok(DiscoveredDevice::Sovereign(Arc::new(sov)));
         }

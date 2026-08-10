@@ -416,6 +416,18 @@ impl MultiDevicePool {
                         device = %device_name,
                         "OOM detected — marking device and migrating workload"
                     );
+                    crate::gossip::inject_device_oom(
+                        &device_name,
+                        &e.to_string(),
+                        pool_index,
+                        true,
+                    );
+                    crate::gossip::inject_oom_migration(
+                        attempt,
+                        &device_name,
+                        None,
+                        excluded.len(),
+                    );
                     if let Some(dev) = self.inner.devices.get(pool_index) {
                         dev.set_oom();
                     }
@@ -429,9 +441,15 @@ impl MultiDevicePool {
             }
         }
 
-        Err(last_error.unwrap_or_else(|| {
+        let err = last_error.unwrap_or_else(|| {
             BarracudaError::device("OOM migration exhausted all available devices")
-        }))
+        });
+        crate::gossip::inject_retriable_exhausted(
+            "oom_migration",
+            max_attempts,
+            &err.to_string(),
+        );
+        Err(err)
     }
 
     /// Acquire a device excluding specific indices, with optional quota tracker.

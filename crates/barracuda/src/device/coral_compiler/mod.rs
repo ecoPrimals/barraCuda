@@ -470,6 +470,7 @@ impl CoralCompiler {
 
         if let Some(addr) = discover_shader_compiler().await {
             tracing::info!(addr = %addr, "discovered shader compiler service");
+            crate::gossip::inject_compiler_peer_status(true, Some(&addr));
             let addr: Arc<str> = Arc::from(addr);
             *state = ConnectionState::Connected {
                 addr: Arc::clone(&addr),
@@ -477,6 +478,7 @@ impl CoralCompiler {
             Some(addr)
         } else {
             tracing::debug!("shader compiler not available — using standard compilation path");
+            crate::gossip::inject_compiler_peer_status(false, None);
             *state = ConnectionState::Unavailable;
             None
         }

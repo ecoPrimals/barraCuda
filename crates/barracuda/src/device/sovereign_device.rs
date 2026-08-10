@@ -357,6 +357,11 @@ impl SovereignDevice {
                 };
 
                 let binary = binary.ok_or_else(|| {
+                    crate::gossip::inject_compile_failure(
+                        &target,
+                        "compile_failed",
+                        "live compilation returned None",
+                    );
                     BarracudaError::device(format!(
                         "SovereignDevice: live compilation failed for target {target}"
                     ))
@@ -364,11 +369,17 @@ impl SovereignDevice {
 
                 let hash = shader_hash(&source);
                 cache_native_binary(&hash, &target, binary.clone());
+                let binary_len = binary.binary.len();
                 tracing::info!(
                     target = %target,
-                    size = binary.binary.len(),
-                    "live compile-on-dispatch: compiled and cached ({} bytes)",
-                    binary.binary.len()
+                    size = binary_len,
+                    "live compile-on-dispatch: compiled and cached ({binary_len} bytes)",
+                );
+                crate::gossip::inject_compile_success(
+                    hash,
+                    &target,
+                    binary_len,
+                    if advice.is_some() { "wgsl_advice" } else { "wgsl_direct" },
                 );
                 Ok(CachedBinary {
                     binary: binary.binary,
@@ -431,6 +442,11 @@ impl SovereignDevice {
                     .compile_gemm(m, n, k, precision, &target)
                     .await
                     .ok_or_else(|| {
+                        crate::gossip::inject_compile_failure(
+                            &target,
+                            "gemm_failed",
+                            &format!("m={m}, n={n}, k={k}, precision={precision}"),
+                        );
                         BarracudaError::device(format!(
                             "SovereignDevice: GEMM compilation failed (m={m}, n={n}, k={k}, precision={precision}, target={target})"
                         ))
@@ -443,6 +459,13 @@ impl SovereignDevice {
                     shared_mem_bytes: binary.shared_mem_bytes.unwrap_or(0),
                     barrier_count: binary.barrier_count.unwrap_or(0),
                 };
+
+                crate::gossip::inject_compile_success(
+                    key,
+                    &target,
+                    cached.binary.len(),
+                    "gemm",
+                );
 
                 if let Ok(mut cache) = self.binary_cache.lock() {
                     cache.insert(key, cached.clone());
@@ -645,11 +668,13 @@ impl GpuBackend for SovereignDevice {
         let cached = match cache.entry(key) {
             Entry::Occupied(e) => {
                 tracing::debug!("sovereign cache hit — using pre-compiled native binary");
+                crate::gossip::inject_shader_cache_hit(key, "sovereign");
                 e.into_mut()
             }
             Entry::Vacant(e) => {
                 if let Some(binary) = Self::try_coral_cache(desc.shader_source) {
                     tracing::debug!("coral compiler cache hit — using pre-compiled native binary");
+                    crate::gossip::inject_shader_cache_hit(key, "coral");
                     e.insert(CachedBinary {
                         binary,
                         gpr_count: *GPR_COUNT,
@@ -658,6 +683,7 @@ impl GpuBackend for SovereignDevice {
                         barrier_count: 0,
                     })
                 } else {
+                    crate::gossip::inject_shader_cache_miss(key);
                     let advice = Self::build_precision_advice(desc.f64_shader, desc.df64_shader);
                     let cached = self.live_compile(desc.shader_source, advice)?;
                     e.insert(cached)

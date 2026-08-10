@@ -43,10 +43,12 @@ impl WgpuDevice {
         match result {
             Ok(true) => Ok(()),
             Ok(false) => {
+                let secs = timeout.map_or(0, |d| d.as_secs());
                 tracing::warn!(
                     "poll_safe: GPU poll timed out after {}s — treating as stall",
-                    timeout.map_or(0, |d| d.as_secs())
+                    secs
                 );
+                crate::gossip::inject_dispatch_stall(secs, "poll_safe");
                 Err(crate::error::BarracudaError::execution_failed(
                     "GPU poll timed out — driver stall or instrumentation overhead",
                 ))
@@ -54,7 +56,9 @@ impl WgpuDevice {
             Err(payload) => {
                 if Self::is_device_lost_panic(&payload) {
                     self.lost.store(true, Ordering::Release);
-                    tracing::warn!("poll_safe: device lost: {}", Self::panic_message(&payload));
+                    let msg = Self::panic_message(&payload);
+                    tracing::warn!("poll_safe: device lost: {msg}");
+                    crate::gossip::inject_device_lost(self.name(), "poll_safe", msg);
                     return Err(crate::error::BarracudaError::device_lost("device lost"));
                 }
                 tracing::warn!(
@@ -121,7 +125,9 @@ impl WgpuDevice {
     fn handle_device_lost_panic(&self, payload: Box<dyn std::any::Any + Send>, context: &str) {
         if Self::is_device_lost_panic(&payload) {
             self.lost.store(true, Ordering::Release);
-            tracing::warn!("{context}: device lost: {}", Self::panic_message(&payload));
+            let msg = Self::panic_message(&payload);
+            tracing::warn!("{context}: device lost: {msg}");
+            crate::gossip::inject_device_lost(self.name(), context, msg);
             return;
         }
         std::panic::resume_unwind(payload);

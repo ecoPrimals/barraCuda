@@ -174,6 +174,18 @@ pub fn inject_capacity(pool_count: usize, available_devices: usize) {
     }
 }
 
+/// Inject a `tower.health.degraded` event when the primal runs without GPU.
+pub fn inject_degraded(reason: &str, gpu_available: bool) {
+    let key = format!("health.degraded:{}:barracuda", gate_name());
+    let payload = serde_json::json!({
+        "reason": reason,
+        "gpu_available": gpu_available,
+    });
+    if send_inject("tower", &key, &payload) {
+        tracing::debug!(key = %key, "gossip: injected health.degraded");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -212,5 +224,10 @@ mod tests {
     #[test]
     fn inject_capacity_does_not_panic() {
         inject_capacity(2, 1);
+    }
+
+    #[test]
+    fn inject_degraded_does_not_panic() {
+        inject_degraded("no GPU available", false);
     }
 }

@@ -1,10 +1,35 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-08-10.
+Prioritized work items, ordered by impact. Updated 2026-08-11.
 
 ---
 
 ## Recently Completed
+
+### Wave 157g — Full Gossip Enmeshment (Aug 11, 2026)
+Runtime gossip injection wired across all critical code paths.
+`barracuda/src/gossip.rs` (13 runtime injection APIs) complements
+`barracuda-core/src/ipc/gossip.rs` (6 startup injection APIs).
+19 events now fire at runtime:
+
+**Startup** (barracuda-core): `compute.device.created`, `tower.endpoint.alive`,
+`tower.health.readiness_changed`, `compute.capacity`, `tower.health.degraded`.
+
+**Device lifecycle** (barracuda): `compute.device.lost` (wired in
+`handle_device_lost_panic` + `poll_safe`), `compute.device.oom` (OOM migration),
+`compute.device.tier_fallback` (Auto::new fallback chain).
+
+**Shader compilation** (barracuda): `compute.shader.cache_hit/miss`
+(sovereign `dispatch_compute`), `compute.shader.compile_success/failure`
+(`live_compile`, `compile_gemm`), `compute.compiler.peer_status`
+(CoralCompiler discovery).
+
+**Capacity/errors** (barracuda): `compute.dispatch.stall` (poll_safe timeout),
+`compute.quota.exceeded` (QuotaTracker rejection), `compute.oom.migration`
+(multi-device pool migration), `compute.precision.route` (IPC advisory),
+`compute.error.retriable_exhausted` (migration exhaustion).
+
+16 new tests (5,054 total). 12-axis deep debt scan clean across all axes.
 
 ### Wave 157g — Gossip Client + G72 Dep Audit (Aug 10, 2026)
 Fire-and-forget `gossip.inject` client wired in `barracuda-core/src/ipc/gossip.rs`.
@@ -310,9 +335,6 @@ Older completions (Waves 44–128, Mar–Jun 2026) documented in `CHANGELOG.md`.
 
 ## Near-term (P2)
 
-- **Gossip injection expansion**: 5/20 events wired at startup (device.created,
-  endpoint.alive, readiness_changed, device.lost, capacity). Remaining 15 need
-  runtime injection at compilation, OOM, precision routing, and error sites.
 - **Test coverage to 90%**: Currently 80.54% line on llvmpipe. CI 80% gate blocking.
   Evolve to 90 with real GPU hardware. Remaining gaps are GPU-dependent code paths.
 - **Kokkos GPU parity benchmarks**: Publish comparison data on matching hardware.

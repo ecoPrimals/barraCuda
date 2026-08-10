@@ -332,6 +332,12 @@ impl QuotaTracker {
             && bytes > max_single
         {
             self.quota_failures.fetch_add(1, Ordering::Relaxed);
+            crate::gossip::inject_quota_exceeded(
+                bytes,
+                max_single,
+                &self.quota.name,
+                "single_buffer",
+            );
             return Err(BarracudaError::resource_exhausted(format!(
                 "Quota '{}': single buffer {} bytes exceeds limit {} bytes",
                 self.quota.name, bytes, max_single
@@ -343,6 +349,12 @@ impl QuotaTracker {
             let current = self.current_buffers() as usize;
             if current >= max_buffers {
                 self.quota_failures.fetch_add(1, Ordering::Relaxed);
+                crate::gossip::inject_quota_exceeded(
+                    bytes,
+                    0,
+                    &self.quota.name,
+                    "buffer_count",
+                );
                 return Err(BarracudaError::resource_exhausted(format!(
                     "Quota '{}': buffer count {} at limit {}",
                     self.quota.name, current, max_buffers
@@ -358,6 +370,12 @@ impl QuotaTracker {
 
                 if new_total > max_vram {
                     self.quota_failures.fetch_add(1, Ordering::Relaxed);
+                    crate::gossip::inject_quota_exceeded(
+                        bytes,
+                        max_vram,
+                        &self.quota.name,
+                        "vram_budget",
+                    );
                     return Err(BarracudaError::resource_exhausted(format!(
                         "Quota '{}': allocation of {} bytes would exceed limit ({} + {} > {})",
                         self.quota.name, bytes, current, bytes, max_vram

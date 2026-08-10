@@ -157,6 +157,7 @@ pub mod discovery;
 /// Named constants for environment variable keys.
 pub mod env_keys;
 pub mod error;
+pub mod gossip;
 pub mod health;
 pub mod linalg;
 pub mod nautilus;

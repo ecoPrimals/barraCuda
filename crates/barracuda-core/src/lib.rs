@@ -350,6 +350,7 @@ impl PrimalLifecycle for BarraCudaPrimal {
                 "barraCuda: GPU probe skipped (BARRACUDA_NO_GPU_PROBE), \
                  running in cpu-shader-only mode"
             );
+            crate::ipc::gossip::inject_degraded("GPU probe skipped via env", false);
         } else {
             tracing::info!("barraCuda: discovering compute devices...");
 
@@ -362,6 +363,10 @@ impl PrimalLifecycle for BarraCudaPrimal {
                     tracing::warn!(
                         "barraCuda: no compute device available ({e}), \
                          running degraded (cpu-shader only)"
+                    );
+                    crate::ipc::gossip::inject_degraded(
+                        "no compute device available",
+                        false,
                     );
                 }
             }
@@ -380,12 +385,16 @@ impl PrimalLifecycle for BarraCudaPrimal {
         self.state = PrimalState::Running;
 
         let has_gpu = self.compute.is_some();
+        let pool_count = self
+            .gpu_pool
+            .as_ref()
+            .map_or_else(|| usize::from(has_gpu), |p| p.device_count());
         if let Some(ref dev) = self.compute {
-            let pool_count = self.gpu_pool.as_ref().map_or(1, |p| p.device_count());
             crate::ipc::gossip::inject_device_created(&dev.name(), pool_count);
         }
         crate::ipc::gossip::inject_endpoint_alive(env!("CARGO_PKG_VERSION"));
         crate::ipc::gossip::inject_readiness_changed(true, has_gpu);
+        crate::ipc::gossip::inject_capacity(pool_count, pool_count);
 
         Ok(())
     }

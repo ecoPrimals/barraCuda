@@ -110,6 +110,12 @@ pub(super) fn precision_route(
         let advice = brain.route_advice(domain);
         let tier = advice.tier;
 
+        barracuda::gossip::inject_precision_route(
+            domain_str,
+            &tier.to_string(),
+            dispatch_path,
+        );
+
         return JsonRpcResponse::success(
             id,
             serde_json::json!({

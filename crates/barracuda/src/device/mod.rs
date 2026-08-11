@@ -44,6 +44,8 @@ pub mod driver_profile;
 pub mod fma_policy;
 /// Per-tier GPU compilation probing (hotSpring v0.6.25 absorption).
 pub mod hardware_calibration;
+/// Per-shader precision/throughput profiler across precision tiers.
+pub mod precision_eval;
 /// Unified Math-to-Hardware routing (operation → best device).
 pub mod kernel_router;
 /// Latency models for dispatch scheduling (Sm70, Rdna2, AppleM, Conservative).

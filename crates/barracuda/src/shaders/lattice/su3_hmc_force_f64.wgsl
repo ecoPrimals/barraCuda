@@ -199,10 +199,10 @@ fn hmc_force(@builtin(global_invocation_id) gid: vec3<u32>) {
 
     for (var mu = 0u; mu < 4u; mu = mu + 1u) {
         let staples = compute_staple_sum(site, mu, c);
-        let u_dag   = su3_adjoint(load_link(site, mu));
-        // F_raw = Σ_staple * U_mu†(x)
-        let f_raw   = su3_mul(staples, u_dag);
-        // Project onto algebra and scale by -beta/3
+        let u_mu    = load_link(site, mu);
+        // F_raw = U_mu(x) * Σ_staples — correct Wilson force form
+        let f_raw   = su3_mul(u_mu, staples);
+        // Project onto traceless anti-Hermitian algebra and scale by -beta/3
         let f_alg   = su3_project_algebra(f_raw);
         store_force(site, mu, su3_scale(f_alg, coeff));
     }

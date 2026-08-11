@@ -33,6 +33,12 @@ pub struct TierCapability {
     /// Whether transcendental builtins (exp, log) are safe at this tier.
     /// `false` on NVIDIA proprietary for DF64 transcendentals (NVVM poisoning).
     pub transcendentals_safe: bool,
+    /// Compilation time in microseconds (0 if not measured or failed).
+    pub compile_us: f64,
+    /// Mean dispatch time in microseconds (0 if not measured or failed).
+    pub dispatch_us: f64,
+    /// Max ULP error vs f64 reference for arithmetic probe (NaN if not measured).
+    pub probe_ulp: f64,
 }
 
 /// Complete hardware calibration for a single GPU.
@@ -91,6 +97,9 @@ impl HardwareCalibration {
             compiles: true,
             dispatches: true,
             transcendentals_safe: true,
+            compile_us: 0.0,
+            dispatch_us: 0.0,
+            probe_ulp: f64::NAN,
         };
 
         let f16_cap = TierCapability {
@@ -98,6 +107,9 @@ impl HardwareCalibration {
             compiles: has_f16,
             dispatches: has_f16,
             transcendentals_safe: has_f16,
+            compile_us: 0.0,
+            dispatch_us: 0.0,
+            probe_ulp: f64::NAN,
         };
 
         let df64_compiles = !matches!(precision_routing, PRA::F32Only);
@@ -107,6 +119,9 @@ impl HardwareCalibration {
             compiles: df64_compiles,
             dispatches: df64_compiles,
             transcendentals_safe: df64_transcendentals,
+            compile_us: 0.0,
+            dispatch_us: 0.0,
+            probe_ulp: f64::NAN,
         };
 
         let f64_works = has_f64_shaders
@@ -119,6 +134,9 @@ impl HardwareCalibration {
             compiles: f64_works,
             dispatches: f64_works,
             transcendentals_safe: f64_works && caps.supports_f64_builtins(),
+            compile_us: 0.0,
+            dispatch_us: 0.0,
+            probe_ulp: f64::NAN,
         };
 
         let f64_precise_cap = TierCapability {
@@ -126,6 +144,9 @@ impl HardwareCalibration {
             compiles: f64_works,
             dispatches: f64_works,
             transcendentals_safe: f64_works && caps.supports_f64_builtins(),
+            compile_us: 0.0,
+            dispatch_us: 0.0,
+            probe_ulp: f64::NAN,
         };
 
         let tiers = vec![
@@ -142,6 +163,9 @@ impl HardwareCalibration {
                 compiles: false,
                 dispatches: false,
                 transcendentals_safe: false,
+                compile_us: 0.0,
+                dispatch_us: 0.0,
+                probe_ulp: f64::NAN,
             },
             universal(PrecisionTier::F32),
             df64_cap,
@@ -153,6 +177,9 @@ impl HardwareCalibration {
                 compiles: f64_works,
                 dispatches: f64_works,
                 transcendentals_safe: f64_works && caps.supports_f64_builtins(),
+                compile_us: 0.0,
+                dispatch_us: 0.0,
+                probe_ulp: f64::NAN,
             },
         ];
 
@@ -261,6 +288,9 @@ mod tests {
             compiles: ok,
             dispatches: ok,
             transcendentals_safe: ok,
+            compile_us: 0.0,
+            dispatch_us: 0.0,
+            probe_ulp: f64::NAN,
         };
         let universal = |tier| mk(tier, true);
         HardwareCalibration {

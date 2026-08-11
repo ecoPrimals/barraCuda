@@ -4,10 +4,12 @@
 //! Replaces CPU-only `wilson.rs` `cold_start/hot_start` with GPU shaders.
 
 use crate::device::WgpuDevice;
-use crate::device::capabilities::WORKGROUP_SIZE_COMPACT;
 use crate::device::compute_pipeline::ComputeDispatch;
 use crate::error::Result;
 use std::sync::Arc;
+
+/// Per-link workgroup size — must match @workgroup_size in lattice_init_f64.wgsl.
+const WG_LINK: u32 = 128;
 
 use super::su3_extended::su3_extended_preamble;
 const SHADER_BODY: &str = include_str!("../../shaders/lattice/lattice_init_f64.wgsl");
@@ -110,7 +112,7 @@ impl GpuLatticeInit {
             .uniform(0, &params)
             .storage_rw(1, links_buf)
             .storage_rw(2, rng_buf)
-            .dispatch(self.n_links.div_ceil(WORKGROUP_SIZE_COMPACT), 1, 1)
+            .dispatch(self.n_links.div_ceil(WG_LINK), 1, 1)
             .submit()?;
 
         Ok(())

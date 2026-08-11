@@ -64,7 +64,7 @@ fn store_momentum(base: u32, m: array<vec2<f64>, 9>) {
 }
 
 // π ← π + dt × force
-@compute @workgroup_size(64)
+@compute @workgroup_size(128)
 fn momentum_kick(@builtin(global_invocation_id) gid: vec3<u32>) {
     let link_id = gid.x;
     if (link_id >= params.n_links) { return; }
@@ -78,7 +78,7 @@ fn momentum_kick(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 
 // U ← exp(dt × π) × U  then reunitarize
-@compute @workgroup_size(64)
+@compute @workgroup_size(128)
 fn link_update(@builtin(global_invocation_id) gid: vec3<u32>) {
     let link_id = gid.x;
     if (link_id >= params.n_links) { return; }
@@ -92,7 +92,7 @@ fn link_update(@builtin(global_invocation_id) gid: vec3<u32>) {
 }
 
 // Generate random algebra momenta
-@compute @workgroup_size(64)
+@compute @workgroup_size(128)
 fn generate_momenta(@builtin(global_invocation_id) gid: vec3<u32>) {
     let link_id = gid.x;
     if (link_id >= params.n_links) { return; }

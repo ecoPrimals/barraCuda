@@ -28,7 +28,7 @@ fn load_su3_df64(base: u32) -> array<Cdf64, 9> {
     return m;
 }
 
-@compute @workgroup_size(64)
+@compute @workgroup_size(128)
 fn kinetic_energy_kernel(@builtin(global_invocation_id) gid: vec3<u32>) {
     let link_id = gid.x;
     if (link_id >= params.n_links) { return; }

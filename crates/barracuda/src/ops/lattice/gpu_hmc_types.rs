@@ -116,24 +116,20 @@ impl GpuHmcBuffers {
         let link_bytes = (n_links * 18 * std::mem::size_of::<f64>()) as u64;
         let field_bytes = (volume * 6 * std::mem::size_of::<f64>()) as u64;
 
-        // NVK buffer guard: estimate total allocation and check driver limits
-        let n_link_bufs = 6u64; // links, backup, momenta, gauge/fermion/total force
-        let n_field_bufs = 2 + config.n_flavors_over_4 as u64 + 5; // phi + eta + dirac_tmp + CG bufs
-        let scalar_bufs = (volume as u64 + n_links as u64 + volume as u64 * 2)
-            * std::mem::size_of::<u32>() as u64;
-        let total_estimate = n_link_bufs * link_bytes + n_field_bufs * field_bytes + scalar_bufs;
-
+        // Guard: verify the largest single buffer fits within the driver's per-buffer limit.
+        // (The old check compared total multi-buffer allocation against the single-buffer
+        // limit, which incorrectly rejected valid allocations on 16 GB+ GPUs at 32⁴.)
         let caps = DeviceCapabilities::from_device(device);
         if let Some(limit) = caps.max_safe_allocation_bytes()
-            && total_estimate > limit
+            && link_bytes > limit
         {
             return Err(crate::error::BarracudaError::DeviceLimitExceeded {
                 message: format!(
-                    "Estimated allocation {:.1} MB exceeds safe limit {:.1} MB",
-                    total_estimate as f64 / 1e6,
+                    "Largest single buffer {:.1} MB exceeds safe limit {:.1} MB",
+                    link_bytes as f64 / 1e6,
                     limit as f64 / 1e6,
                 ),
-                requested_bytes: total_estimate,
+                requested_bytes: link_bytes,
                 safe_limit_bytes: limit,
             });
         }

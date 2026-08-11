@@ -20,7 +20,7 @@ struct InitParams {
 @group(0) @binding(1) var<storage, read_write> links:     array<f64>;
 @group(0) @binding(2) var<storage, read_write> rng_state: array<u32>;
 
-@compute @workgroup_size(64)
+@compute @workgroup_size(128)
 fn cold_start(@builtin(global_invocation_id) gid: vec3<u32>) {
     let link_id = gid.x;
     if (link_id >= params.n_links) { return; }
@@ -34,7 +34,7 @@ fn cold_start(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 }
 
-@compute @workgroup_size(64)
+@compute @workgroup_size(128)
 fn hot_start(@builtin(global_invocation_id) gid: vec3<u32>) {
     let link_id = gid.x;
     if (link_id >= params.n_links) { return; }

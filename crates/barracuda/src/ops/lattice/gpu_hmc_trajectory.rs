@@ -257,22 +257,36 @@ impl GpuHmcTrajectory {
         })
     }
 
-    /// Omelyan 2MN integration with force recomputation between steps.
-    /// Uses π(λε) → U(ε/2) → π((1-2λ)ε) → U(ε/2) → π(λε) per step,
-    /// achieving O(ε⁴) energy conservation vs O(ε²) for plain leapfrog.
+    /// Omelyan 2MN integration with force recomputation between position updates.
+    ///
+    /// Per step: F → π(λε) → U(ε/2) → F → π((1-2λ)ε) → U(ε/2) → F → π(λε)
+    ///
+    /// Force is recomputed 3× per step (after each drift) to maintain the
+    /// symplectic property. Without this, the integrator is non-reversible and
+    /// produces O(1) energy violations instead of O(ε⁴).
     fn omelyan_integration(&self, bufs: &GpuHmcBuffers, total_cg_iters: &mut usize) -> Result<()> {
         let dt = self.config.dt;
+        let lam = super::omelyan_integrator::OMELYAN_LAMBDA;
+        let lf_bufs = LeapfrogBuffers {
+            links_buf: &bufs.links,
+            momenta_buf: &bufs.momenta,
+            force_buf: &bufs.total_force,
+            rng_buf: &bufs.rng_links,
+        };
 
         for _ in 0..self.config.n_md_steps {
             self.compute_total_force(bufs, total_cg_iters)?;
-            self.omelyan.step(
-                &bufs.links,
-                &bufs.momenta,
-                &bufs.total_force,
-                &bufs.rng_links,
-                self.volume,
-                dt,
-            )?;
+            self.leapfrog.momentum_kick(&lf_bufs, self.volume, lam * dt)?;
+
+            self.leapfrog.link_update(&lf_bufs, self.volume, 0.5 * dt)?;
+
+            self.compute_total_force(bufs, total_cg_iters)?;
+            self.leapfrog.momentum_kick(&lf_bufs, self.volume, 2.0f64.mul_add(-lam, 1.0) * dt)?;
+
+            self.leapfrog.link_update(&lf_bufs, self.volume, 0.5 * dt)?;
+
+            self.compute_total_force(bufs, total_cg_iters)?;
+            self.leapfrog.momentum_kick(&lf_bufs, self.volume, lam * dt)?;
         }
 
         Ok(())

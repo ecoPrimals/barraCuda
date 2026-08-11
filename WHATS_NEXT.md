@@ -1,10 +1,27 @@
 # barraCuda — What's Next
 
-Prioritized work items, ordered by impact. Updated 2026-08-11.
+Prioritized work items, ordered by impact. Updated 2026-08-12.
 
 ---
 
 ## Recently Completed
+
+### Wave 157i — Edge Gossip + Systemic Error Detection (Aug 12, 2026)
+3 remaining edge gossip events wired, completing 22/22 spec'd events:
+- `compute.device.recovered` — fires on device recreation after loss (test_pool
+  `insert_into_pool` recovery path).
+- `compute.precision.tier_degraded` — fires at f64 probe failure (device creation),
+  DF64 naga poisoning (shader compilation), and IPC precision routing when routed
+  tier falls below domain minimum.
+- `compute.error.systemic` — centralized post-dispatch classifier in
+  `methods/mod.rs::dispatch` fires for non-retriable `BarracudaError` variants
+  (Internal, NoAvailableExecutor, ShaderCompilation) at the IPC boundary.
+
+Also fixed: `inject_compile_success` signature generalized to `impl Display` for
+shader hash (was `u64`, but `live_compile` path uses blake3 hex string). Partial
+move fix in `sovereign_device.rs::live_compile` (advice ownership).
+
+3 new tests (5,057 total). All gates green. Gossip coverage: 22/22 events.
 
 ### Wave 157g — Full Gossip Enmeshment (Aug 11, 2026)
 Runtime gossip injection wired across all critical code paths.

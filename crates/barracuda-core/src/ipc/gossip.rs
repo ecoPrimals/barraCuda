@@ -186,6 +186,28 @@ pub fn inject_degraded(reason: &str, gpu_available: bool) {
     }
 }
 
+/// Inject a `compute.error.systemic` event for non-retriable IPC errors.
+pub fn inject_error_systemic(
+    error_variant: &str,
+    message: &str,
+    method: &str,
+    is_device_lost: bool,
+    is_oom: bool,
+) {
+    let key = format!("compute.error.systemic:{}:barracuda", gate_name());
+    let payload = serde_json::json!({
+        "error_variant": error_variant,
+        "message": message,
+        "method": method,
+        "retriable": false,
+        "is_device_lost": is_device_lost,
+        "is_oom": is_oom,
+    });
+    if send_inject("compute", &key, &payload) {
+        tracing::debug!(key = %key, method = %method, "gossip: injected error.systemic");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -229,5 +251,10 @@ mod tests {
     #[test]
     fn inject_degraded_does_not_panic() {
         inject_degraded("no GPU available", false);
+    }
+
+    #[test]
+    fn inject_error_systemic_does_not_panic() {
+        inject_error_systemic("Internal", "unexpected state", "compute.dispatch", false, false);
     }
 }

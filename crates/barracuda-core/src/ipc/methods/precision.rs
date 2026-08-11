@@ -116,6 +116,16 @@ pub(super) fn precision_route(
             dispatch_path,
         );
 
+        let min_tier = domain.minimum_tier();
+        if tier.mantissa_bits() < min_tier.mantissa_bits() {
+            barracuda::gossip::inject_precision_tier_degraded(
+                &min_tier.to_string(),
+                &tier.to_string(),
+                if coral_available { "coral_lowering" } else { "probe_failed" },
+                brain.adapter_name(),
+            );
+        }
+
         return JsonRpcResponse::success(
             id,
             serde_json::json!({

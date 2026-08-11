@@ -183,7 +183,7 @@ optional = false
 [gossip]
 description = "Events barraCuda injects into the swarmVine gossip mesh"
 inject_via = "gossip.inject"
-status = "fully wired — barracuda-core/src/ipc/gossip.rs (startup) + barracuda/src/gossip.rs (runtime), 19 events across 6 categories"
+status = "fully wired — barracuda-core/src/ipc/gossip.rs (startup + systemic) + barracuda/src/gossip.rs (runtime), 22/22 events across 7 categories"
 
 # ── Device lifecycle ─────────────────────────────────────────────────────────
 

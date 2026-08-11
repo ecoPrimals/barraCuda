@@ -159,14 +159,15 @@ pub fn inject_shader_cache_miss(shader_hash: u64) {
 
 /// Inject `compute.shader.compile_success` after a successful compilation.
 pub fn inject_compile_success(
-    shader_hash: u64,
+    shader_hash: impl std::fmt::Display,
     target_arch: &str,
     binary_bytes: usize,
     compile_path: &str,
 ) {
     let key = format!("compute.shader.compile_success:{}:barracuda", gate_name());
+    let hash_str = shader_hash.to_string();
     let payload = serde_json::json!({
-        "shader_hash": shader_hash,
+        "shader_hash": hash_str,
         "target_arch": target_arch,
         "binary_bytes": binary_bytes,
         "compile_path": compile_path,
@@ -265,6 +266,37 @@ pub fn inject_precision_route(domain: &str, tier: &str, dispatch_path: &str) {
     }
 }
 
+/// Inject `compute.device.recovered` when a fresh device replaces a lost one.
+pub fn inject_device_recovered(device_name: &str, recovery_context: &str) {
+    let key = format!("compute.device.recovered:{}:barracuda", gate_name());
+    let payload = serde_json::json!({
+        "device": device_name,
+        "recovery_context": recovery_context,
+    });
+    if send_inject("compute", &key, &payload) {
+        tracing::debug!(key = %key, "gossip: injected device.recovered");
+    }
+}
+
+/// Inject `compute.precision.tier_degraded` when hardware forces tier degradation.
+pub fn inject_precision_tier_degraded(
+    requested_tier: &str,
+    actual_tier: &str,
+    reason: &str,
+    adapter: &str,
+) {
+    let key = format!("compute.precision.tier_degraded:{}:barracuda", gate_name());
+    let payload = serde_json::json!({
+        "requested_tier": requested_tier,
+        "actual_tier": actual_tier,
+        "reason": reason,
+        "adapter": adapter,
+    });
+    if send_inject("compute", &key, &payload) {
+        tracing::debug!(key = %key, "gossip: injected precision.tier_degraded");
+    }
+}
+
 /// Inject `compute.error.retriable_exhausted` when all retries fail.
 pub fn inject_retriable_exhausted(error_kind: &str, attempts: usize, last_message: &str) {
     let key = format!("compute.error.retriable_exhausted:{}:barracuda", gate_name());
@@ -320,7 +352,7 @@ mod tests {
 
     #[test]
     fn inject_compile_success_does_not_panic() {
-        inject_compile_success(0xdead_beef, "spirv", 4096, "wgsl_direct");
+        inject_compile_success(0xdead_beef_u64, "spirv", 4096, "wgsl_direct");
     }
 
     #[test]
@@ -352,6 +384,16 @@ mod tests {
     #[test]
     fn inject_precision_route_does_not_panic() {
         inject_precision_route("stats", "f64", "wgpu");
+    }
+
+    #[test]
+    fn inject_device_recovered_does_not_panic() {
+        inject_device_recovered("test-gpu", "pool_slot_replace");
+    }
+
+    #[test]
+    fn inject_precision_tier_degraded_does_not_panic() {
+        inject_precision_tier_degraded("F64", "DF64", "probe_failed", "llvmpipe");
     }
 
     #[test]

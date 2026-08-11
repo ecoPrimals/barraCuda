@@ -23,7 +23,7 @@ traits are fully internalized.
 - **Architecture:** 4-crate workspace (barracuda, barracuda-core, barracuda-spirv, barracuda-naga-exec)
 - **Communication:** JSON-RPC 2.0 + tarpc over Unix socket and TCP. G65 single-socket protocol negotiation (`PROTOCOLS: tarpc,jsonrpc\n`) with C2 dual-socket backward compat
 - **License:** AGPL-3.0-or-later (scyBorg provenance trio)
-- **Tests:** 5,054 passing (cargo test --workspace)
+- **Tests:** 5,057 passing (cargo test --workspace)
 - **Wave 157g Evolution:** Full gossip enmeshment (19 events wired across device-lost, OOM, shader compilation, quota, precision routing). G72 Dependency Pandemic Tier 1 clean. Sovereign GEMM executor bridge. Deep debt scan clean across all 12 axes.
 - **Coverage:** 80.54% line on llvmpipe (80% CI gate, 90% target with GPU hardware)
 - **MSRV:** 1.92

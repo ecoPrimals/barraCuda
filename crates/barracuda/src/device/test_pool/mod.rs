@@ -270,6 +270,10 @@ fn insert_into_pool(
         crate::device::tensor_context::clear_global_contexts();
         crate::device::pipeline_cache::clear_global_cache();
     }
+    crate::gossip::inject_device_recovered(
+        device.adapter_info().name.as_str(),
+        "test_pool_recreate",
+    );
     *guard = Some(Arc::clone(&device));
     device
 }

@@ -643,6 +643,12 @@ impl WgpuDevice {
                 tracing::warn!(
                     "SHADER_F64 advertised but basic f64 probe FAILED — all f64 shaders will use DF64 fallback"
                 );
+                crate::gossip::inject_precision_tier_degraded(
+                    "F64",
+                    "DF64",
+                    "probe_failed",
+                    &wgpu_device.adapter_info().name,
+                );
             }
         }
 

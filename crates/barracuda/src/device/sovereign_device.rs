@@ -346,6 +346,7 @@ impl SovereignDevice {
                     "live compile-on-dispatch: compiling WGSL for {target}"
                 );
 
+                let has_advice = advice.is_some();
                 let binary = if let Some(adv) = advice {
                     GLOBAL_CORAL
                         .compile_wgsl_with_advice(&source, &target, fp64_software, adv)
@@ -379,7 +380,7 @@ impl SovereignDevice {
                     hash,
                     &target,
                     binary_len,
-                    if advice.is_some() { "wgsl_advice" } else { "wgsl_direct" },
+                    if has_advice { "wgsl_advice" } else { "wgsl_direct" },
                 );
                 Ok(CachedBinary {
                     binary: binary.binary,

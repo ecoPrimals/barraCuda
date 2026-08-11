@@ -240,6 +240,12 @@ impl WgpuDevice {
                 "DF64 SPIR-V poisoning (naga codegen) — requesting sovereign shader \
                  compilation to bypass naga. Falling back to arithmetic-only if unavailable."
             );
+            crate::gossip::inject_precision_tier_degraded(
+                "DF64",
+                "DF64_arith_only",
+                "df64_poisoned",
+                &caps.device_name,
+            );
 
             // Send the FULL DF64 source (with transcendentals) to the sovereign
             // shader compiler. The sovereign path bypasses naga and compiles to

@@ -29,7 +29,7 @@ mod tensor;
 
 use std::sync::LazyLock;
 
-use super::jsonrpc::{JsonRpcResponse, METHOD_NOT_FOUND};
+use super::jsonrpc::{JsonRpcResponse, INTERNAL_ERROR, METHOD_NOT_FOUND};
 use super::method_gate::{CallerContext, MethodGate};
 use crate::BarraCudaPrimal;
 use serde_json::Value;
@@ -229,7 +229,7 @@ pub async fn dispatch(
         return denied;
     }
 
-    match normalized {
+    let response = match normalized {
         // Ecosystem probes
         "health.liveness" | "ping" | "health" => health::health_liveness(id),
         "health.readiness" => health::health_readiness(primal, id),
@@ -353,7 +353,50 @@ pub async fn dispatch(
         // Introspection
         "method.describe" => primal::method_describe(params, id),
         _ => JsonRpcResponse::error(id, METHOD_NOT_FOUND, format!("Unknown method: {method}")),
+    };
+
+    check_systemic_error(normalized, &response);
+    response
+}
+
+/// Fire `compute.error.systemic` gossip for non-retriable IPC errors.
+///
+/// Classifies the error variant from the stringified message since typed
+/// `BarracudaError` is lost after handler conversion to `JsonRpcResponse`.
+fn check_systemic_error(method: &str, response: &JsonRpcResponse) {
+    let Some(ref err) = response.error else {
+        return;
+    };
+    if err.code != INTERNAL_ERROR {
+        return;
     }
+    let msg = &err.message;
+    let lower = msg.to_lowercase();
+    if lower.contains("device lost")
+        || lower.contains("out of memory")
+        || msg.contains("is invalid")
+        || msg.contains("Validation Error")
+    {
+        return;
+    }
+
+    let variant = if msg.contains("Internal error") {
+        "Internal"
+    } else if msg.contains("No available executor") {
+        "NoAvailableExecutor"
+    } else if msg.contains("Shader compilation") {
+        "ShaderCompilation"
+    } else {
+        "Unknown"
+    };
+
+    crate::ipc::gossip::inject_error_systemic(
+        variant,
+        msg,
+        method,
+        lower.contains("device lost"),
+        lower.contains("out of memory"),
+    );
 }
 
 #[cfg(test)]

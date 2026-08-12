@@ -21,6 +21,7 @@ fn make_cal(f32_ok: bool, df64_ok: bool, f64_ok: bool, precise_ok: bool) -> Hard
     let universal = |tier| mk(tier, true);
     HardwareCalibration {
         adapter_name: "Test GPU".into(),
+        fp64_full_rate: false,
         tiers: vec![
             universal(PrecisionTier::Binary),
             universal(PrecisionTier::Int2),
@@ -47,49 +48,63 @@ fn make_cal(f32_ok: bool, df64_ok: bool, f64_ok: bool, precise_ok: bool) -> Hard
 #[test]
 fn full_hw_routes_dielectric_to_precise() {
     let cal = make_cal(true, true, true, true);
-    let tier = route_domain(PhysicsDomain::Dielectric, &cal, true, false);
+    let tier = route_domain(PhysicsDomain::Dielectric, &cal, true, true, false);
     assert_eq!(tier, PrecisionTier::F64Precise);
 }
 
 #[test]
 fn no_precise_routes_dielectric_to_f64() {
     let cal = make_cal(true, true, true, false);
-    let tier = route_domain(PhysicsDomain::Dielectric, &cal, true, false);
+    let tier = route_domain(PhysicsDomain::Dielectric, &cal, true, true, false);
     assert_eq!(tier, PrecisionTier::F64);
 }
 
 #[test]
 fn no_f64_routes_to_df64() {
     let cal = make_cal(true, true, false, false);
-    let tier = route_domain(PhysicsDomain::Dielectric, &cal, false, false);
+    let tier = route_domain(PhysicsDomain::Dielectric, &cal, false, false, false);
     assert_eq!(tier, PrecisionTier::DF64);
 }
 
 #[test]
 fn nothing_works_falls_to_f32() {
     let cal = make_cal(true, false, false, false);
-    let tier = route_domain(PhysicsDomain::LatticeQcd, &cal, false, false);
+    let tier = route_domain(PhysicsDomain::LatticeQcd, &cal, false, false, false);
     assert_eq!(tier, PrecisionTier::F32);
 }
 
 #[test]
-fn throughput_domain_prefers_f64() {
+fn throughput_domain_prefers_f64_on_full_rate() {
     let cal = make_cal(true, true, true, true);
-    let tier = route_domain(PhysicsDomain::MolecularDynamics, &cal, true, false);
+    let tier = route_domain(PhysicsDomain::MolecularDynamics, &cal, true, true, false);
     assert_eq!(tier, PrecisionTier::F64);
 }
 
 #[test]
-fn population_pk_routes_moderate() {
+fn throughput_domain_prefers_df64_on_narrow_rate() {
+    let cal = make_cal(true, true, true, true);
+    let tier = route_domain(PhysicsDomain::MolecularDynamics, &cal, true, false, false);
+    assert_eq!(tier, PrecisionTier::DF64);
+}
+
+#[test]
+fn population_pk_routes_moderate_full_rate() {
     let cal = make_cal(true, true, true, false);
-    let tier = route_domain(PhysicsDomain::PopulationPk, &cal, true, false);
+    let tier = route_domain(PhysicsDomain::PopulationPk, &cal, true, true, false);
     assert_eq!(tier, PrecisionTier::F64);
+}
+
+#[test]
+fn population_pk_prefers_df64_on_narrow_rate() {
+    let cal = make_cal(true, true, true, false);
+    let tier = route_domain(PhysicsDomain::PopulationPk, &cal, true, false, false);
+    assert_eq!(tier, PrecisionTier::DF64);
 }
 
 #[test]
 fn hydrology_fallback_to_df64() {
     let cal = make_cal(true, true, false, false);
-    let tier = route_domain(PhysicsDomain::Hydrology, &cal, false, false);
+    let tier = route_domain(PhysicsDomain::Hydrology, &cal, false, false, false);
     assert_eq!(tier, PrecisionTier::DF64);
 }
 
@@ -132,6 +147,7 @@ fn test_caps_volta_full() -> DeviceCapabilities {
         f64_shaders: true,
         f64_shared_memory: false,
         f64_capabilities: None,
+        f64_throughput_ratio: None,
     }
 }
 
@@ -261,21 +277,21 @@ fn adapter_name_accessor() {
 #[test]
 fn inference_domain_routes_to_q4() {
     let cal = make_cal(true, true, true, true);
-    let tier = route_domain(PhysicsDomain::Inference, &cal, true, false);
+    let tier = route_domain(PhysicsDomain::Inference, &cal, true, true, false);
     assert_eq!(tier, PrecisionTier::Quantized4);
 }
 
 #[test]
 fn training_domain_routes_to_bf16() {
     let cal = make_cal(true, true, true, true);
-    let tier = route_domain(PhysicsDomain::Training, &cal, true, false);
+    let tier = route_domain(PhysicsDomain::Training, &cal, true, true, false);
     assert_eq!(tier, PrecisionTier::Bf16);
 }
 
 #[test]
 fn hashing_domain_routes_to_binary() {
     let cal = make_cal(true, true, true, true);
-    let tier = route_domain(PhysicsDomain::Hashing, &cal, true, false);
+    let tier = route_domain(PhysicsDomain::Hashing, &cal, true, true, false);
     assert_eq!(tier, PrecisionTier::Binary);
 }
 

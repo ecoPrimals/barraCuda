@@ -102,6 +102,12 @@ impl GpuHmcTrajectory {
         })
     }
 
+    /// Active FP64 strategy used by this trajectory engine (from its leapfrog integrator).
+    #[must_use]
+    pub fn strategy(&self) -> crate::device::capabilities::Fp64Strategy {
+        self.leapfrog.strategy()
+    }
+
     /// Upload lattice topology (neighbors + staggered phases) from a `DiracGpuLayout`.
     pub fn upload_topology(&self, layout: &DiracGpuLayout, bufs: &GpuHmcBuffers) {
         self.device

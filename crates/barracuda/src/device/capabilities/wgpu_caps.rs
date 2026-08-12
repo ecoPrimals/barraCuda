@@ -190,6 +190,16 @@ pub struct DeviceCapabilities {
     /// values for ground-truth behavior. When `None`, they fall back to
     /// heuristics based on device type and features.
     pub f64_capabilities: Option<F64BuiltinCapabilities>,
+
+    /// Measured FP32:FP64 throughput ratio from `probe_f64_throughput_ratio`.
+    ///
+    /// Higher values mean worse native FP64 relative performance:
+    /// - `<= 2.5`: Native tier (Titan V, V100, A100)
+    /// - `2.5..=8`: Capable tier
+    /// - `> 8`: Consumer/Throttled tier → selects `Fp64Strategy::Concurrent`
+    ///
+    /// `None` if throughput probing has not been performed.
+    pub f64_throughput_ratio: Option<f64>,
 }
 
 impl DeviceCapabilities {
@@ -228,6 +238,7 @@ impl DeviceCapabilities {
             f64_shaders: device.has_f64_shaders(),
             f64_shared_memory: false,
             f64_capabilities: crate::device::probe::cache::cached_f64_builtins(device),
+            f64_throughput_ratio: None,
         }
     }
 
@@ -444,6 +455,17 @@ impl DeviceCapabilities {
         self
     }
 
+    /// Enrich with measured FP32:FP64 throughput ratio.
+    ///
+    /// Call after [`crate::device::probe_throughput::probe_f64_throughput_ratio`]
+    /// to enable ratio-driven strategy selection. When ratio > 8, `fp64_strategy()`
+    /// returns `Concurrent` (silicon saturation) instead of `Native`.
+    #[must_use]
+    pub fn with_f64_throughput_ratio(mut self, ratio: f64) -> Self {
+        self.f64_throughput_ratio = Some(ratio);
+        self
+    }
+
     // ── Probe-based capability queries ──────────────────────────────────
 
     /// Whether f64 compute shaders produce correct results on this device.
@@ -505,11 +527,32 @@ impl DeviceCapabilities {
 
     /// Hardware-adaptive FP64 execution strategy (capability-based).
     ///
-    /// Uses probed f64 capabilities when available; falls back to heuristics
-    /// based on device type and `f64_shaders` feature flag.
+    /// Uses measured throughput ratio (from `probe_f64_throughput_ratio`) when
+    /// available to select silicon-saturation mode. Falls back to probed f64
+    /// capabilities and feature flags.
+    ///
+    /// Strategy selection:
+    /// - ratio <= 2.5 (Native tier): `Native` — full-rate FP64 hardware
+    /// - ratio > 8 (Consumer/Throttled) + DF64 safe: `Concurrent` — silicon saturation
+    /// - DF64 broken or no f64: `Hybrid`
+    /// - Otherwise: `Native`
     #[must_use]
     pub fn fp64_strategy(&self) -> super::Fp64Strategy {
         use super::Fp64Strategy;
+
+        if let Some(ratio) = self.f64_throughput_ratio {
+            if ratio <= 2.5 {
+                return Fp64Strategy::Native;
+            }
+            if ratio > 8.0 {
+                let df64_safe = self
+                    .f64_capabilities
+                    .map_or(self.f64_shaders, |c| c.df64_arith);
+                if df64_safe {
+                    return Fp64Strategy::Concurrent;
+                }
+            }
+        }
 
         if let Some(caps) = &self.f64_capabilities {
             if !caps.basic_f64 {

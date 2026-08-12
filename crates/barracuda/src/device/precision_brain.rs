@@ -110,8 +110,17 @@ impl PrecisionBrain {
             HwAdvice::F64Native | HwAdvice::F64NativeNoSharedMem
         );
 
-        let route_table = ALL_DOMAINS
-            .map(|domain| route_domain(domain, &calibration, hw_native, coral_f64_lowering));
+        let fp64_full_rate = calibration.fp64_full_rate;
+
+        let route_table = ALL_DOMAINS.map(|domain| {
+            route_domain(
+                domain,
+                &calibration,
+                hw_native,
+                fp64_full_rate,
+                coral_f64_lowering,
+            )
+        });
 
         let compiler_prefers_coral = caps.compiler_prefers_coral();
 
@@ -282,6 +291,7 @@ fn route_domain(
     domain: PhysicsDomain,
     cal: &HardwareCalibration,
     hw_native: bool,
+    fp64_full_rate: bool,
     coral_f64_lowering: bool,
 ) -> PrecisionTier {
     let f64_safe = cal.tier_safe(PrecisionTier::F64) || coral_f64_lowering;
@@ -304,31 +314,38 @@ fn route_domain(
             }
         }
 
-        // Moderate precision: prefer F64, cascade to DF64
+        // Moderate precision: prefer F64 on full-rate or coral-provided, else DF64
         PhysicsDomain::GradientFlow
         | PhysicsDomain::NuclearEos
         | PhysicsDomain::PopulationPk
         | PhysicsDomain::Hydrology => {
-            if f64_safe {
+            if f64_safe && (fp64_full_rate || coral_f64_lowering) {
                 PrecisionTier::F64
             } else if df64_safe {
                 PrecisionTier::DF64
+            } else if f64_safe {
+                PrecisionTier::F64
             } else {
                 PrecisionTier::F32
             }
         }
 
-        // Throughput-bound: F64 if fast, else DF64 for throughput
+        // Throughput-bound: FP64 is premium. Only use native f64 when it's
+        // free (full-rate hardware or coral-provided). On narrow-rate GPUs,
+        // DF64 on FP32 cores saturates the abundant silicon while FP64 units
+        // handle reductions.
         PhysicsDomain::LatticeQcd
         | PhysicsDomain::KineticFluid
         | PhysicsDomain::MolecularDynamics
         | PhysicsDomain::Bioinformatics
         | PhysicsDomain::Statistics
         | PhysicsDomain::General => {
-            if f64_safe {
+            if f64_safe && (fp64_full_rate || coral_f64_lowering) {
                 PrecisionTier::F64
             } else if df64_safe {
                 PrecisionTier::DF64
+            } else if f64_safe {
+                PrecisionTier::F64
             } else {
                 PrecisionTier::F32
             }

@@ -58,6 +58,10 @@ pub struct HardwareCalibration {
     pub df64_safe: bool,
     /// Whether any tier has NVVM transcendental issues.
     pub nvvm_transcendental_risk: bool,
+    /// Whether FP64 hardware runs at full rate (1:2 or better).
+    /// When false, FP64 is premium/scarce and throughput-bound domains
+    /// should prefer DF64 on the abundant FP32 cores.
+    pub fp64_full_rate: bool,
 }
 
 impl HardwareCalibration {
@@ -193,12 +197,15 @@ impl HardwareCalibration {
             .iter()
             .any(|t| t.dispatches && !t.transcendentals_safe);
 
+        let fp64_full_rate = classify_fp64_full_rate_from_ratio(caps.f64_throughput_ratio, &adapter_name);
+
         Self {
             adapter_name,
             tiers,
             has_any_f64,
             df64_safe,
             nvvm_transcendental_risk,
+            fp64_full_rate,
         }
     }
 
@@ -250,6 +257,40 @@ impl HardwareCalibration {
     }
 }
 
+/// Classify whether a GPU has full-rate FP64 from adapter name.
+///
+/// Full-rate (1:2 or better) means FP64 units are abundant enough that native
+/// f64 should be the default path. When false, FP64 is premium/scarce and the
+/// precision brain prefers DF64 on FP32 cores for throughput-bound domains.
+///
+/// This is a temporary heuristic until `probe_throughput` provides measured
+/// FP64:FP32 ratio at runtime.
+/// Classify FP64 full-rate using measured throughput ratio when available,
+/// falling back to adapter-name heuristics.
+fn classify_fp64_full_rate_from_ratio(ratio: Option<f64>, adapter_name: &str) -> bool {
+    if let Some(r) = ratio {
+        return r <= 2.5;
+    }
+    classify_fp64_full_rate_by_name(adapter_name)
+}
+
+fn classify_fp64_full_rate_by_name(adapter_name: &str) -> bool {
+    let name = adapter_name.to_lowercase();
+    name.contains("a100")
+        || name.contains("h100")
+        || name.contains("h200")
+        || name.contains("b100")
+        || name.contains("b200")
+        || name.contains("titan v")
+        || name.contains("v100")
+        || name.contains("gv100")
+        || name.contains("mi50")
+        || name.contains("mi100")
+        || name.contains("mi200")
+        || name.contains("mi250")
+        || name.contains("mi300")
+}
+
 impl std::fmt::Display for HardwareCalibration {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "HwCal[{}]:", self.adapter_name)?;
@@ -295,6 +336,7 @@ mod tests {
         let universal = |tier| mk(tier, true);
         HardwareCalibration {
             adapter_name: "Test GPU".into(),
+            fp64_full_rate: false,
             tiers: vec![
                 universal(PrecisionTier::Binary),
                 universal(PrecisionTier::Int2),

@@ -242,6 +242,7 @@ fn test_sin_cos_taylor_workaround_asin_acos_protected() {
             df64_fma_two_prod: true,
             df64_workgroup_reduce: true,
         }),
+        f64_throughput_ratio: None,
     };
     let shader = "let a = sin(x); let b = cos(y); let c = asin(z); let d = acos(w);";
     let result = ShaderTemplate::for_device_capabilities(shader, true, &nvk_caps);

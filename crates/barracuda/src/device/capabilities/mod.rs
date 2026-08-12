@@ -64,6 +64,7 @@ mod tests {
             f64_shaders: true,
             f64_shared_memory: false,
             f64_capabilities: None,
+            f64_throughput_ratio: None,
         };
 
         let workloads = vec![
@@ -118,6 +119,7 @@ mod tests {
             f64_shaders: true,
             f64_shared_memory: false,
             f64_capabilities: None,
+            f64_throughput_ratio: None,
         };
 
         assert!(caps_supported.supports_fhe());
@@ -141,6 +143,7 @@ mod tests {
             f64_shaders: true,
             f64_shared_memory: false,
             f64_capabilities: None,
+            f64_throughput_ratio: None,
         };
 
         assert!(!caps_limited.supports_fhe());
@@ -198,6 +201,7 @@ mod tests {
             f64_shaders: true,
             f64_shared_memory: false,
             f64_capabilities: None,
+            f64_throughput_ratio: None,
         }
     }
 

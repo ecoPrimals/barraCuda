@@ -14,6 +14,9 @@ fn make_cal(f32_ok: bool, df64_ok: bool, f64_ok: bool, precise_ok: bool) -> Hard
         compiles: ok,
         dispatches: ok,
         transcendentals_safe: ok,
+        compile_us: 0.0,
+        dispatch_us: 0.0,
+        probe_ulp: 0.0,
     };
     let universal = |tier| mk(tier, true);
     HardwareCalibration {

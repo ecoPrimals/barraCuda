@@ -19,10 +19,7 @@ const SHADER_BODY: &str = include_str!("../../shaders/lattice/lattice_init_f64.w
 struct InitParams {
     volume: u32,
     n_links: u32,
-    _pad0: u32,
-    _pad1: u32,
     epsilon: f64,
-    _padf: f64,
 }
 
 /// GPU lattice initializer — cold start (identity) or hot start (random near identity).
@@ -91,10 +88,7 @@ impl GpuLatticeInit {
         let params_data = InitParams {
             volume,
             n_links: self.n_links,
-            _pad0: 0,
-            _pad1: 0,
             epsilon,
-            _padf: 0.0,
         };
         let params = self.device.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some(&format!("GpuLatticeInit:{label}:params")),

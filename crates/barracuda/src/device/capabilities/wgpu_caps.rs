@@ -83,6 +83,43 @@ pub fn optimal_workgroup_size_arch(
 /// limit. When the driver reports a bogus value, the only information
 /// available at runtime is the adapter name. These heuristics are
 /// conservative lower bounds used *only* when the driver is demonstrably
+/// Resolve FP64 throughput ratio from (in priority order):
+/// 1. `BARRACUDA_FP64_RATIO` env var (explicit override)
+/// 2. Cached async probe result (if probed earlier in this process)
+/// 3. Adapter-name heuristic table (known hardware)
+fn resolve_f64_throughput_ratio(device: &WgpuDevice, adapter_name: &str) -> Option<f64> {
+    if let Ok(v) = std::env::var("BARRACUDA_FP64_RATIO") {
+        if let Ok(ratio) = v.parse::<f64>() {
+            return Some(ratio);
+        }
+    }
+
+    if let Some(cached) = crate::device::probe_throughput::cached_f64_ratio(device) {
+        return Some(cached.ratio);
+    }
+
+    // Known hardware ratios (FP32 GFLOPS / FP64 GFLOPS).
+    // Source: metalForge validation + vendor specs.
+    let name_upper = adapter_name.to_uppercase();
+    let known: &[(&[&str], f64)] = &[
+        // Native tier (ratio <= 2.5) — full-rate FP64
+        (&["TITAN V", "V100", "A100", "H100", "H200", "MI250", "MI300"], 2.0),
+        (&["RTX 3090", "RTX A6000", "RTX A5000"], 2.0),
+        // Consumer tier (ratio > 8) — heavily throttled FP64
+        (&["RX 6", "RX 7", "NAVI"], 16.0),         // RDNA 2/3: 1:16
+        (&["RTX 40", "RTX 50", "ADA"], 64.0),       // Ada Lovelace: 1:64
+        (&["RTX 20", "TURING"], 32.0),               // Turing non-Titan: 1:32
+    ];
+
+    for &(patterns, ratio) in known {
+        if patterns.iter().any(|p| name_upper.contains(p)) {
+            return Some(ratio);
+        }
+    }
+
+    None
+}
+
 /// broken (>64 GB reported for consumer hardware). When wgpu gains a
 /// VRAM capacity limit, this function should switch to it.
 fn sanitize_max_buffer_size(reported: u64, device_name: &str) -> u64 {
@@ -238,7 +275,7 @@ impl DeviceCapabilities {
             f64_shaders: device.has_f64_shaders(),
             f64_shared_memory: false,
             f64_capabilities: crate::device::probe::cache::cached_f64_builtins(device),
-            f64_throughput_ratio: None,
+            f64_throughput_ratio: resolve_f64_throughput_ratio(device, &adapter_info.name),
         }
     }
 

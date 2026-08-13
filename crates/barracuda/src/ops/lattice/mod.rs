@@ -32,6 +32,7 @@
 //! | `gpu_multi_shift_cg` | GPU multi-shift CG for RHMC (shared Krylov, Jegerlehner) |
 //! | `gpu_resident_observables` | GPU-resident O(1)-readback plaquette, KE, Hamiltonian, Metropolis |
 //! | `gpu_hmc_trajectory` | Full dynamical fermion HMC trajectory on GPU |
+//! | `rt_core_qcd` | RT core QCD capability mappings (exploration targets) |
 //!
 //! # Test-Only CPU Reference
 //!
@@ -85,6 +86,7 @@ pub mod hmc_force_su3;
 pub mod omelyan_integrator;
 pub mod plaquette;
 pub mod rop_force_accum;
+pub mod rt_core_qcd;
 pub mod tmu_tables;
 
 /// LCG PRNG and lattice constants (used at runtime by `HostRng`).

@@ -40,6 +40,26 @@
 //! **Recommendation**: Keep compute atomic path as default. Upstream render path
 //! when multi-pole RHMC campaigns demonstrate the atomic path as bottleneck.
 //! hotSpring prototype (`render_force_accum.rs`) is the reference for integration.
+//!
+//! ## Fixed-Function Silicon — Capability-First Mapping
+//!
+//! Every fixed-function unit on the GPU was designed to solve a physics problem at
+//! wire speed. Capability precedes use case — all units are exploration targets.
+//!
+//! | Unit | Hardware capability | QCD mapping | Status |
+//! |------|--------------------|----|--------|
+//! | **ROP** | Scatter-accumulate (additive blend) | Force accumulation across RHMC poles | MEASURED: 7.8G/s (3090) |
+//! | **RT cores** | BVH spatial query O(log n) | Wilson loop tracing, parameter-space nearest-neighbor, multigrid coarsening on irregular geometries | MAPPED: 1.5 Mtri/s (3090) |
+//! | **Tessellation** | Hardware h-refinement (subdivision) | Adaptive multigrid, non-uniform lattice generation, domain-adapted stencils near defects | THEORIZED |
+//! | **Rasterizer** | Coverage/binning (primitive → fragment) | Domain decomposition, site→cell spatial sorting | MEASURED: 63 Msites/s |
+//! | **Depth buffer** | Nearest-site lookup (z-test) | Voronoi coarsening, prolongation weights, smearing radius | MEASURED: 16 Mpx/s |
+//! | **Video encoder** | Temporal coherence compression (NVENC) | Config archival (61:1), trajectory streaming, checkpoint delta | MEASURED: zero ALU contention |
+//!
+//! RT cores are not competitive for regular lattice neighbor lookup (O(1) index
+//! arithmetic), but become relevant for: deformed lattices, adaptive meshes,
+//! parameter-space hot-start queries, and Wilson loops on large geometries where
+//! the path intersects O(L) links. See `bench_rt_core_probe.rs` and
+//! `infra/whitePaper/subGen/GPU_FIXED_FUNCTION_SCIENCE_REPURPOSING.md`.
 
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 

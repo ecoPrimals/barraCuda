@@ -167,6 +167,24 @@ impl Su3HmcForce {
     pub fn link_buffer_len(&self) -> u64 {
         self.volume as u64 * 4 * 18
     }
+
+    /// Uniform params buffer (for streaming encoder bind group creation).
+    #[must_use]
+    pub fn params_buffer(&self) -> &wgpu::Buffer {
+        &self.params
+    }
+
+    /// Shader source (for streaming pipeline compilation).
+    #[must_use]
+    pub fn shader_src(&self) -> &str {
+        &self.shader_src
+    }
+
+    /// Workgroup count for dispatch.
+    #[must_use]
+    pub fn workgroup_count(&self) -> u32 {
+        self.volume.div_ceil(FORCE_WG)
+    }
 }
 
 #[cfg(test)]

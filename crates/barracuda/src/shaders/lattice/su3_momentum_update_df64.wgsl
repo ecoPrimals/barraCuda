@@ -25,9 +25,12 @@ struct LeapfrogParams {
 @group(0) @binding(3) var<storage, read>       force:     array<f64>;
 @group(0) @binding(4) var<storage, read_write> rng_state: array<u32>;
 
-@compute @workgroup_size(128)
-fn momentum_update_df64(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let idx = gid.x;
+@compute @workgroup_size(64)
+fn momentum_update_df64(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+    @builtin(num_workgroups) num_wgs: vec3<u32>,
+) {
+    let idx = gid.y * (num_wgs.x * 64u) + gid.x;
     if idx >= params.n_links { return; }
 
     let base = idx * 18u;

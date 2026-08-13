@@ -27,6 +27,8 @@ struct LeapfrogParams {
 @group(0) @binding(3) var<storage, read>       force:     array<f64>;
 @group(0) @binding(4) var<storage, read_write> rng_state: array<u32>;
 
+const DF64_WG: u32 = 64u;
+
 fn cdf64_scale_link(a: Cdf64, s: Df64) -> Cdf64 {
     return Cdf64(df64_mul(a.re, s), df64_mul(a.im, s));
 }
@@ -97,9 +99,12 @@ fn su3_reunitarize_gs_df64(m: array<Cdf64, 9>) -> array<Cdf64, 9> {
     return r;
 }
 
-@compute @workgroup_size(128)
-fn link_update_df64(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let idx = gid.x;
+@compute @workgroup_size(64)
+fn link_update_df64(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+    @builtin(num_workgroups) num_wgs: vec3<u32>,
+) {
+    let idx = gid.y * (num_wgs.x * DF64_WG) + gid.x;
     if idx >= params.n_links { return; }
 
     let base = idx * 18u;

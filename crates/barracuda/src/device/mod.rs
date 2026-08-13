@@ -135,7 +135,7 @@ pub use registry::{
 pub use sovereign_device::SovereignDevice;
 pub use substrate::{Substrate, SubstrateCapability, SubstrateType};
 pub use unified::{Capability, Device, DeviceContext, DeviceInfo, WorkloadHint};
-pub use wgpu_device::WgpuDevice;
+pub use wgpu_device::{GuardedEncoder, WgpuDevice};
 
 // Re-export the tiered discovery result type.
 // `DiscoveredDevice` is the return type of `Auto::new()` after BC-07.

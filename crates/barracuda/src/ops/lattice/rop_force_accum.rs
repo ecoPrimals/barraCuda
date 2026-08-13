@@ -16,6 +16,30 @@
 //! 1. Zero the i32 atomic accumulation buffer
 //! 2. For each pole: dispatch fused force+atomicAdd shader (independent, no barriers)
 //! 3. Single conversion dispatch: momentum += f64(accum) / scale
+//!
+//! ## Upstream Viability Assessment (August 2026)
+//!
+//! **Current path (compute atomicAdd)**: Proven, validated, already upstream.
+//! Lights up ALU + L2 cache for scatter-add but ROPs remain dark.
+//!
+//! **Render-pass path (ROP additive blend)**: Prototype validated in hotSpring
+//! (`render_force_accum.rs`). Uses `PointList` topology with `BlendOp::Add`
+//! (src=One, dst=One) on `Rgba32Float` render target. Performance:
+//! - RTX 3090: 7.8 G scatter-adds/s (~0.5× peak 112 ROPs)
+//! - RX 6950 XT: 5.5 G scatter-adds/s (~0.05× peak 128 ROPs)
+//!
+//! **Viability**: HIGH for dynamical fermion HMC with many RHMC poles (N≥8).
+//! LOW priority for pure gauge (no poles, force is single dispatch).
+//!
+//! **Upstream blockers**:
+//! 1. barraCuda is currently compute-only (no render pipeline infrastructure)
+//! 2. `Rgba32Float` blend on point primitives requires fragment shader stage
+//! 3. Readback from render target → storage buffer adds a copy pass
+//! 4. Fixed-point quantization in compute path is acceptable for O(dt²) integrator
+//!
+//! **Recommendation**: Keep compute atomic path as default. Upstream render path
+//! when multi-pole RHMC campaigns demonstrate the atomic path as bottleneck.
+//! hotSpring prototype (`render_force_accum.rs`) is the reference for integration.
 
 use crate::device::capabilities::WORKGROUP_SIZE_1D;
 

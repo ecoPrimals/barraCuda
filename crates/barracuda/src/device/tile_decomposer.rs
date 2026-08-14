@@ -218,6 +218,9 @@ mod tests {
             tmu_count: 0,
             rop_count: 0,
             subgroup_size: 0,
+            dispatch_overhead_us: 0.0,
+            streaming_speedup: 1.0,
+            max_1d_workgroups: 65535,
             measured_at: String::new(),
         }
     }

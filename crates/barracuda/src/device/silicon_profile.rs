@@ -141,6 +141,30 @@ pub struct SiliconProfile {
     pub rop_count: u32,
     /// Subgroup (warp/wavefront) size, 0 if unknown.
     pub subgroup_size: u32,
+    /// Measured per-dispatch host-device round-trip cost (microseconds).
+    ///
+    /// Captures the driver/queue submission overhead per `submit()` call.
+    /// Critically varies by driver: RADV ~1900μs, NVIDIA proprietary ~290μs.
+    /// The streaming encoder's benefit is proportional to this value ×
+    /// dispatches_per_trajectory.
+    ///
+    /// Cross-GPU learning: AMD's 39× streaming speedup (78s→2s/traj) exposed
+    /// that NVIDIA's 2.83× (142s→50s) shares the same root cause — the
+    /// magnitude differs by driver, but the pattern is universal.
+    #[serde(default)]
+    pub dispatch_overhead_us: f64,
+    /// Streaming encoder speedup ratio (trajectory_time_per_dispatch / streaming).
+    ///
+    /// Measured by comparing identical physics with per-dispatch vs batched
+    /// encoder submission. Values >2× indicate the workload is dispatch-bound.
+    #[serde(default)]
+    pub streaming_speedup: f64,
+    /// Maximum workgroups per dimension before 2D dispatch is required.
+    /// RDNA2 = 65535 (with broken 2D linearization); NVIDIA = 65535 (2D works).
+    /// Used by silicon router to select workgroup sizes that avoid 2D dispatch
+    /// on drivers with known 2D failures.
+    #[serde(default)]
+    pub max_1d_workgroups: u32,
     /// ISO-8601 timestamp of when this profile was last measured.
     pub measured_at: String,
 }
@@ -180,6 +204,36 @@ impl SiliconProfile {
     #[must_use]
     pub const fn has_subgroup_intrinsics(&self) -> bool {
         self.subgroup_size > 0
+    }
+
+    /// Whether streaming dispatch is strongly preferred on this device.
+    ///
+    /// Returns `true` when the measured streaming speedup exceeds 5×, indicating
+    /// the driver has high per-dispatch overhead that dominates workload time.
+    /// Cross-GPU pattern: RADV (39×) >> NVIDIA proprietary (2.83×) — the threshold
+    /// captures RADV-class drivers where per-dispatch encoding is untenable.
+    #[must_use]
+    pub fn prefers_streaming(&self) -> bool {
+        self.streaming_speedup > 5.0
+    }
+
+    /// Whether a dispatch count is safe for 1D dispatch on this device.
+    ///
+    /// When `max_1d_workgroups > 0` and the dispatch exceeds it, callers must
+    /// either use 2D dispatch (if the driver supports it) or widen the workgroup
+    /// to reduce dispatch count. This is silicon-driven, not vendor-specific.
+    #[must_use]
+    pub fn needs_dispatch_widening(&self, workgroups: u32) -> bool {
+        self.max_1d_workgroups > 0 && workgroups > self.max_1d_workgroups
+    }
+
+    /// Estimated time saved per trajectory by using streaming encoder (seconds).
+    ///
+    /// Based on measured dispatch overhead × dispatches per trajectory.
+    /// At 40 MD steps × 8 dispatches/step = 320 dispatches per trajectory.
+    #[must_use]
+    pub fn streaming_time_saved_per_traj(&self, dispatches_per_traj: u32) -> f64 {
+        self.dispatch_overhead_us * dispatches_per_traj as f64 / 1_000_000.0
     }
 
     /// Best composition multiplier involving a given unit.
@@ -269,6 +323,9 @@ mod tests {
             tmu_count: 328,
             rop_count: 112,
             subgroup_size: 32,
+            dispatch_overhead_us: 290.0,
+            streaming_speedup: 2.83,
+            max_1d_workgroups: 65535,
             measured_at: "2026-03-29T12:00:00Z".into(),
         }
     }

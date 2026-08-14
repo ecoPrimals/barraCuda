@@ -201,8 +201,29 @@ impl GpuHmcTrajectory {
             if let (Some(mom_src), Some(link_src)) =
                 (leapfrog.df64_momentum_src(), leapfrog.df64_link_src())
             {
-                let mom_mod = device.compile_shader(mom_src, Some("streaming_kick_df64"));
-                let link_mod = device.compile_shader(link_src, Some("streaming_link_df64"));
+                // Silicon capability: when DF64 WG64 dispatch exceeds 65535 workgroups,
+                // widen to WG128 to keep dispatch 1D. This avoids broken 2D
+                // global_invocation_id.y / num_workgroups on RADV (RDNA2) and
+                // any driver with max_workgroups_per_dimension = 65535.
+                // The pattern generalizes: dispatch sizing is silicon-driven,
+                // not vendor-specific.
+                let (effective_mom_src, effective_link_src, effective_wg) =
+                    if lf_wg_df64 > 65535 {
+                        let wg128_mom = mom_src
+                            .replace("@workgroup_size(64)", "@workgroup_size(128)")
+                            .replace("num_wgs.x * 64u", "num_wgs.x * 128u");
+                        let wg128_link = link_src
+                            .replace("@workgroup_size(64)", "@workgroup_size(128)")
+                            .replace("const DF64_WG: u32 = 64u;", "const DF64_WG: u32 = 128u;")
+                            .replace("num_wgs.x * DF64_WG", "num_wgs.x * DF64_WG");
+                        let n_links = leapfrog.n_links();
+                        (wg128_mom, wg128_link, n_links.div_ceil(128))
+                    } else {
+                        (mom_src.to_string(), link_src.to_string(), lf_wg_df64)
+                    };
+
+                let mom_mod = device.compile_shader(&effective_mom_src, Some("streaming_kick_df64"));
+                let link_mod = device.compile_shader(&effective_link_src, Some("streaming_link_df64"));
                 let kick = device.device.create_compute_pipeline(
                     &wgpu::ComputePipelineDescriptor {
                         label: Some("streaming_kick_df64"),
@@ -223,7 +244,7 @@ impl GpuHmcTrajectory {
                         compilation_options: Default::default(),
                     },
                 );
-                (kick, link, lf_wg_df64)
+                (kick, link, effective_wg)
             } else {
                 let native_mod = device.compile_shader_f64(
                     leapfrog.native_shader_src(),

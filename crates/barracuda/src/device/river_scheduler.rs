@@ -210,6 +210,9 @@ mod tests {
             tmu_count: 328,
             rop_count: 112,
             subgroup_size: 32,
+            dispatch_overhead_us: 290.0,
+            streaming_speedup: 2.83,
+            max_1d_workgroups: 65535,
             measured_at: String::new(),
         }
     }
@@ -238,6 +241,9 @@ mod tests {
             tmu_count: 256,
             rop_count: 128,
             subgroup_size: 32,
+            dispatch_overhead_us: 1900.0,
+            streaming_speedup: 39.0,
+            max_1d_workgroups: 65535,
             measured_at: String::new(),
         }
     }
@@ -256,6 +262,9 @@ mod tests {
             tmu_count: 0,
             rop_count: 0,
             subgroup_size: 0,
+            dispatch_overhead_us: 0.0,
+            streaming_speedup: 1.0,
+            max_1d_workgroups: 65535,
             measured_at: String::new(),
         }
     }

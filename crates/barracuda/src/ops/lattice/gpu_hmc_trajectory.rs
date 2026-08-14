@@ -34,6 +34,22 @@ use super::gpu_pseudofermion::{GpuPseudofermionForce, GpuPseudofermionHeatbath};
 use super::gpu_wilson_action::GpuWilsonAction;
 use super::hmc_force_su3::Su3HmcForce;
 
+/// Cached GPU pipelines for streaming MD integration.
+///
+/// Created once at trajectory engine construction; reused across all trajectories.
+/// Avoids recompiling 3-5 shaders per trajectory (saves ~50-200ms per call).
+struct StreamingPipelines {
+    force_pipeline: wgpu::ComputePipeline,
+    force_bgl: wgpu::BindGroupLayout,
+    kick_pipeline: wgpu::ComputePipeline,
+    link_pipeline: wgpu::ComputePipeline,
+    lf_bgl: wgpu::BindGroupLayout,
+    /// Workgroup count for leapfrog dispatches (accounts for DF64 WG64 vs native WG128).
+    lf_workgroups: u32,
+    /// Workgroup count for force dispatches.
+    force_workgroups: u32,
+}
+
 /// Full GPU HMC trajectory engine.
 pub struct GpuHmcTrajectory {
     device: Arc<WgpuDevice>,
@@ -51,6 +67,7 @@ pub struct GpuHmcTrajectory {
     action_reducer: ReduceScalarPipeline,
     energy_reducer: ReduceScalarPipeline,
     host_rng: std::cell::RefCell<HostRng>,
+    streaming_pipelines: StreamingPipelines,
 }
 
 impl GpuHmcTrajectory {
@@ -72,18 +89,22 @@ impl GpuHmcTrajectory {
             device.clone(),
             volume,
         )?);
+        let gauge_force = Su3HmcForce::new(
+            device.clone(),
+            config.nt,
+            config.nx,
+            config.ny,
+            config.nz,
+            config.beta,
+        )?;
+
+        let streaming_pipelines =
+            Self::build_streaming_pipelines(&device, &leapfrog, &gauge_force);
 
         Ok(Self {
             leapfrog,
             omelyan,
-            gauge_force: Su3HmcForce::new(
-                device.clone(),
-                config.nt,
-                config.nx,
-                config.ny,
-                config.nz,
-                config.beta,
-            )?,
+            gauge_force,
             wilson_action: GpuWilsonAction::new(
                 device.clone(),
                 config.nt,
@@ -103,12 +124,143 @@ impl GpuHmcTrajectory {
             cg_solver: GpuCgSolver::new(device.clone(), volume)?,
             action_reducer: ReduceScalarPipeline::new(device.clone(), volume as usize)?,
             energy_reducer: ReduceScalarPipeline::new(device.clone(), n_links as usize)?,
+            streaming_pipelines,
             device,
             config,
             volume,
             n_links,
             host_rng: std::cell::RefCell::new(HostRng::new(seed)),
         })
+    }
+
+    fn build_streaming_pipelines(
+        device: &Arc<WgpuDevice>,
+        leapfrog: &GpuHmcLeapfrog,
+        gauge_force: &Su3HmcForce,
+    ) -> StreamingPipelines {
+        let force_wg = gauge_force.workgroup_count();
+        let force_module =
+            device.compile_shader_f64(gauge_force.shader_src(), Some("streaming_force"));
+        let force_bgl =
+            device
+                .device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("streaming_force_bgl"),
+                    entries: &[
+                        crate::device::compute_pipeline::uniform_bgl_entry(0),
+                        crate::device::compute_pipeline::storage_bgl_entry(1, true),
+                        crate::device::compute_pipeline::storage_bgl_entry(2, false),
+                    ],
+                });
+        let force_pl =
+            device
+                .device
+                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some("streaming_force_pl"),
+                    bind_group_layouts: &[&force_bgl],
+                    immediate_size: 0,
+                });
+        let force_pipeline =
+            device
+                .device
+                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("streaming_force"),
+                    layout: Some(&force_pl),
+                    module: &force_module,
+                    entry_point: Some("hmc_force"),
+                    cache: None,
+                    compilation_options: Default::default(),
+                });
+
+        let leapfrog_bgl_entries = &[
+            crate::device::compute_pipeline::uniform_bgl_entry(0),
+            crate::device::compute_pipeline::storage_bgl_entry(1, false),
+            crate::device::compute_pipeline::storage_bgl_entry(2, false),
+            crate::device::compute_pipeline::storage_bgl_entry(3, true),
+            crate::device::compute_pipeline::storage_bgl_entry(4, false),
+        ];
+        let lf_bgl =
+            device
+                .device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("streaming_lf_bgl"),
+                    entries: leapfrog_bgl_entries,
+                });
+        let lf_pl = device
+            .device
+            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("streaming_lf_pl"),
+                bind_group_layouts: &[&lf_bgl],
+                immediate_size: 0,
+            });
+
+        let lf_wg_native = leapfrog.workgroup_count();
+        let lf_wg_df64 = leapfrog.workgroup_count_df64();
+
+        let (kick_pipeline, link_pipeline, lf_workgroups) =
+            if let (Some(mom_src), Some(link_src)) =
+                (leapfrog.df64_momentum_src(), leapfrog.df64_link_src())
+            {
+                let mom_mod = device.compile_shader(mom_src, Some("streaming_kick_df64"));
+                let link_mod = device.compile_shader(link_src, Some("streaming_link_df64"));
+                let kick = device.device.create_compute_pipeline(
+                    &wgpu::ComputePipelineDescriptor {
+                        label: Some("streaming_kick_df64"),
+                        layout: Some(&lf_pl),
+                        module: &mom_mod,
+                        entry_point: Some("momentum_update_df64"),
+                        cache: None,
+                        compilation_options: Default::default(),
+                    },
+                );
+                let link = device.device.create_compute_pipeline(
+                    &wgpu::ComputePipelineDescriptor {
+                        label: Some("streaming_link_df64"),
+                        layout: Some(&lf_pl),
+                        module: &link_mod,
+                        entry_point: Some("link_update_df64"),
+                        cache: None,
+                        compilation_options: Default::default(),
+                    },
+                );
+                (kick, link, lf_wg_df64)
+            } else {
+                let native_mod = device.compile_shader_f64(
+                    leapfrog.native_shader_src(),
+                    Some("streaming_lf_native"),
+                );
+                let kick = device.device.create_compute_pipeline(
+                    &wgpu::ComputePipelineDescriptor {
+                        label: Some("streaming_kick_native"),
+                        layout: Some(&lf_pl),
+                        module: &native_mod,
+                        entry_point: Some("momentum_kick"),
+                        cache: None,
+                        compilation_options: Default::default(),
+                    },
+                );
+                let link = device.device.create_compute_pipeline(
+                    &wgpu::ComputePipelineDescriptor {
+                        label: Some("streaming_link_native"),
+                        layout: Some(&lf_pl),
+                        module: &native_mod,
+                        entry_point: Some("link_update"),
+                        cache: None,
+                        compilation_options: Default::default(),
+                    },
+                );
+                (kick, link, lf_wg_native)
+            };
+
+        StreamingPipelines {
+            force_pipeline,
+            force_bgl,
+            kick_pipeline,
+            link_pipeline,
+            lf_bgl,
+            lf_workgroups,
+            force_workgroups: force_wg,
+        }
     }
 
     /// Active FP64 strategy used by this trajectory engine (from its leapfrog integrator).
@@ -309,8 +461,8 @@ impl GpuHmcTrajectory {
 
     /// Streaming Omelyan integration: all MD passes in a single GPU submission.
     ///
-    /// Pre-compiles pipelines for force, momentum kick, and link update, then
-    /// records all `n_md_steps × 8` passes (3 force + 3 kick + 2 link per step)
+    /// Uses cached pipelines from construction (no per-trajectory shader recompilation).
+    /// Records all `n_md_steps × 8` passes (3 force + 3 kick + 2 link per step)
     /// into one command encoder. Eliminates per-dispatch submit+poll overhead.
     ///
     /// Pure gauge only — no CG convergence readbacks needed during MD.
@@ -318,44 +470,11 @@ impl GpuHmcTrajectory {
         let dt = self.config.dt;
         let lam = super::omelyan_integrator::OMELYAN_LAMBDA;
         let n_md_steps = self.config.n_md_steps;
+        let sp = &self.streaming_pipelines;
 
-        let force_wg = self.gauge_force.workgroup_count();
-        let lf_wg = self.leapfrog.workgroup_count();
-
-        let force_module = self.device.compile_shader_f64(
-            self.gauge_force.shader_src(),
-            Some("streaming_force"),
-        );
-        let force_bgl = self.device.device.create_bind_group_layout(
-            &wgpu::BindGroupLayoutDescriptor {
-                label: Some("streaming_force_bgl"),
-                entries: &[
-                    crate::device::compute_pipeline::uniform_bgl_entry(0),
-                    crate::device::compute_pipeline::storage_bgl_entry(1, true),
-                    crate::device::compute_pipeline::storage_bgl_entry(2, false),
-                ],
-            },
-        );
-        let force_pl = self.device.device.create_pipeline_layout(
-            &wgpu::PipelineLayoutDescriptor {
-                label: Some("streaming_force_pl"),
-                bind_group_layouts: &[&force_bgl],
-                immediate_size: 0,
-            },
-        );
-        let force_pipeline = self.device.device.create_compute_pipeline(
-            &wgpu::ComputePipelineDescriptor {
-                label: Some("streaming_force"),
-                layout: Some(&force_pl),
-                module: &force_module,
-                entry_point: Some("hmc_force"),
-                cache: None,
-                compilation_options: Default::default(),
-            },
-        );
         let force_bg = self.device.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("streaming_force_bg"),
-            layout: &force_bgl,
+            layout: &sp.force_bgl,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -371,84 +490,6 @@ impl GpuHmcTrajectory {
                 },
             ],
         });
-
-        let leapfrog_bgl_entries = &[
-            crate::device::compute_pipeline::uniform_bgl_entry(0),
-            crate::device::compute_pipeline::storage_bgl_entry(1, false),
-            crate::device::compute_pipeline::storage_bgl_entry(2, false),
-            crate::device::compute_pipeline::storage_bgl_entry(3, true),
-            crate::device::compute_pipeline::storage_bgl_entry(4, false),
-        ];
-        let lf_bgl = self.device.device.create_bind_group_layout(
-            &wgpu::BindGroupLayoutDescriptor {
-                label: Some("streaming_lf_bgl"),
-                entries: leapfrog_bgl_entries,
-            },
-        );
-        let lf_pl = self.device.device.create_pipeline_layout(
-            &wgpu::PipelineLayoutDescriptor {
-                label: Some("streaming_lf_pl"),
-                bind_group_layouts: &[&lf_bgl],
-                immediate_size: 0,
-            },
-        );
-
-        let lf_wg_df64 = self.leapfrog.workgroup_count_df64();
-        let (kick_pipeline, link_pipeline, lf_wg_actual) =
-            if let (Some(mom_src), Some(link_src)) = (
-                self.leapfrog.df64_momentum_src(),
-                self.leapfrog.df64_link_src(),
-            ) {
-                let mom_mod = self.device.compile_shader(mom_src, Some("streaming_kick_df64"));
-                let link_mod = self.device.compile_shader(link_src, Some("streaming_link_df64"));
-                let kick_pl = self.device.device.create_compute_pipeline(
-                    &wgpu::ComputePipelineDescriptor {
-                        label: Some("streaming_kick_df64"),
-                        layout: Some(&lf_pl),
-                        module: &mom_mod,
-                        entry_point: Some("momentum_update_df64"),
-                        cache: None,
-                        compilation_options: Default::default(),
-                    },
-                );
-                let link_pl_pipe = self.device.device.create_compute_pipeline(
-                    &wgpu::ComputePipelineDescriptor {
-                        label: Some("streaming_link_df64"),
-                        layout: Some(&lf_pl),
-                        module: &link_mod,
-                        entry_point: Some("link_update_df64"),
-                        cache: None,
-                        compilation_options: Default::default(),
-                    },
-                );
-                (kick_pl, link_pl_pipe, lf_wg_df64)
-            } else {
-                let native_mod = self.device.compile_shader_f64(
-                    self.leapfrog.native_shader_src(),
-                    Some("streaming_lf_native"),
-                );
-                let kick_pl = self.device.device.create_compute_pipeline(
-                    &wgpu::ComputePipelineDescriptor {
-                        label: Some("streaming_kick_native"),
-                        layout: Some(&lf_pl),
-                        module: &native_mod,
-                        entry_point: Some("momentum_kick"),
-                        cache: None,
-                        compilation_options: Default::default(),
-                    },
-                );
-                let link_pl_pipe = self.device.device.create_compute_pipeline(
-                    &wgpu::ComputePipelineDescriptor {
-                        label: Some("streaming_link_native"),
-                        layout: Some(&lf_pl),
-                        module: &native_mod,
-                        entry_point: Some("link_update"),
-                        cache: None,
-                        compilation_options: Default::default(),
-                    },
-                );
-                (kick_pl, link_pl_pipe, lf_wg)
-            };
 
         use super::gpu_hmc_leapfrog::LeapfrogParams;
         let make_lf_params_buf = |dt_val: f64, label: &str| -> wgpu::Buffer {
@@ -479,7 +520,7 @@ impl GpuHmcTrajectory {
         let make_lf_bg = |params_buf: &wgpu::Buffer, label: &str| -> wgpu::BindGroup {
             self.device.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some(label),
-                layout: &lf_bgl,
+                layout: &sp.lf_bgl,
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
@@ -517,14 +558,14 @@ impl GpuHmcTrajectory {
         );
 
         for _step in 0..n_md_steps {
-            Self::encode_compute_pass(&mut encoder, &force_pipeline, &force_bg, force_wg);
-            Self::encode_compute_pass(&mut encoder, &kick_pipeline, &kick_lam_bg, lf_wg_actual);
-            Self::encode_compute_pass(&mut encoder, &link_pipeline, &link_half_bg, lf_wg_actual);
-            Self::encode_compute_pass(&mut encoder, &force_pipeline, &force_bg, force_wg);
-            Self::encode_compute_pass(&mut encoder, &kick_pipeline, &kick_mid_bg, lf_wg_actual);
-            Self::encode_compute_pass(&mut encoder, &link_pipeline, &link_half_bg, lf_wg_actual);
-            Self::encode_compute_pass(&mut encoder, &force_pipeline, &force_bg, force_wg);
-            Self::encode_compute_pass(&mut encoder, &kick_pipeline, &kick_lam_bg, lf_wg_actual);
+            Self::encode_compute_pass(&mut encoder, &sp.force_pipeline, &force_bg, sp.force_workgroups);
+            Self::encode_compute_pass(&mut encoder, &sp.kick_pipeline, &kick_lam_bg, sp.lf_workgroups);
+            Self::encode_compute_pass(&mut encoder, &sp.link_pipeline, &link_half_bg, sp.lf_workgroups);
+            Self::encode_compute_pass(&mut encoder, &sp.force_pipeline, &force_bg, sp.force_workgroups);
+            Self::encode_compute_pass(&mut encoder, &sp.kick_pipeline, &kick_mid_bg, sp.lf_workgroups);
+            Self::encode_compute_pass(&mut encoder, &sp.link_pipeline, &link_half_bg, sp.lf_workgroups);
+            Self::encode_compute_pass(&mut encoder, &sp.force_pipeline, &force_bg, sp.force_workgroups);
+            Self::encode_compute_pass(&mut encoder, &sp.kick_pipeline, &kick_lam_bg, sp.lf_workgroups);
         }
 
         self.device.submit_and_poll_inner(Some(encoder.finish()));

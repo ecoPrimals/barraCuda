@@ -139,8 +139,12 @@ impl GpuHmcTrajectory {
         gauge_force: &Su3HmcForce,
     ) -> StreamingPipelines {
         let force_wg = gauge_force.workgroup_count();
-        let force_module =
-            device.compile_shader_f64(gauge_force.shader_src(), Some("streaming_force"));
+        let force_src = gauge_force.native_shader_src();
+        let force_module = device
+            .compile_shader_df64_sovereign(&force_src, Some("streaming_force_sovereign"))
+            .unwrap_or_else(|| {
+                device.compile_shader_f64(&force_src, Some("streaming_force"))
+            });
         let force_bgl =
             device
                 .device
@@ -195,83 +199,39 @@ impl GpuHmcTrajectory {
             });
 
         let lf_wg_native = leapfrog.workgroup_count();
-        let lf_wg_df64 = leapfrog.workgroup_count_df64();
 
-        let (kick_pipeline, link_pipeline, lf_workgroups) =
-            if let (Some(mom_src), Some(link_src)) =
-                (leapfrog.df64_momentum_src(), leapfrog.df64_link_src())
-            {
-                // Silicon capability: when DF64 WG64 dispatch exceeds 65535 workgroups,
-                // widen to WG128 to keep dispatch 1D. This avoids broken 2D
-                // global_invocation_id.y / num_workgroups on RADV (RDNA2) and
-                // any driver with max_workgroups_per_dimension = 65535.
-                // The pattern generalizes: dispatch sizing is silicon-driven,
-                // not vendor-specific.
-                let (effective_mom_src, effective_link_src, effective_wg) =
-                    if lf_wg_df64 > 65535 {
-                        let wg128_mom = mom_src
-                            .replace("@workgroup_size(64)", "@workgroup_size(128)")
-                            .replace("num_wgs.x * 64u", "num_wgs.x * 128u");
-                        let wg128_link = link_src
-                            .replace("@workgroup_size(64)", "@workgroup_size(128)")
-                            .replace("const DF64_WG: u32 = 64u;", "const DF64_WG: u32 = 128u;")
-                            .replace("num_wgs.x * DF64_WG", "num_wgs.x * DF64_WG");
-                        let n_links = leapfrog.n_links();
-                        (wg128_mom, wg128_link, n_links.div_ceil(128))
-                    } else {
-                        (mom_src.to_string(), link_src.to_string(), lf_wg_df64)
-                    };
-
-                let mom_mod = device.compile_shader(&effective_mom_src, Some("streaming_kick_df64"));
-                let link_mod = device.compile_shader(&effective_link_src, Some("streaming_link_df64"));
-                let kick = device.device.create_compute_pipeline(
-                    &wgpu::ComputePipelineDescriptor {
-                        label: Some("streaming_kick_df64"),
-                        layout: Some(&lf_pl),
-                        module: &mom_mod,
-                        entry_point: Some("momentum_update_df64"),
-                        cache: None,
-                        compilation_options: Default::default(),
-                    },
-                );
-                let link = device.device.create_compute_pipeline(
-                    &wgpu::ComputePipelineDescriptor {
-                        label: Some("streaming_link_df64"),
-                        layout: Some(&lf_pl),
-                        module: &link_mod,
-                        entry_point: Some("link_update_df64"),
-                        cache: None,
-                        compilation_options: Default::default(),
-                    },
-                );
-                (kick, link, effective_wg)
-            } else {
-                let native_mod = device.compile_shader_f64(
-                    leapfrog.native_shader_src(),
-                    Some("streaming_lf_native"),
-                );
-                let kick = device.device.create_compute_pipeline(
-                    &wgpu::ComputePipelineDescriptor {
-                        label: Some("streaming_kick_native"),
-                        layout: Some(&lf_pl),
-                        module: &native_mod,
-                        entry_point: Some("momentum_kick"),
-                        cache: None,
-                        compilation_options: Default::default(),
-                    },
-                );
-                let link = device.device.create_compute_pipeline(
-                    &wgpu::ComputePipelineDescriptor {
-                        label: Some("streaming_link_native"),
-                        layout: Some(&lf_pl),
-                        module: &native_mod,
-                        entry_point: Some("link_update"),
-                        cache: None,
-                        compilation_options: Default::default(),
-                    },
-                );
-                (kick, link, lf_wg_native)
-            };
+        // Streaming pipelines attempt coralReef sovereign SPIR-V (DF64-safe,
+        // bypasses naga's broken SPIR-V codegen on RADV), falling back to native
+        // f64 via compile_shader_f64 if coralReef is unavailable.
+        let (kick_pipeline, link_pipeline, lf_workgroups) = {
+            let lf_src = leapfrog.native_shader_src();
+            let native_mod = device
+                .compile_shader_df64_sovereign(lf_src, Some("streaming_lf_sovereign"))
+                .unwrap_or_else(|| {
+                    device.compile_shader_f64(lf_src, Some("streaming_lf_native"))
+                });
+            let kick = device.device.create_compute_pipeline(
+                &wgpu::ComputePipelineDescriptor {
+                    label: Some("streaming_kick_native"),
+                    layout: Some(&lf_pl),
+                    module: &native_mod,
+                    entry_point: Some("momentum_kick"),
+                    cache: None,
+                    compilation_options: Default::default(),
+                },
+            );
+            let link = device.device.create_compute_pipeline(
+                &wgpu::ComputePipelineDescriptor {
+                    label: Some("streaming_link_native"),
+                    layout: Some(&lf_pl),
+                    module: &native_mod,
+                    entry_point: Some("link_update"),
+                    cache: None,
+                    compilation_options: Default::default(),
+                },
+            );
+            (kick, link, lf_wg_native)
+        };
 
         StreamingPipelines {
             force_pipeline,

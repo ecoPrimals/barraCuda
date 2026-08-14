@@ -284,6 +284,57 @@ impl CoralCompiler {
         }
     }
 
+    /// Compile WGSL to portable SPIR-V via `shader.compile.wgsl_to_spirv`.
+    ///
+    /// Returns SPIR-V words for direct passthrough to
+    /// `create_shader_module_passthrough`. Uses DF64-safe FMA policy to
+    /// preserve Dekker 2-sum arithmetic integrity.
+    ///
+    /// Returns `None` if no compiler is available or the endpoint fails.
+    pub async fn compile_wgsl_to_spirv(
+        &self,
+        wgsl: &str,
+        fma_policy: &str,
+        no_fuse_functions: &[String],
+        fp64_software: bool,
+    ) -> Option<Vec<u32>> {
+        let addr = self.ensure_connected().await?;
+
+        let request = types::CompileWgslToSpirvRequest {
+            wgsl_source: wgsl.to_owned(),
+            fma_policy: fma_policy.to_owned(),
+            no_fuse_functions: no_fuse_functions.to_vec(),
+            spirv_version: Some([1, 3]),
+            fp64_software,
+        };
+
+        match jsonrpc_call::<types::CompileWgslToSpirvRequest, types::CompileWgslToSpirvResponse>(
+            &addr,
+            "shader.compile.wgsl_to_spirv",
+            &request,
+        )
+        .await
+        {
+            Ok(resp) if resp.status == "success" => {
+                tracing::debug!(
+                    "wgsl_to_spirv: {} words, fma_policy={}, skipped_fns={}",
+                    resp.spirv_words.len(),
+                    resp.applied_fma_policy,
+                    resp.fma_skipped_functions,
+                );
+                Some(resp.spirv_words)
+            }
+            Ok(resp) => {
+                tracing::debug!("wgsl_to_spirv returned non-success status: {}", resp.status);
+                None
+            }
+            Err(e) => {
+                tracing::debug!("shader.compile.wgsl_to_spirv failed: {e}");
+                None
+            }
+        }
+    }
+
     /// Query supported GPU architectures from the discovered compiler.
     ///
     /// Prefers the Phase 10 `shader.compile.capabilities` endpoint, falling

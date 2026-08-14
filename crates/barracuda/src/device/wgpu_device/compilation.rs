@@ -205,6 +205,130 @@ impl WgpuDevice {
         self.compile_shader_raw(&optimized, label)
     }
 
+    /// Compile a DF64 shader for streaming encoder use (no FMA fusion).
+    ///
+    /// DF64 arithmetic depends on exact rounding at each f32 operation.
+    /// FMA fusion (a*b + c as a single rounded operation) breaks the Dekker
+    /// 2-sum error accumulation that DF64 relies on. This method uses the
+    /// sovereign WGSL re-emission path (fixing naga SPIR-V codegen issues on
+    /// RADV) while explicitly skipping FMA fusion.
+    ///
+    /// The source must already contain the full DF64 preamble (df64_core,
+    /// su3_df64, etc.) — unlike `compile_shader_df64` which prepends them.
+    #[must_use]
+    pub fn compile_shader_df64_streaming(&self, source: &str, label: Option<&str>) -> wgpu::ShaderModule {
+        let source = source
+            .replace("enable f64;", "")
+            .replace("enable subgroups;", "");
+
+        let with_polyfills = crate::shaders::precision::polyfill::inject_f64_polyfills(&source, None);
+
+        use crate::shaders::sovereign::SovereignCompiler;
+        let caps = crate::device::capabilities::DeviceCapabilities::from_device(self);
+        let sovereign = SovereignCompiler::new(caps);
+        match sovereign.compile_to_wgsl_no_fma(&with_polyfills) {
+            Ok((reemitted, _stats)) => {
+                return self.compile_shader_raw(&reemitted, label);
+            }
+            Err(e) => {
+                tracing::warn!("DF64 streaming sovereign failed: {e}, falling back to raw");
+            }
+        }
+        self.compile_shader_raw(&with_polyfills, label)
+    }
+
+    /// Compile a DF64 shader via coralReef's sovereign SPIR-V path.
+    ///
+    /// Sends the DF64 WGSL source to coralReef's `shader.compile.wgsl_to_spirv`
+    /// endpoint with `FmaPolicy::NeverFuse`, receives SPIR-V words, and passes
+    /// them through `barracuda-spirv::compile_spirv_passthrough` to create a
+    /// `wgpu::ShaderModule` that bypasses naga's broken SPIR-V codegen.
+    ///
+    /// Returns `None` if coralReef is unavailable, the compile fails, or the
+    /// `spirv-passthrough` feature is not enabled.
+    ///
+    /// The source must already contain the full DF64 preamble.
+    #[cfg(feature = "spirv-passthrough")]
+    pub fn compile_shader_df64_sovereign(
+        &self,
+        source: &str,
+        label: Option<&str>,
+    ) -> Option<wgpu::ShaderModule> {
+        let source_clean = source
+            .replace("enable f64;", "")
+            .replace("enable subgroups;", "");
+
+        let with_polyfills =
+            crate::shaders::precision::polyfill::inject_f64_polyfills(&source_clean, None);
+
+        let spirv_words = {
+            let rt = tokio::runtime::Handle::try_current().ok()?;
+            let can_block = std::panic::catch_unwind(|| {
+                tokio::task::block_in_place(|| {});
+            })
+            .is_ok();
+
+            if can_block {
+                tokio::task::block_in_place(|| {
+                    rt.block_on(async {
+                        crate::device::coral_compiler::global_coral()
+                            .compile_wgsl_to_spirv(
+                                &with_polyfills,
+                                "never_fuse",
+                                &[],
+                                true,
+                            )
+                            .await
+                    })
+                })?
+            } else {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .ok()?;
+                rt.block_on(async {
+                    crate::device::coral_compiler::global_coral()
+                        .compile_wgsl_to_spirv(
+                            &with_polyfills,
+                            "never_fuse",
+                            &[],
+                            true,
+                        )
+                        .await
+                })?
+            }
+        };
+
+        if spirv_words.is_empty() {
+            tracing::debug!("df64_sovereign: coralReef returned empty SPIR-V");
+            return None;
+        }
+
+        match barracuda_spirv::compile_spirv_passthrough(self.device(), &spirv_words, label) {
+            Ok(module) => {
+                tracing::debug!(
+                    "df64_sovereign: compiled {} SPIR-V words via passthrough",
+                    spirv_words.len()
+                );
+                Some(module)
+            }
+            Err(e) => {
+                tracing::debug!("df64_sovereign: passthrough failed: {e}");
+                None
+            }
+        }
+    }
+
+    /// Stub when `spirv-passthrough` feature is not enabled.
+    #[cfg(not(feature = "spirv-passthrough"))]
+    pub fn compile_shader_df64_sovereign(
+        &self,
+        _source: &str,
+        _label: Option<&str>,
+    ) -> Option<wgpu::ShaderModule> {
+        None
+    }
+
     /// Compile a DF64 (double-float, f32-pair) WGSL shader.
     ///
     /// Prepends `df64_core.wgsl` + `df64_transcendentals.wgsl` to the source,

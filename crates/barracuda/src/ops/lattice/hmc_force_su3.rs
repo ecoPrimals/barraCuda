@@ -180,6 +180,16 @@ impl Su3HmcForce {
         &self.shader_src
     }
 
+    /// Native f64 force shader source (always uses hardware f64, no DF64).
+    ///
+    /// The streaming encoder uses this unconditionally — the sovereign WGSL
+    /// re-emission path corrupts DF64 arithmetic through expression reordering
+    /// in naga IR, while native f64 compiles correctly on all drivers.
+    #[must_use]
+    pub fn native_shader_src(&self) -> String {
+        format!("{}{}", su3_preamble(), FORCE_SHADER_BODY)
+    }
+
     /// Workgroup count for dispatch.
     #[must_use]
     pub fn workgroup_count(&self) -> u32 {

@@ -53,6 +53,55 @@ fn mark_f64_expressions(expressions: &Arena<Expression>) -> Vec<bool> {
     is_f64
 }
 
+/// DF64 function name prefixes that must never be FMA-fused.
+///
+/// Dekker arithmetic requires independent rounding: `a*b` rounds to get the
+/// "high" result, then the error term is computed from the rounded product.
+/// FMA fusion eliminates the intermediate rounding, destroying the error term.
+const DF64_NO_FUSE_PREFIXES: &[&str] = &[
+    "df64_", "two_sum", "two_prod", "split_f32", "dekker_", "knuth_", "error_free_",
+];
+
+/// Check if a function name matches the DF64 no-fuse pattern set.
+fn is_df64_function_name(name: &str) -> bool {
+    DF64_NO_FUSE_PREFIXES
+        .iter()
+        .any(|prefix| name.starts_with(prefix))
+}
+
+/// Check if a WGSL source line contains the `@no_fma` pragma annotation.
+///
+/// The annotation is a comment-based pragma: `// @no_fma` or `/* @no_fma */`
+/// placed before a function declaration. This opts a function out of FMA fusion
+/// regardless of its name.
+fn source_has_no_fma_pragma(source: &str, function_name: &str) -> bool {
+    let fn_pattern = format!("fn {function_name}(");
+    if let Some(fn_pos) = source.find(&fn_pattern) {
+        let preceding = &source[..fn_pos];
+        let search_start = fn_pos.saturating_sub(200).max(
+            preceding
+                .rfind("\n\n")
+                .map_or(0, |p| p),
+        );
+        let context = &source[search_start..fn_pos];
+        return context.contains("@no_fma");
+    }
+    false
+}
+
+/// Check if a function should skip FMA fusion based on name patterns or `@no_fma` pragma.
+pub fn should_skip_fma_for_function(name: &str, source: Option<&str>) -> bool {
+    if is_df64_function_name(name) {
+        return true;
+    }
+    if let Some(src) = source {
+        if source_has_no_fma_pragma(src, name) {
+            return true;
+        }
+    }
+    false
+}
+
 /// Fuse `Mul + Add/Sub` patterns into `Fma` in the given expression arena.
 ///
 /// Skips f64 expressions: WGSL `fma()` is f32/f16 only.
@@ -326,6 +375,60 @@ pub(crate) fn visit_operands<F: FnMut(Handle<Expression>)>(expr: &Expression, mu
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_df64_function_name_detection() {
+        assert!(is_df64_function_name("df64_add"));
+        assert!(is_df64_function_name("df64_mul"));
+        assert!(is_df64_function_name("two_sum"));
+        assert!(is_df64_function_name("two_prod"));
+        assert!(is_df64_function_name("split_f32"));
+        assert!(is_df64_function_name("dekker_mul"));
+        assert!(is_df64_function_name("knuth_two_sum"));
+        assert!(is_df64_function_name("error_free_prod"));
+
+        assert!(!is_df64_function_name("main"));
+        assert!(!is_df64_function_name("hmc_force"));
+        assert!(!is_df64_function_name("momentum_kick"));
+        assert!(!is_df64_function_name("su3_multiply"));
+    }
+
+    #[test]
+    fn test_no_fma_pragma_detection() {
+        let source = r#"
+// @no_fma
+fn my_sensitive_function(a: f32, b: f32) -> f32 {
+    return a * b + 1.0;
+}
+
+fn regular_function(x: f32) -> f32 {
+    return x * x + x;
+}
+"#;
+        assert!(source_has_no_fma_pragma(source, "my_sensitive_function"));
+        assert!(!source_has_no_fma_pragma(source, "regular_function"));
+    }
+
+    #[test]
+    fn test_should_skip_fma_combined() {
+        let source = r#"
+fn df64_add(a_hi: f32, a_lo: f32, b_hi: f32, b_lo: f32) -> vec2<f32> {
+    return vec2(0.0);
+}
+
+// @no_fma
+fn custom_precision_op(x: f32) -> f32 {
+    return x;
+}
+
+fn normal_math(x: f32) -> f32 {
+    return x * x + x;
+}
+"#;
+        assert!(should_skip_fma_for_function("df64_add", Some(source)));
+        assert!(should_skip_fma_for_function("custom_precision_op", Some(source)));
+        assert!(!should_skip_fma_for_function("normal_math", Some(source)));
+    }
 
     #[test]
     fn test_fma_fusion_on_add_pattern() {

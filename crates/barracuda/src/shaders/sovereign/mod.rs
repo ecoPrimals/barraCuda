@@ -130,6 +130,58 @@ impl SovereignCompiler {
         Ok((optimized_wgsl, stats))
     }
 
+    /// Parse → validate → re-emit WGSL without FMA fusion.
+    ///
+    /// DF64 (f32-pair) arithmetic depends on exact rounding at each operation.
+    /// FMA fusion breaks the Dekker 2-sum error accumulation by combining
+    /// operations that must round independently. This method provides the
+    /// naga re-emission fix (canonicalizing WGSL for correct SPIR-V codegen)
+    /// without corrupting DF64 precision.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if WGSL fails to parse, validate, or re-emit.
+    pub fn compile_to_wgsl_no_fma(&self, wgsl: &str) -> Result<(String, CompileStats), SovereignError> {
+        let mut stats = CompileStats::default();
+
+        let mut module =
+            naga::front::wgsl::parse_str(wgsl).map_err(|e| SovereignError::Parse(e.to_string()))?;
+
+        for (_handle, func) in module.functions.iter_mut() {
+            stats.dead_exprs_eliminated += dead_expr::eliminate(&mut func.expressions, &func.body);
+        }
+        for ep in &mut module.entry_points {
+            stats.dead_exprs_eliminated +=
+                dead_expr::eliminate(&mut ep.function.expressions, &ep.function.body);
+        }
+
+        let info = {
+            let mut validator = naga::valid::Validator::new(
+                naga::valid::ValidationFlags::all(),
+                naga::valid::Capabilities::all(),
+            );
+            validator
+                .validate(&module)
+                .map_err(|e| SovereignError::Validation(e.to_string()))?
+        };
+        let mut optimized_wgsl = wgsl_emit::emit_wgsl(&module, &info)?;
+
+        for ep in &module.entry_points {
+            let original = &ep.name;
+            let fn_original = format!("fn {original}(");
+            if optimized_wgsl.contains(&fn_original) {
+                continue;
+            }
+            let renamed = format!("{original}_");
+            let fn_renamed = format!("fn {renamed}(");
+            if optimized_wgsl.contains(&fn_renamed) {
+                optimized_wgsl = optimized_wgsl.replacen(&fn_renamed, &fn_original, 1);
+            }
+        }
+
+        Ok((optimized_wgsl, stats))
+    }
+
     /// Compile WGSL source to optimized SPIR-V.
     ///
     /// Returns `Err` if the WGSL fails to parse or the optimized module
@@ -144,6 +196,39 @@ impl SovereignCompiler {
         let (module, info, stats) = self.parse_optimize_validate(wgsl)?;
         let validated = spv_emit::emit_spirv(&module, &info)?;
         Ok((SovereignOutput::Spirv(validated), stats))
+    }
+
+    /// Compile WGSL with DF64-safe FMA: skip fusion in Dekker helper functions.
+    ///
+    /// Uses function-name pattern matching and `@no_fma` pragma detection to
+    /// selectively apply FMA fusion only to non-DF64 functions. This provides
+    /// the performance benefit of FMA for regular math while preserving the
+    /// precision of DF64 pair arithmetic.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if WGSL fails to parse, validate, or re-emit.
+    pub fn compile_to_wgsl_df64_safe(
+        &self,
+        wgsl: &str,
+    ) -> Result<(String, CompileStats), SovereignError> {
+        let (module, info, stats) = self.parse_optimize_validate_df64_safe(wgsl)?;
+        let mut optimized_wgsl = wgsl_emit::emit_wgsl(&module, &info)?;
+
+        for ep in &module.entry_points {
+            let original = &ep.name;
+            let fn_original = format!("fn {original}(");
+            if optimized_wgsl.contains(&fn_original) {
+                continue;
+            }
+            let renamed = format!("{original}_");
+            let fn_renamed = format!("fn {renamed}(");
+            if optimized_wgsl.contains(&fn_renamed) {
+                optimized_wgsl = optimized_wgsl.replacen(&fn_renamed, &fn_original, 1);
+            }
+        }
+
+        Ok((optimized_wgsl, stats))
     }
 
     /// Shared pipeline: parse → optimise → validate.
@@ -161,6 +246,52 @@ impl SovereignCompiler {
         }
         for ep in &mut module.entry_points {
             stats.fma_fusions += fma_fusion::fuse_multiply_add(&mut ep.function.expressions);
+        }
+
+        for (_handle, func) in module.functions.iter_mut() {
+            stats.dead_exprs_eliminated += dead_expr::eliminate(&mut func.expressions, &func.body);
+        }
+        for ep in &mut module.entry_points {
+            stats.dead_exprs_eliminated +=
+                dead_expr::eliminate(&mut ep.function.expressions, &ep.function.body);
+        }
+
+        let info = {
+            let mut validator = naga::valid::Validator::new(
+                naga::valid::ValidationFlags::all(),
+                naga::valid::Capabilities::all(),
+            );
+            validator
+                .validate(&module)
+                .map_err(|e| SovereignError::Validation(e.to_string()))?
+        };
+
+        Ok((module, info, stats))
+    }
+
+    /// Parse → optimize (DF64-safe) → validate.
+    ///
+    /// FMA fusion is applied selectively: skipped for functions matching DF64
+    /// naming patterns or annotated with `@no_fma`.
+    fn parse_optimize_validate_df64_safe(
+        &self,
+        wgsl: &str,
+    ) -> Result<(naga::Module, naga::valid::ModuleInfo, CompileStats), SovereignError> {
+        let mut stats = CompileStats::default();
+
+        let mut module =
+            naga::front::wgsl::parse_str(wgsl).map_err(|e| SovereignError::Parse(e.to_string()))?;
+
+        for (_handle, func) in module.functions.iter_mut() {
+            let name = func.name.as_deref().unwrap_or("");
+            if !fma_fusion::should_skip_fma_for_function(name, Some(wgsl)) {
+                stats.fma_fusions += fma_fusion::fuse_multiply_add(&mut func.expressions);
+            }
+        }
+        for ep in &mut module.entry_points {
+            if !fma_fusion::should_skip_fma_for_function(&ep.name, Some(wgsl)) {
+                stats.fma_fusions += fma_fusion::fuse_multiply_add(&mut ep.function.expressions);
+            }
         }
 
         for (_handle, func) in module.functions.iter_mut() {

@@ -115,6 +115,38 @@ pub fn precision_to_coral_strategy(
     }
 }
 
+/// WGSL-to-SPIR-V compile request (`shader.compile.wgsl_to_spirv`).
+///
+/// Dedicated endpoint for DF64-safe SPIR-V emission. Returns SPIR-V words
+/// for direct passthrough to `create_shader_module_passthrough`, bypassing
+/// naga's broken SPIR-V codegen for complex DF64 shaders.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(super) struct CompileWgslToSpirvRequest {
+    pub wgsl_source: String,
+    pub fma_policy: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub no_fuse_functions: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spirv_version: Option<[u8; 2]>,
+    #[serde(default)]
+    pub fp64_software: bool,
+}
+
+/// WGSL-to-SPIR-V compile response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(super) struct CompileWgslToSpirvResponse {
+    pub spirv_words: Vec<u32>,
+    pub status: String,
+    #[serde(default)]
+    pub compile_time_ms: Option<f64>,
+    #[serde(default)]
+    pub entry_points: Vec<String>,
+    #[serde(default)]
+    pub applied_fma_policy: String,
+    #[serde(default)]
+    pub fma_skipped_functions: u32,
+}
+
 /// GEMM compilation request (`shader.compile.gemm`).
 ///
 /// Requests a tiled MMA kernel from the shader compiler primal.

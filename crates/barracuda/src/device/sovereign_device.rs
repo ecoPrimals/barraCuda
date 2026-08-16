@@ -26,12 +26,21 @@
 //!
 //! # Backend maturity
 //!
-//! | Path | Status | Notes |
-//! |------|--------|-------|
-//! | IPC compile (`shader.compile`) | Done | via `coral_compiler/` |
-//! | IPC dispatch (`compute.dispatch`) | Done | `compute.dispatch.submit` + readback via `output_buffers` |
-//! | DRM (nouveau/amdgpu) | E2E verified | Titan V + RTX 3090 proven |
-//! | VFIO/GPFIFO | Fix applied | USERD_TARGET + INST_TARGET fix (Iter 44); hw revalidation pending |
+//! "Done" below means the wire path is implemented and exercised, not that a
+//! shader has produced a verified number over it. Those are tracked apart on
+//! purpose: conflating them is how "E2E verified" outlived the code it
+//! described.
+//!
+//! | Path | Wire | Verified numeric result on silicon |
+//! |------|------|------------------------------------|
+//! | IPC compile (`shader.compile`) | Done | Compilation verified; see coralReef |
+//! | IPC dispatch (`compute.dispatch`) | Done | **None.** Submit + readback execute; no GR result has come back |
+//! | DRM (nouveau/amdgpu) | Legacy | **Superseded.** The Titan V + RTX 3090 result was the pre-Sprint-9 coral-driver, since excised. Not revalidated on the current stack |
+//! | VFIO/GPFIFO | Fix applied | **None.** USERD_TARGET + INST_TARGET fix (Iter 44); blocked on PFIFO runlist and FECS context load |
+//!
+//! Verified compute today runs through wgpu/Vulkan with a vendor driver
+//! present — that is where the cross-vendor QCD validation was measured. The
+//! sovereign path has not yet executed a shader.
 //!
 //! # Activation
 //!

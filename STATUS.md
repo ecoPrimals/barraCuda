@@ -60,7 +60,7 @@
 - NautilusBrain force anomaly detection (10σ energy deviation, rolling window)
 - `GpuBackend` trait (`device::backend`) — backend-agnostic compute interface; `WgpuDevice` + `Arc<WgpuDevice>` implement it; `ComputeDispatch<B: GpuBackend>` generic over backend
 - `SovereignDevice` capability-based IPC sovereign backend behind `sovereign-dispatch` feature — compiles via `shader.compile` primal, dispatches via `compute.dispatch` primal; no compile-time coupling
-- VFIO-primary architecture adopted: toadStool VFIO is the primary GPU dispatch path (exclusive device access, IOMMU isolation, deterministic scheduling); wgpu demoted to development/fallback
+- VFIO-primary architecture adopted as the *target*: toadStool VFIO is the intended primary GPU dispatch path. Proven today: wgpu/Vulkan. No sovereign VFIO shader execution exists yet (exclusive device access, IOMMU isolation, deterministic scheduling); wgpu demoted to development/fallback
 - VFIO detection moved to toadStool — barraCuda queries hardware capabilities via IPC at runtime
 - Kokkos parity projections: ~4,000 steps/s target (VFIO + DF64) vs 2,630 steps/s Kokkos baseline
 - **Multi-GPU OOM auto-migration**: `MultiDevicePool::execute_with_migration()` — automatic workload retry across pool devices on OOM, excluded-device tracking, configurable retry limit, `set_oom()`/`clear_oom()` device signaling

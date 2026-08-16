@@ -47,7 +47,7 @@ springs = ["hotspring", "primalspring", "wetspring", "airspring"]
 - **WGSL-as-truth**: 337+ op test files, GPU shaders validated at all layers
 - **TensorSession**: fused multi-op GPU pipeline (add, sub, mul, negate, fma, scale)
 - **PrecisionBrain**: self-routing precision advisory, dispatch_path differentiation
-- **Sovereign dispatch**: `KernelTarget::Sovereign` routes tensor-core-eligible workloads to toadStool via JSON-RPC
+- **Sovereign dispatch**: `KernelTarget::Sovereign` routes tensor-core-eligible workloads to toadStool via JSON-RPC. Routing is implemented; **no verified GPU numeric result exists on the sovereign VFIO path** (Aug 2026)
 - **OOM auto-migration**: `execute_with_migration_quota()` — quota-aware retry across pool devices, `QuotaTracker` records failures
 - **BTSP Phase 3**: ChaCha20-Poly1305 stream encryption on all accept loops
 - **Perceptron pipeline**: end-to-end training from dispatch telemetry for biomeOS L5 Neural API routing
@@ -56,7 +56,7 @@ springs = ["hotspring", "primalspring", "wetspring", "airspring"]
 
 - **biomeOS** — perceptron weights consumer (`PerceptronAdvisor` hot path, <0.1ms)
 - **primalSpring** — composition validation, typed extractors, training pipeline
-- **hotSpring** — 3-GPU sovereign compute (Titan V, K80, RTX 5060), SU(3) lattice QCD, nuclear EOS
+- **hotSpring** — lattice QCD and nuclear EOS via wgpu/Vulkan (cross-validated RTX 3090 vs RX 6950 XT to 0.19%). Titan V / K80 / RTX 5060 have sovereign *init* pipelines only — not sovereign compute
 - **wetSpring** — Tenaillon 2016 (264-clone LTEE), pairwise L2 GPU dispatch
 - **airSpring** — cross-tier parity benchmarks
 

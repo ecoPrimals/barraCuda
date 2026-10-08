@@ -40,6 +40,9 @@
 //! | `plasma_dispersion_w(z)` | ✅ | ✅ | W(z) = 1+z·Z(z), stable branch |
 //! | `tridiagonal_ql(d, e)` | ✅ | — | QL with Wilkinson shifts |
 //! | `anderson_diagonalize(w, t)` | ✅ | — | Anderson tight-binding eigensolver |
+//! | `membrane_permeability(mode)` | ✅ | — | Mode-dependent P(ω, W_ω, d_ω) |
+//! | `membrane_profile(modes)` | ✅ | — | Multi-mode selectivity S = max(P)−min(P) |
+//! | `dimensional_localization_length(W, E, d)` | ✅ | — | ξ(W, E) for fractional d_eff |
 //!
 //! # Precision
 //!
@@ -92,7 +95,10 @@ pub mod stable_gpu;
 pub mod tridiagonal_ql;
 
 // Re-export CPU functions
-pub use anderson_transport::{anderson_conductance, localization_length};
+pub use anderson_transport::{
+    anderson_conductance, dimensional_localization_length, localization_length,
+    membrane_permeability, membrane_profile, MembraneMode, MembraneProfile,
+};
 pub use bessel::{bessel_i0, bessel_j0, bessel_j1, bessel_k0};
 #[cfg(feature = "gpu")]
 pub use chi_squared::{ChiSquaredBatchGpu, ChiSquaredBatchResult};

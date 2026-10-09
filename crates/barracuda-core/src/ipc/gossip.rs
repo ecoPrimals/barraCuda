@@ -93,6 +93,10 @@ fn send_inject(topic: &str, key: &str, payload: &serde_json::Value) -> bool {
     let _ = stream.set_write_timeout(Some(WRITE_TIMEOUT));
 
     let mut writer = std::io::BufWriter::new(&stream);
+    // riboCipher signal prefix — required by ecosystem JSON-RPC servers
+    if writer.write_all(&[0xEC, 0x01]).is_err() {
+        return false;
+    }
     if writer.write_all(line.as_bytes()).is_err() {
         return false;
     }

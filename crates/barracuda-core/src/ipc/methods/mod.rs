@@ -172,12 +172,25 @@ pub(crate) const REGISTERED_METHODS: &[&str] = &[
 
 /// Normalize a method name: accepts both `{domain}.{operation}` (standard)
 /// and legacy `{namespace}.{domain}.{operation}` (backward-compatible).
+///
+/// Tracks how many calls arrive with the legacy `barracuda.` prefix so we
+/// can measure migration progress toward prefix-free method names.
 pub(crate) fn normalize_method(method: &str) -> &str {
-    method
+    match method
         .strip_prefix(crate::PRIMAL_NAMESPACE)
         .and_then(|s| s.strip_prefix('.'))
-        .unwrap_or(method)
+    {
+        Some(stripped) => {
+            LEGACY_PREFIX_HITS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            stripped
+        }
+        None => method,
+    }
 }
+
+/// Count of JSON-RPC calls that arrived with a legacy `barracuda.` prefix.
+pub static LEGACY_PREFIX_HITS: std::sync::atomic::AtomicU64 =
+    std::sync::atomic::AtomicU64::new(0);
 
 /// Extract a [`CallerContext`] from request params.
 ///

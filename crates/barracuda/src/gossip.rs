@@ -322,7 +322,33 @@ mod tests {
 
     #[test]
     fn send_inject_returns_false_without_socket() {
-        assert!(!send_inject("compute", "test.key", &serde_json::json!({})));
+        // When NUCLEUS is running, XDG_RUNTIME_DIR/biomeos/swarmvine.sock exists
+        // and send_inject succeeds. This test verifies the failure path, so we
+        // use a subprocess with the socket env pointed to a nonexistent path.
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .arg("--exact")
+            .arg("gossip::tests::send_inject_verify_false_inner")
+            .env("SWARMVINE_SOCKET", "/tmp/nonexistent-swarmvine-test.sock")
+            .env("XDG_RUNTIME_DIR", "/tmp/nonexistent-xdg-test")
+            .output()
+            .expect("failed to spawn subprocess");
+        assert!(
+            output.status.success(),
+            "inner test failed: {}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+    }
+
+    #[test]
+    fn send_inject_verify_false_inner() {
+        // Only meaningful when run via the subprocess in the test above,
+        // with socket env pointed to a nonexistent path.
+        if std::env::var("SWARMVINE_SOCKET")
+            .map(|p| !std::path::Path::new(&p).exists())
+            .unwrap_or(false)
+        {
+            assert!(!send_inject("compute", "test.key", &serde_json::json!({})));
+        }
     }
 
     #[test]

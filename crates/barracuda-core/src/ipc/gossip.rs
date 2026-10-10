@@ -224,7 +224,31 @@ mod tests {
 
     #[test]
     fn send_inject_returns_false_without_socket() {
-        assert!(!send_inject("compute", "test.key", &serde_json::json!({})));
+        // When NUCLEUS is running, XDG_RUNTIME_DIR/biomeos/swarmvine.sock exists
+        // and send_inject succeeds. Test the failure path via subprocess with
+        // env pointing to nonexistent paths (can't set_var: #![forbid(unsafe_code)]).
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .arg("--exact")
+            .arg("ipc::gossip::tests::send_inject_verify_false_inner")
+            .env("SWARMVINE_SOCKET", "/tmp/nonexistent-swarmvine-test.sock")
+            .env("XDG_RUNTIME_DIR", "/tmp/nonexistent-xdg-test")
+            .output()
+            .expect("failed to spawn subprocess");
+        assert!(
+            output.status.success(),
+            "inner test failed: {}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+    }
+
+    #[test]
+    fn send_inject_verify_false_inner() {
+        if std::env::var("SWARMVINE_SOCKET")
+            .map(|p| !std::path::Path::new(&p).exists())
+            .unwrap_or(false)
+        {
+            assert!(!send_inject("compute", "test.key", &serde_json::json!({})));
+        }
     }
 
     #[test]

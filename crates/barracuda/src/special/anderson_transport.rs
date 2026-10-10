@@ -21,6 +21,8 @@
 //! S → 1 for a healthy cell membrane or well-tuned firewall.
 //!
 //! Provenance: wetSpring V20 (transport), Wave 167 (permeability)
+//! Paper: baseCamp 43 — Selective Permeability: The Orthogonal Anderson Dimension
+//! Live rendering: petalTongue v1.7.0 scene compiler at hud.primals.eco/ws
 
 use crate::error::{BarracudaError, Result};
 

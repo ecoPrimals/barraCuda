@@ -87,6 +87,7 @@ pub mod gamma;
 pub mod hermite;
 pub mod laguerre;
 pub mod legendre;
+pub mod pi_constants;
 #[cfg(all(feature = "gpu", feature = "domain-lattice"))]
 pub mod plasma_dispersion;
 #[cfg(feature = "gpu")]
@@ -121,6 +122,10 @@ pub use plasma_dispersion::{plasma_dispersion_w, plasma_dispersion_w_stable, pla
 #[cfg(feature = "gpu")]
 pub use screened_coulomb::screened_coulomb_eigenvalues;
 pub use stable_gpu::{bessel_j0_minus1_f64, erfc_f64, expm1_f64, log1p_f64};
+pub use pi_constants::{
+    catalogue as pi_catalogue, d_eff_from_constant, focal_distance, three_body_dimensions,
+    running_prediction, ALPHA_EM, ALPHA_GRAV, ALPHA_STRONG, SIN2_THETA_W,
+};
 pub use tridiagonal_ql::{anderson_diagonalize, tridiagonal_ql};
 
 // Re-export GPU ops for batch processing (requires GPU feature)

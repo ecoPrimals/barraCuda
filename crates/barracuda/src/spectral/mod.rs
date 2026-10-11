@@ -38,6 +38,7 @@
 pub mod anderson;
 #[cfg(feature = "gpu")]
 pub mod batch_ipr;
+pub mod fss_nu;
 mod hofstadter;
 pub(crate) mod lanczos;
 pub(crate) mod sparse;
@@ -46,6 +47,10 @@ mod tridiag;
 #[cfg(feature = "gpu")]
 pub mod tridiag_eigh_gpu;
 
+pub use fss_nu::{
+    FssSweepResult as FssFssSweepResult, NuResult, StripResult,
+    extract_nu, find_w_c_from_sweep, fss_sweep, quasi_1d_averaged, quasi_1d_lyapunov,
+};
 pub use anderson::{
     AndersonSweepPoint, anderson_2d, anderson_3d, anderson_3d_correlated, anderson_4d,
     anderson_eigenvalues, anderson_hamiltonian, anderson_potential, anderson_sweep_averaged,

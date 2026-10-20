@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-use super::super::jsonrpc::{JsonRpcRequest, JsonRpcResponse};
+use super::super::jsonrpc::{BarracudaRequest, JsonRpcRequest, JsonRpcResponse, parse_error_response};
 use super::super::methods;
 use crate::BarraCudaPrimal;
 
@@ -26,6 +26,7 @@ pub(super) async fn handle_request(
         Some(v) if !v.is_null() => v,
         _ => return None,
     };
+    let params = params.unwrap_or(serde_json::Value::Null);
     Some(methods::dispatch(primal, &method, &params, id).await)
 }
 
@@ -33,7 +34,7 @@ pub(super) async fn handle_request(
 pub(super) async fn handle_line(primal: &BarraCudaPrimal, line: &str) -> Option<JsonRpcResponse> {
     let request: JsonRpcRequest = match serde_json::from_str(line) {
         Ok(r) => r,
-        Err(_) => return Some(JsonRpcResponse::parse_error()),
+        Err(_) => return Some(parse_error_response()),
     };
     handle_request(primal, request).await
 }
@@ -52,7 +53,7 @@ pub(super) async fn handle_batch(primal: &BarraCudaPrimal, line: &str) -> Option
         Ok(v) => v,
         Err(_) => {
             return Some(
-                serde_json::to_string(&JsonRpcResponse::parse_error())
+                serde_json::to_string(&parse_error_response())
                     .unwrap_or_else(|_| SERIALIZATION_ERROR.to_string()),
             );
         }
@@ -77,7 +78,7 @@ pub(super) async fn handle_batch(primal: &BarraCudaPrimal, line: &str) -> Option
                     responses.push(resp);
                 }
             }
-            Err(_) => responses.push(JsonRpcResponse::parse_error()),
+            Err(_) => responses.push(parse_error_response()),
         }
     }
 

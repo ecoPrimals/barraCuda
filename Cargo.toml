@@ -178,6 +178,9 @@ base64ct = { version = "1.6", features = ["alloc"] }
 # Binary serialization (model persistence — postcard: pure Rust, no_std, serde)
 postcard = { version = "1.1", default-features = false, features = ["alloc"] }
 
+# Shared ecosystem types (health, jsonrpc, service, discovery, security)
+cellmembrane-types = { path = "../../gardens/cellMembrane/crates/cellmembrane-types" }
+
 # Platform — rustix provides safe Rust wrappers around Unix syscalls (no unsafe)
 # Used for G65 recv(MSG_PEEK) on Unix domain sockets
 rustix = { version = "1.1", features = ["net"] }

@@ -22,6 +22,7 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 blake3 = { workspace = true }
+cellmembrane-types = { workspace = true }
 clap = { workspace = true }
 rand = { workspace = true }
 chacha20poly1305 = { workspace = true }

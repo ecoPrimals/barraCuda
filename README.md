@@ -1,9 +1,19 @@
 # barraCuda
 
+[![crates.io](https://img.shields.io/crates/v/primal-barracuda.svg)](https://crates.io/crates/primal-barracuda)
+[![docs.rs](https://docs.rs/primal-barracuda/badge.svg)](https://docs.rs/primal-barracuda)
+[![license](https://img.shields.io/crates/l/primal-barracuda.svg)](https://github.com/ecoPrimal/barraCuda/blob/main/LICENSE)
+
+```sh
+cargo add primal-barracuda
+```
+
 **Version**: 0.4.0
 **Status**: Composition-ready — zero debt, 5-gate mesh operational, primal self-knowledge, all quality gates green
 **License**: AGPL-3.0-or-later (scyBorg provenance trio)
 **MSRV**: 1.92
+
+> **Cite this work**: [primals.eco/cite](https://primals.eco/cite) · **ORCID**: [0009-0004-2141-0321](https://orcid.org/0009-0004-2141-0321)
 
 ---
 

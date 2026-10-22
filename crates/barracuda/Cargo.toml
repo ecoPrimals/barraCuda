@@ -1,5 +1,5 @@
 [package]
-name = "barracuda"
+name = "primal-barracuda"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -9,6 +9,9 @@ rust-version.workspace = true
 description = "barraCuda — BARrier-free Rust Abstracted Cross-platform Unified Dimensional Algebra. Vendor-agnostic GPU compute via WGSL."
 keywords = ["gpu", "tensor", "compute", "webgpu", "wgsl"]
 categories = ["science", "hardware-support"]
+
+[lib]
+name = "barracuda"
 
 [dependencies]
 thiserror = { workspace = true }

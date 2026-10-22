@@ -1,5 +1,5 @@
 [package]
-name = "barracuda-core"
+name = "primal-barracuda-core"
 description = "Core primal lifecycle for barraCuda — BARrier-free Rust Abstracted Cross-platform Unified Dimensional Algebra"
 version.workspace = true
 edition.workspace = true
@@ -8,13 +8,16 @@ repository.workspace = true
 authors.workspace = true
 rust-version.workspace = true
 
+[lib]
+name = "barracuda_core"
+
 [features]
 default = ["tarpc-transport"]
 tarpc-transport = ["dep:tarpc", "dep:futures", "dep:tokio-util", "dep:tokio-serde"]
 sovereign-dispatch = ["barracuda/sovereign-dispatch"]
 
 [dependencies]
-barracuda = { path = "../barracuda", version = "0.4.0", default-features = true }
+barracuda = { package = "primal-barracuda", path = "../barracuda", version = "0.4.0", default-features = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

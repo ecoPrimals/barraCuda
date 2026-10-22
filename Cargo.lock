@@ -129,6 +129,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
+<<<<<<< Updated upstream
 name = "barracuda"
 version = "0.4.0"
 dependencies = [
@@ -182,6 +183,8 @@ dependencies = [
 ]
 
 [[package]]
+=======
+>>>>>>> Stashed changes
 name = "barracuda-naga-exec"
 version = "0.4.0"
 dependencies = [
@@ -1289,6 +1292,57 @@ name = "presser"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8cf8e6a8aa66ce33f63993ffc4ea4271eb5b0530a9002db8455ea6050c77bfa"
+
+[[package]]
+name = "primal-barracuda"
+version = "0.4.0"
+dependencies = [
+ "approx",
+ "barracuda-naga-exec",
+ "barracuda-spirv",
+ "blake3",
+ "bytemuck",
+ "bytes",
+ "half",
+ "naga",
+ "postcard",
+ "proptest",
+ "rand 0.9.4",
+ "rayon",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "wgpu",
+]
+
+[[package]]
+name = "primal-barracuda-core"
+version = "0.4.0"
+dependencies = [
+ "base64ct",
+ "blake3",
+ "chacha20poly1305",
+ "clap",
+ "futures",
+ "hkdf",
+ "hmac",
+ "primal-barracuda",
+ "rand 0.9.4",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tarpc",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-serde",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "proc-macro2"
